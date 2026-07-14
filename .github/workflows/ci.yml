@@ -1,0 +1,30 @@
+# Typecheck both sides on every push and PR. This is the repo's build gate
+# (the same `npx tsc --noEmit` the Cadence build-validator runs locally) and
+# the status check branch protection points at.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            console/package-lock.json
+      # Native deps (better-sqlite3, sharp, node-pty) build from prebuilds;
+      # Playwright's browser download is skipped — CI only typechecks.
+      - run: npm ci
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+      - run: npx tsc --noEmit
+      - run: npm ci --prefix console
+      - run: npx tsc --noEmit -p console

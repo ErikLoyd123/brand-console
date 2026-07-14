@@ -50,9 +50,13 @@ Read the **voice card** (the active profile's `voice-card.md`) too if a new pill
 it names the pillars in prose and sets what each lane is for, so a label or a new pillar stays
 consistent with how the owner already frames them.
 
-## 1. Ask what to do
+## 1. Read the pillars, then ask what to do
 
-Open with one `ask_user` choice — the common pillar actions, plus free text:
+Run the two reads above (current pillars, live coverage) first, so you know the state
+before saying anything. Open with a one-glance summary — each pillar with its weight and
+whether it has a coverage gap — then one `ask_user` choice with the common pillar
+actions, plus free text. If the user already named the action, skip the question but
+keep the summary: the informed opening is the point.
 
 - **Add a pillar** — a new theme (new key + label + a starting weight).
 - **Rename a pillar** — change its label (never its key; see the rule below).

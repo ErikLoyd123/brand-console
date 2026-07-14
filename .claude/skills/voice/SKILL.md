@@ -60,10 +60,13 @@ npx tsx -e "import('./src/profile/loader.ts').then(m => console.log(JSON.stringi
   policy, and the machine-checkable protected-relationships list. You read this to keep a card
   edit consistent with it; you never write it here.
 
-## 1. Ask what to change — one focused choice
+## 1. Read the card, then ask what to change — one focused choice
 
-Open with a single `ask_user` choice. Offer the common card edits as options, plus free text so
-the owner can describe anything in their own words:
+Read the active profile's voice card first, so you know its current shape before saying
+anything. Open with a one-line sketch of what the card holds today (its sections, roughly
+how many hard rules / hook formulas / patterns / AI-tells), then a single `ask_user`
+choice. Offer the common card edits as options, plus free text so the owner can describe
+anything in their own words:
 
 - **Add a hard rule** — a new pass-or-fail rule the review gate should enforce in spirit.
 - **Add / refine a hook formula** — a new opening move, or sharpen an existing one.

@@ -47,11 +47,29 @@ web idea or article-draft a post.
    procedure file is the single source. Obey the shared doctrine
    (`.claude/skills/content-doctrine.md`) throughout.
 
-3. **Report as that procedure specifies**, then stop. One item per run.
+3. **Report as that procedure specifies.** One item per run — but the session stays open.
+
+## Orient first, converse after
+
+The console's buttons drop the owner straight into a session with no preamble, so the session
+must supply the context a person would want:
+
+- **Review** opens with a short plain-words orientation *before* the verdict — what the piece
+  is, what it is trying to do (its silo intent and platform), in 2-4 sentences. Then the gate
+  runs and the verdict lands as the spec prescribes. After reporting, stay available: answer
+  questions about the verdict, a specific finding, or the piece itself. Answering never turns
+  into rewriting — an explicit "revise it" ask is a new revise run.
+- **Revise** opens by telling the owner where the piece stands — what it currently says, its
+  review status, any standing check findings — in a few sentences, then asks what to change.
+  After writing the revision back, stay for follow-up tweaks in the same session; each write
+  still goes through the procedure's CLI.
+- **Develop / Write** already interview by design; the same principle binds them: lead with
+  what you read from the item, never open with a bare question the owner has no context for.
 
 ## Rules
 
-- One branch, one item, per run. Never silently do two.
+- One branch, one item, per run. Never silently do two. Follow-up questions and tweaks on
+  the same item in the same session are fine; a different branch or item is a new run.
 - Never invent the opinion, the beats, or a fact — the procedures spell this out; it binds here too.
 - Only ever writes through the procedures' CLIs (`develop-idea.ts` / `draft-store.ts` /
   `update-draft.ts` / `update-article.ts`) — plus, in the review branch only, the verdict

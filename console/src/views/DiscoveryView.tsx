@@ -246,10 +246,22 @@ export function DiscoveryView() {
     surfaceRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
   function workUp(item: InboxItem) {
+    // Everything the view already knows rides into the first message so the skill
+    // orients immediately; the id stays authoritative for anything deeper.
+    const src = sourceInfo.get(item.sourceId)
+    const context =
+      ` Known context — feed: ${src?.name ?? 'unknown'}; pillar: ${src?.pillar ?? 'none'}; ` +
+      `tags: ${item.tags.length > 0 ? item.tags.map((t) => t.name).join(', ') : 'none'}; ` +
+      `url: ${item.url ?? 'none'}` +
+      (item.summary ? `; feed summary: "${item.summary.slice(0, 300)}"` : '') +
+      '.'
     triggerWorkUp(
       `Work up the Discovery feed item whose id is ${item.id} (title: "${item.title}"). ` +
-        `Do not ask which item — use this one. Read it and its source, infer the intent and ` +
-        `confirm it, draw out my take and the 2-4 points, then promote it into the queue.`,
+        `Do not ask which item — use this one. Read it and its source first, open by telling ` +
+        `me in a couple sentences what the article says and why it landed in my inbox, infer ` +
+        `the intent and confirm it, draw out my take and the 2-4 points, then promote it ` +
+        `into the queue.` +
+        context,
     )
   }
   function workUpGeneric() {

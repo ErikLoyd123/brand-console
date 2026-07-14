@@ -1,6 +1,6 @@
 ---
 name: feeds
-description: Add, edit, or remove the RSS feeds discovery watches — all in the database, no code or config editing. Add validates a URL is a real feed and files it under a pillar with relevance keywords and a default tag; edit changes any of those (or pauses a feed); remove deletes a feed and its inbox items. Ask what to do, then do it.
+description: Add, edit, or remove the RSS feeds discovery watches — all in the database, no code or config editing. Add validates a URL is a real feed and files it under a pillar with relevance keywords and a default tag; edit changes any of those (or pauses a feed); remove deletes a feed and its inbox items. Reads your current feeds first, then asks what to do and does it.
 type: skill
 ---
 
@@ -30,10 +30,14 @@ Writes **only** the `sources` table (`kind='rss'` feeds): `name`, `url`, `pillar
 (relevance terms), `default_tag`, `curated`, `enabled`. Never edits code, the voice card,
 pillars, register, or `identity.yaml`. One feed per action.
 
-## Step 1 — Ask what to do
+## Step 1 — Read the feeds, then ask what to do
 
-Ask whether the user wants to **add**, **edit**, **remove**, or **list** feeds, and route
-accordingly. If they already said (e.g. "add this URL"), skip the question.
+Run the list command below first, so you know the current feeds before saying anything.
+Open with a one-line summary of what exists (how many feeds, which pillars they cover,
+any paused), then ask whether the user wants to **add**, **edit**, **remove**, or **list**
+feeds, and route accordingly. If they already said (e.g. "add this URL"), skip the
+question — but still read the list first, so a duplicate or a conflict surfaces
+immediately instead of mid-action.
 
 ## List / pick a feed
 

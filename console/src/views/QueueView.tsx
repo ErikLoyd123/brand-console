@@ -880,12 +880,29 @@ export function QueueView() {
     setSurfaceKey((k) => k + 1)
     surfaceRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
+  // Everything the view already knows about the item rides into the session's first
+  // message, so the skill orients immediately instead of asking or re-deriving the
+  // basics. The id stays authoritative — the skill still reads the row for anything deeper.
+  function itemContext(item: IdeaQueueItem): string {
+    const platform = (item.platform as ContentPlatform | null) ?? 'linkedin'
+    const written = platform === 'web' ? item.article : item.draft
+    const reviewStatus =
+      platform === 'web' ? item.article?.reviewStatus : item.draft?.reviewStatus
+    return (
+      ` Known context — platform: ${platform}; silo: ${item.silo}; pillar: ${item.pillar}; ` +
+      `tone: ${item.tone ?? 'profile default'}; my take: ${item.seed ? `"${item.seed}"` : 'not given yet'}; ` +
+      `points: ${item.points.length > 0 ? item.points.map((p) => `"${p}"`).join(' | ') : 'none yet'}; ` +
+      `written content: ${written ? `present (review status: ${reviewStatus ?? 'pending'})` : 'none yet'}.`
+    )
+  }
   function developItem(item: IdeaQueueItem) {
     runQueue(
       'develop',
       `Develop the queue item whose id is ${item.id} (angle: "${item.proposedAngle}"). ` +
-        `Do not ask which item — use this one. Read it and its source, then draw out my take ` +
-        `and the 2-4 points.`,
+        `Do not ask which item — use this one. Read it and its source first, open by telling ` +
+        `me in a couple sentences what the item is and what the source says, then draw out ` +
+        `my take and the 2-4 points.` +
+        itemContext(item),
     )
   }
   function draftItem(item: IdeaQueueItem) {
@@ -897,10 +914,14 @@ export function QueueView() {
       hasContent
         ? `Revise the written ${kind} for the queue item whose id is ${item.id} (angle: ` +
             `"${item.proposedAngle}"). Do not ask which item — use this one. Load the voice ` +
-            `card, ask me what to change, and write the revision back.`
+            `card and read the ${kind} first, then open by telling me where it stands in a ` +
+            `few sentences (what it says, its review status, any standing check findings) ` +
+            `and ask what I want changed. Write the revision back, then stay for follow-ups.` +
+            itemContext(item)
         : `Write the full ${kind} for the queue item whose id is ${item.id} (angle: ` +
             `"${item.proposedAngle}"). Do not ask which item — use this one. Load the voice ` +
-            `card, then write it from my take and points and save it.`,
+            `card, then write it from my take and points and save it.` +
+            itemContext(item),
     )
   }
   function reviewItem(item: IdeaQueueItem) {
@@ -908,9 +929,12 @@ export function QueueView() {
     runQueue(
       'review',
       `Review the written ${kind} for the queue item whose id is ${item.id} (angle: ` +
-        `"${item.proposedAngle}"). Do not ask which item — use this one. Follow the ` +
-        `content-reviewer spec exactly, write the verdict, and report pass or the fix list. ` +
-        `Do not rewrite the content.`,
+        `"${item.proposedAngle}"). Do not ask which item — use this one. Open with a short ` +
+        `orientation before the verdict: what this ${kind} is, what it is trying to do (its ` +
+        `intent and platform), in plain words. Then follow the content-reviewer spec exactly, ` +
+        `write the verdict, and report pass or the fix list. Do not rewrite the content. ` +
+        `Afterward stay in the session and answer my questions about the verdict or the piece.` +
+        itemContext(item),
     )
   }
   // The generic top entry launches the queue skill in develop mode and lets it pick an item.

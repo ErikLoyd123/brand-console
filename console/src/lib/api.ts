@@ -564,6 +564,10 @@ export const api = {
   // button surfaces res.exportPath. NOT a browser download; the server writes the file.
   exportArticle: (id: string) =>
     http<Omit<Article, 'silo' | 'pillar'>>(`/articles/${id}/export`, { method: 'POST' }),
+  // Delete the article row and (when no draft references it) the queue idea it grew
+  // from; the raw spark capture stays in the sparks log. `ideaDeleted` reports which.
+  deleteArticle: (id: string) =>
+    http<{ ok: boolean; ideaDeleted: boolean }>(`/articles/${id}`, { method: 'DELETE' }),
 
   // Update a published post's permalink after the fact (PATCH /api/posts/:id).
   updatePost: (id: string, patch: { permalink?: string | null }) =>

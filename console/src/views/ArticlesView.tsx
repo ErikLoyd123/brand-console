@@ -48,10 +48,21 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
   )
 }
 
-function ArticleEditor({ article, onChanged }: { article: Article; onChanged: () => void }) {
+function ArticleEditor({
+  article,
+  onChanged,
+  onDeleted,
+}: {
+  article: Article
+  onChanged: () => void
+  onDeleted: () => void
+}) {
   const [sections, setSections] = useState<ArticleSection[]>(article.sections)
   const [busy, setBusy] = useState(false)
   const [note, setNote] = useState<string | null>(null)
+  // Two-click delete confirm, matching the Feeds screen: first click arms, second deletes.
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   const [title, setTitle] = useState(article.title)
   const [slug, setSlug] = useState(article.slug)
@@ -116,9 +127,20 @@ function ArticleEditor({ article, onChanged }: { article: Article; onChanged: ()
     setLengthTarget(String(article.lengthTarget ?? ''))
     setExportPath(article.exportPath)
     setNote(null)
+    setConfirmingDelete(false)
     // Clear any stale directive so a remount can't target the previously-open piece.
     setSurfaceInput(undefined)
   }, [article])
+
+  async function deleteArticle() {
+    setDeleting(true)
+    try {
+      await api.deleteArticle(article.id)
+      onDeleted()
+    } finally {
+      setDeleting(false)
+    }
+  }
 
   function patchSection(i: number, patch: Partial<ArticleSection>) {
     setSections((cur) => cur.map((s, idx) => (idx === i ? { ...s, ...patch } : s)))
@@ -432,6 +454,37 @@ function ArticleEditor({ article, onChanged }: { article: Article; onChanged: ()
             </span>
             <ChecksPanel findings={findings} loading={reviewing} />
           </div>
+
+          <div className="flex flex-col gap-2 rounded-lg bg-surface p-5 shadow-sm">
+            <span className="font-mono text-[11px] font-medium uppercase tracking-wide text-text-subtle">
+              Delete
+            </span>
+            {confirmingDelete ? (
+              <>
+                <p className="text-xs leading-relaxed text-text-muted">
+                  Removes this piece and the queue idea it grew from. The raw spark capture stays in
+                  the database log. This cannot be undone.
+                </p>
+                <div className="flex items-center gap-2">
+                  <Button size="sm" variant="destructive" disabled={deleting} onClick={deleteArticle}>
+                    <Trash2 className="size-3.5" /> {deleting ? 'Deleting…' : 'Yes, delete it'}
+                  </Button>
+                  <Button size="sm" variant="ghost" disabled={deleting} onClick={() => setConfirmingDelete(false)}>
+                    Cancel
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <Button
+                size="sm"
+                variant="outline"
+                className="self-start"
+                onClick={() => setConfirmingDelete(true)}
+              >
+                <Trash2 className="size-3.5" /> Delete article
+              </Button>
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -460,6 +513,14 @@ export function ArticlesView() {
   function refresh() {
     reload()
     if (selectedId) api.getArticle(selectedId).then(setCurrent)
+  }
+
+  // After a delete the piece is gone: drop the selection (the articles effect will pick
+  // the next piece, if any) and reload the list.
+  function handleDeleted() {
+    setSelectedId(null)
+    setCurrent(null)
+    reload()
   }
 
   return (
@@ -536,7 +597,7 @@ export function ArticlesView() {
             <SilosInfoLink className="self-start pl-1" />
           </div>
           {current ? (
-            <ArticleEditor article={current} onChanged={refresh} />
+            <ArticleEditor article={current} onChanged={refresh} onDeleted={handleDeleted} />
           ) : (
             <EmptyState title="Select a piece" hint="Pick one from the list to open its outline." />
           )}

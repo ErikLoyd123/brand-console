@@ -7,7 +7,7 @@
 import { Router } from 'express';
 import { and, desc, eq } from 'drizzle-orm';
 import { db } from '../../db/client';
-import { articles, ideaQueueItems } from '../../db/schema';
+import { articles, drafts, ideaQueueItems } from '../../db/schema';
 import { getActiveProfileId } from '../../profile/loader';
 import { updateArticle } from '../../core/update-article';
 import { exportArticle } from '../../core/export-article';
@@ -87,6 +87,33 @@ router.patch('/:id', (req, res) => {
   }
   const updated = db.select().from(articles).where(eq(articles.id, req.params.id)).get();
   res.json(updated);
+});
+
+// DELETE /api/articles/:id — remove a long-form piece for good. The article row (sections
+// and SEO fields ride on it) goes, and the queue idea it grew from goes with it unless a
+// draft still references that idea (FK enforcement; a web idea normally has none). The raw
+// spark capture, when there was one, stays in the sparks log — it is history, not pipeline
+// state. Returns whether the idea went too, so the console can say exactly what happened.
+router.delete('/:id', (req, res) => {
+  const profileId = getActiveProfileId();
+  const existing = db
+    .select()
+    .from(articles)
+    .where(and(eq(articles.id, req.params.id), eq(articles.profileId, profileId)))
+    .get();
+  if (!existing) return res.status(404).json({ error: 'not found' });
+  db.delete(articles).where(eq(articles.id, req.params.id)).run();
+  const dependentDrafts = db
+    .select({ id: drafts.id })
+    .from(drafts)
+    .where(eq(drafts.ideaId, existing.ideaId))
+    .all();
+  let ideaDeleted = false;
+  if (dependentDrafts.length === 0) {
+    db.delete(ideaQueueItems).where(eq(ideaQueueItems.id, existing.ideaId)).run();
+    ideaDeleted = true;
+  }
+  res.json({ ok: true, ideaDeleted });
 });
 
 // Export to markdown through the shared writer; returns the written path.

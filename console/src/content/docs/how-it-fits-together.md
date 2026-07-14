@@ -79,6 +79,8 @@ are stored in the local database.
   per-section editing is the plain floor beneath it. **Export as Markdown** writes a local file
   to `data/exports/` (with SEO frontmatter) and shows you its path — it does not publish. A piece
   starts from a **spark** or from **Discovery** by choosing the `web` platform and a piece kind.
+  **Delete article** (bottom of the editor, with a confirm) removes the piece *and* the queue
+  idea it grew from; the raw spark capture stays in the database log.
 - **The discovery inbox** — the **Discovery** screen: triage incoming feed items. Archive
   the noise, **save** a keeper for later (a low-friction, pre-queue shortlist — no take
   required), or move one into the queue two ways: **promote** it with a one-line take you type

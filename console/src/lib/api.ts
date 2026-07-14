@@ -548,10 +548,10 @@ export const api = {
   // draft content never lands in a URL/query string. Empty array means clean.
   // isProductAdjacent drives the cta-rule severity (fail for personal posts,
   // warn for product-adjacent posts carrying more than one ask).
-  postReview: (text: string, isProductAdjacent: boolean) =>
+  postReview: (text: string, isProductAdjacent: boolean, silo?: Silo) =>
     http<ReviewFinding[]>('/review', {
       method: 'POST',
-      body: JSON.stringify({ text, isProductAdjacent }),
+      body: JSON.stringify({ text, isProductAdjacent, silo }),
     }),
 
   // Frontend-only health probe. Uses a RAW fetch (NOT http()) and hits an existing

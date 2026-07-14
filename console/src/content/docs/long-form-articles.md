@@ -24,10 +24,11 @@ into its export. Nothing here publishes for you; the last step is a file you pla
    any fact you haven't supplied is a `[FILL: …]` marker, never a guess.
 3. **Review — on the queue card.** Read the piece in the card's content box. Edit it (and
    the meta description / slug) by hand, or **Write with AI** again to revise a part of it.
-   The `content-reviewer` agent is the gate: your voice card's rules, the piece kind's own
-   guidance (a comparison must actually compare; a how-to must leave you able to do the
-   thing), and a plain SEO sanity check (keyword in the title, the lead heading, and the
-   meta description; meta the right length). It reports; you decide.
+   **Review with AI** runs the `content-reviewer` gate: your voice card's rules, the piece
+   kind's own guidance (a comparison must actually compare; a how-to must leave you able to
+   do the thing), and a plain SEO sanity check (keyword in the title, the lead heading, and
+   the meta description; meta the right length). The verdict shows as the card's review
+   badge; any edit resets it to pending. It reports; you decide.
 4. **Publish = export.** When it's good to go, **Publish** on the card writes the piece to
    a local file at `data/exports/<profile>/<slug>.md` with an SEO frontmatter block —
    title, meta description, target keyword, slug, and the date — and moves it to the

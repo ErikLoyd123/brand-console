@@ -4,6 +4,8 @@ import {
   type Connection,
   type ContentPlatform,
   type IdeaQueueItem,
+  type ReviewFinding,
+  type ReviewStatus,
   type Silo,
 } from '../lib/api'
 import { useResource } from '../lib/useResource'
@@ -14,12 +16,24 @@ import { TagBadge } from '../components/TagBadge'
 import { SiloBadge } from '../components/SiloBadge'
 import { SilosInfoLink } from '../components/SilosInfoLink'
 import { PublishLinkedInModal } from '../components/PublishLinkedInModal'
+import { PostPreview } from '../components/PostPreview'
+import { ChecksPanel } from '../components/ChecksPanel'
 import { getConsoleSilos } from '../lib/silos'
 import { useCapabilityToggle } from '../lib/capabilities'
 import { cn } from '../lib/cn'
 import { PageHeader, ScoreChip, EmptyState } from '../components/kit'
 import { SkillSurface } from '../components/SkillSurface'
-import { ListChecks, Plus, Check, Copy, Send, Trash2, X, Sparkles } from 'lucide-react'
+import { ListChecks, Plus, Check, Copy, Send, ShieldCheck, Trash2, X, Sparkles } from 'lucide-react'
+
+// The review-gate verdict, rendered on each card's content header. Same vocabulary the
+// retired Drafts editor used; set by content-reviewer (via Review with AI or the terminal)
+// and reset to pending by any content write.
+const REVIEW: Record<ReviewStatus, { label: string; dot: string }> = {
+  pending: { label: 'Not yet reviewed', dot: 'bg-text-subtle' },
+  passed: { label: 'Passed the gate', dot: 'bg-success' },
+  failed: { label: 'Needs changes', dot: 'bg-error' },
+  edited: { label: 'Edited by you', dot: 'bg-info' },
+}
 
 // Ambient hints for the develop walk's working state (see SkillSurface.workingHints).
 const DEVELOP_HINTS = [
@@ -35,6 +49,14 @@ const DRAFT_HINTS = [
   'Reading the idea and its points',
   'Shaping hooks and body',
   'Saving the draft',
+]
+
+// Ambient hints for the review gate's working state.
+const REVIEW_HINTS = [
+  'Loading your voice card',
+  'Reading the piece',
+  'Running the mechanical checks',
+  'Judging it against the rules',
 ]
 
 // The filter bar spans every platform's roster, not just one — a Reddit-sourced idea
@@ -61,14 +83,18 @@ function ContentBlock({
   item,
   linkedinConn,
   publishEnabled,
+  profileName,
   onChanged,
   onRevise,
+  onReview,
 }: {
   item: IdeaQueueItem
   linkedinConn: Connection | null
   publishEnabled: boolean
+  profileName?: string
   onChanged: () => void
   onRevise: () => void
+  onReview: () => void
 }) {
   const platform: ContentPlatform = (item.platform as ContentPlatform | null) ?? 'linkedin'
   const isWeb = platform === 'web'
@@ -108,6 +134,25 @@ function ContentBlock({
   const assembled = draft
     ? [draft.hookOptions[0] ?? '', '', draft.body, '', draft.close].join('\n').trim()
     : ''
+
+  // Live mechanical voice checks over the text being edited (the same POST /api/review the
+  // Drafts editor ran), debounced, and only while the editor is open — a whole grid of
+  // cards must not hammer the API. Silo rides along so adjacency derives correctly.
+  const [findings, setFindings] = useState<ReviewFinding[]>([])
+  const [checking, setChecking] = useState(false)
+  const editedText = isWeb ? webBody : [hooks.split('\n')[0] ?? '', '', body, '', close].join('\n').trim()
+  useEffect(() => {
+    if (!editing) return
+    setChecking(true)
+    const t = setTimeout(() => {
+      api
+        .postReview(editedText, false, item.silo)
+        .then(setFindings)
+        .catch(() => setFindings([]))
+        .finally(() => setChecking(false))
+    }, 600)
+    return () => clearTimeout(t)
+  }, [editing, editedText, item.silo])
 
   async function saveContent() {
     setBusy(true)
@@ -166,14 +211,31 @@ function ContentBlock({
     )
   }
 
+  const reviewStatus = (isWeb ? article?.reviewStatus : draft?.reviewStatus) ?? 'pending'
+  const review = REVIEW[reviewStatus] ?? REVIEW.pending
+
   return (
     <div className="flex flex-col gap-2 rounded-lg bg-surface-nested px-4 py-3">
-      <div className="flex items-center justify-between">
-        <span className="font-mono text-[11px] font-medium uppercase tracking-wide text-text-subtle">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <span className="inline-flex items-center gap-2 font-mono text-[11px] font-medium uppercase tracking-wide text-text-subtle">
           {isWeb ? 'Article' : 'Post'}
           {isWeb && article?.exportPath ? ' · exported' : ''}
+          <span
+            className="inline-flex items-center gap-1.5 normal-case tracking-normal"
+            title="The content-reviewer gate's verdict. Run it with Review with AI; any edit resets it to pending."
+          >
+            <span className={cn('size-1.5 rounded-full', review.dot)} />
+            {review.label}
+          </span>
         </span>
         <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={onReview}
+            className="inline-flex items-center gap-1 text-xs text-primary-ink underline-offset-2 hover:underline"
+          >
+            <ShieldCheck className="size-3" /> Review with AI
+          </button>
           <button
             type="button"
             onClick={onRevise}
@@ -252,10 +314,29 @@ function ContentBlock({
             </Button>
           </div>
         )
-      ) : (
+      ) : isWeb ? (
         <p className="line-clamp-6 whitespace-pre-wrap text-sm leading-relaxed text-text-muted">
-          {isWeb ? article?.body : assembled}
+          {article?.body}
         </p>
+      ) : (
+        draft && (
+          // The real preview (LinkedIn chrome / Reddit title + markdown with the 300-char
+          // title cue), platform-resolved from the idea since the raw draft row carries none.
+          <PostPreview
+            draft={{ ...draft, platform: platform === 'reddit' ? 'reddit' : 'linkedin' }}
+            connection={platform === 'reddit' ? null : linkedinConn}
+            profileName={profileName}
+          />
+        )
+      )}
+
+      {editing && (
+        <div className="flex flex-col gap-1.5">
+          <span className="font-mono text-[11px] text-text-subtle">
+            Voice check — the active profile's voice card. Advisory; the review gate is the authority.
+          </span>
+          <ChecksPanel findings={findings} loading={checking} />
+        </div>
       )}
 
       <div className="mt-1 flex flex-wrap items-center gap-2">
@@ -273,11 +354,7 @@ function ContentBlock({
             <Copy className="size-3.5" /> Copy
           </Button>
         )}
-        {platform === 'linkedin' && linkedinConn?.connected === true && publishEnabled ? (
-          <Button size="sm" disabled={busy} onClick={() => setLinkedinModalOpen(true)}>
-            <Send className="size-3.5" /> Publish to LinkedIn
-          </Button>
-        ) : confirmingPublish ? (
+        {confirmingPublish ? (
           <div className="flex flex-wrap items-center gap-2">
             {!isWeb && (
               <Input
@@ -295,6 +372,17 @@ function ContentBlock({
               Cancel
             </Button>
           </div>
+        ) : platform === 'linkedin' && linkedinConn?.connected === true && publishEnabled ? (
+          <>
+            <Button size="sm" disabled={busy} onClick={() => setLinkedinModalOpen(true)}>
+              <Send className="size-3.5" /> Publish to LinkedIn
+            </Button>
+            {/* The manual path stays reachable while the API is connected: paste it
+                yourself, then record it here with the permalink. */}
+            <Button size="sm" variant="ghost" disabled={busy} onClick={() => setConfirmingPublish(true)}>
+              Mark published…
+            </Button>
+          </>
         ) : (
           <Button size="sm" disabled={busy} onClick={() => setConfirmingPublish(true)}>
             <Send className="size-3.5" /> Publish
@@ -336,17 +424,21 @@ function QueueRow({
   item,
   linkedinConn,
   publishEnabled,
+  profileName,
   onDone,
   onDevelop,
   onDraft,
+  onReview,
   highlight = false,
 }: {
   item: IdeaQueueItem
   linkedinConn: Connection | null
   publishEnabled: boolean
+  profileName?: string
   onDone: () => void
   onDevelop: () => void
   onDraft: () => void
+  onReview: () => void
   highlight?: boolean
 }) {
   const [seed, setSeed] = useState(item.seed ?? '')
@@ -688,8 +780,10 @@ function QueueRow({
             item={item}
             linkedinConn={linkedinConn}
             publishEnabled={publishEnabled}
+            profileName={profileName}
             onChanged={onDone}
             onRevise={onDraft}
+            onReview={onReview}
           />
           {!(item.platform === 'web' ? item.article?.body?.trim() : item.draft) && (
             <div className="flex items-center gap-3">
@@ -755,21 +849,24 @@ export function QueueView() {
   // Publish wiring shared by every card: the LinkedIn connection (for the API modal)
   // and whether direct publishing is enabled on the Connections page.
   const [linkedinConn, setLinkedinConn] = useState<Connection | null>(null)
+  const [profileName, setProfileName] = useState<string | undefined>(undefined)
   const publishEnabled = useCapabilityToggle('linkedin', 'publish')
   useEffect(() => {
     api.getConnections().then((rows) => {
       setLinkedinConn(rows.find((c) => c.platform === 'linkedin') ?? null)
     }).catch(() => setLinkedinConn(null))
+    // The post preview's author fallback when LinkedIn isn't connected.
+    api.getProfile().then((p) => setProfileName(p.name)).catch(() => setProfileName(undefined))
   }, [])
   // One `queue` skill drives this surface; the per-card buttons only vary the first-message
   // directive (develop vs draft) and the local `mode` (which sets the working hints and result
   // link). Each trigger bumps surfaceKey to remount the surface fresh on that item; the bump is
   // what lets the same card re-trigger.
-  const [mode, setMode] = useState<'develop' | 'draft'>('develop')
+  const [mode, setMode] = useState<'develop' | 'draft' | 'review'>('develop')
   const [surfaceInput, setSurfaceInput] = useState<string | undefined>(undefined)
   const [surfaceKey, setSurfaceKey] = useState(0)
   const surfaceRef = useRef<HTMLDivElement>(null)
-  function runQueue(nextMode: 'develop' | 'draft', input: string) {
+  function runQueue(nextMode: 'develop' | 'draft' | 'review', input: string) {
     setMode(nextMode)
     setSurfaceInput(input)
     setSurfaceKey((k) => k + 1)
@@ -796,6 +893,16 @@ export function QueueView() {
         : `Write the full ${kind} for the queue item whose id is ${item.id} (angle: ` +
             `"${item.proposedAngle}"). Do not ask which item — use this one. Load the voice ` +
             `card, then write it from my take and points and save it.`,
+    )
+  }
+  function reviewItem(item: IdeaQueueItem) {
+    const kind = item.platform === 'web' ? 'article' : 'post'
+    runQueue(
+      'review',
+      `Review the written ${kind} for the queue item whose id is ${item.id} (angle: ` +
+        `"${item.proposedAngle}"). Do not ask which item — use this one. Follow the ` +
+        `content-reviewer spec exactly, write the verdict, and report pass or the fix list. ` +
+        `Do not rewrite the content.`,
     )
   }
   // The generic top entry launches the queue skill in develop mode and lets it pick an item.
@@ -847,11 +954,13 @@ export function QueueView() {
           skillName="queue"
           aiOnly
           initialInput={surfaceInput}
-          workingHints={mode === 'draft' ? DRAFT_HINTS : DEVELOP_HINTS}
+          workingHints={
+            mode === 'draft' ? DRAFT_HINTS : mode === 'review' ? REVIEW_HINTS : DEVELOP_HINTS
+          }
           resultActions={
-            mode === 'draft'
-              ? { linkLabel: 'Show in Queue', resetLabel: 'Done' }
-              : { resetLabel: 'Develop another' }
+            mode === 'develop'
+              ? { resetLabel: 'Develop another' }
+              : { linkLabel: 'Show in Queue', resetLabel: 'Done' }
           }
           onProgress={reload}
           onResult={reload}
@@ -954,9 +1063,11 @@ export function QueueView() {
               item={item}
               linkedinConn={linkedinConn}
               publishEnabled={publishEnabled}
+              profileName={profileName}
               onDone={reload}
               onDevelop={() => developItem(item)}
               onDraft={() => draftItem(item)}
+              onReview={() => reviewItem(item)}
               highlight={item.id === highlightId}
             />
           ))}

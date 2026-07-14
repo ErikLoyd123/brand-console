@@ -79,7 +79,11 @@ are stored in the local database.
   **Develop with AI**; **Write with AI** has the `queue` skill write the full piece (a post's
   hook/body/close, or a web article as one markdown document) from your take + points, and
   turns into a revise once content exists. The card's **content box** is the plain floor —
-  edit the text (and, for web, the meta description and slug) directly. When it's good to go,
+  a real post preview (LinkedIn chrome, or Reddit title + body with the 300-char title cue),
+  an editor for the text (and, for web, the meta description and slug) with live voice checks
+  while you type, a **review badge** showing the gate's verdict, and **Review with AI**, which
+  runs the `content-reviewer` gate on the piece and writes the verdict back (any edit resets
+  it to pending). When it's good to go,
   **Publish** on the card: LinkedIn posts via the API behind a type-`PUBLISH` gate (or Copy +
   record it manually), Reddit is Copy + record (a manual copy-paste channel), and a web piece
   **exports the Markdown file** (with SEO frontmatter, to `data/exports/`) — export *is* the

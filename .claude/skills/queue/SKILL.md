@@ -1,6 +1,6 @@
 ---
 name: queue
-description: The Queue page's assistant — the review phase's workbench. Moves one idea forward — develop its points (the 2-4 beats), write the full piece (a post, or a long-form web article as one markdown document), or revise what's written — all in the loaded profile's voice. Reads the item, its source, and your voice card. Never invents an opinion, never publishes; the take, the review, and the Publish button are yours.
+description: The Queue page's assistant — the review phase's workbench. Moves one idea forward — develop its points (the 2-4 beats), write the full piece (a post, or a long-form web article as one markdown document), revise what's written, or run the review gate (the content-reviewer spec) on it — all in the loaded profile's voice. Reads the item, its source, and your voice card. Never invents an opinion, never publishes; the take and the Publish button are yours.
 type: skill
 ---
 
@@ -16,6 +16,7 @@ never publishes (the card's Publish button is your action, gated in the console)
 | develop / flesh out / "what are the points" | `.claude/skills/develop-procedure.md` | Draw out your take + 2-4 points on a queue item |
 | write / draft / "write the full post/article" | post idea → `.claude/skills/draft-procedure.md` · web idea → `.claude/skills/article-draft-procedure.md` | Write the full piece from your take + points and save it onto the idea's card |
 | revise / sharpen / "rewrite the intro" | `.claude/skills/revise-procedure.md` (its web variant for a web idea) | Refine the written piece in your voice, write it back |
+| review / "run the gate" / "is this good to publish" | `.claude/agents/content-reviewer.md` — follow it exactly as a procedure | Judge the written piece against the voice card (and, for web, the SEO checks), write the verdict, report pass or the fix list |
 
 **Lane detection:** read the item first. `platform = 'web'` (equivalently, a piece-kind
 `silo` — how-to / explainer / comparison / thought-piece / whitepaper) is the long-form lane:
@@ -30,9 +31,15 @@ web idea or article-draft a post.
    - **"Write with AI"** passes a queue-item id: when nothing is written yet it asks to write
      the full piece → **draft-procedure** or **article-draft-procedure** by lane; when content
      already exists it asks to revise → **revise-procedure**.
+   - **"Review with AI"** passes a queue-item id and asks to review its written content →
+     follow **`.claude/agents/content-reviewer.md`** exactly, as a procedure: the short-form
+     path for a post's draft, the long-form path (voice + kind judgment + SEO checks) for a
+     web idea's article. It writes the verdict (`reviewStatus`, and the article stage on a
+     pass) exactly as that file specifies, reports PASS or the fix list, and **never rewrites
+     the content** — the owner decides what to change.
    In words: "develop item N" / "what are the points" → develop; "write this" / "draft the
-   full post/article" → write; "revise/sharpen/tighten it" → revise. If the ask is ambiguous,
-   ask once which you mean.
+   full post/article" → write; "revise/sharpen/tighten it" → revise; "review it" / "run the
+   gate" → review. If the ask is ambiguous, ask once which you mean.
 
 2. **Load the matching procedure file and do exactly what it says.** Each procedure carries its
    own onboarding gate, its own read/interview/write steps, and its own CLI (`develop-idea.ts`,
@@ -47,6 +54,8 @@ web idea or article-draft a post.
 - One branch, one item, per run. Never silently do two.
 - Never invent the opinion, the beats, or a fact — the procedures spell this out; it binds here too.
 - Only ever writes through the procedures' CLIs (`develop-idea.ts` / `draft-store.ts` /
-  `update-draft.ts` / `update-article.ts`). Never the voice card, pillars, register, feeds, or code.
-- Never publish. Writing saves content onto the idea's queue card; the review gate
-  (`content-reviewer`) and the owner's Publish click are separate and unchanged.
+  `update-draft.ts` / `update-article.ts`) — plus, in the review branch only, the verdict
+  writes the content-reviewer spec itself prescribes (`reviewStatus`, article stage). Never
+  the voice card, pillars, register, feeds, or code, and never the content in a review.
+- Never publish. Writing saves content onto the idea's queue card; the owner's Publish
+  click is separate and unchanged.

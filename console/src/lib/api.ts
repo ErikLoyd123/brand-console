@@ -10,7 +10,7 @@ export interface PillarInfo {
   label: string
 }
 export type QueueTag = 'needs-your-take' | 'ready-to-draft'
-export type QueueStatus = 'new' | 'seeded' | 'drafting' | 'drafted' | 'archived'
+export type QueueStatus = 'new' | 'seeded' | 'drafting' | 'drafted' | 'published' | 'archived'
 export type ReviewStatus = 'pending' | 'passed' | 'failed' | 'edited'
 // A post's intent (its job), orthogonal to its pillar (its topic). Platform-keyed
 // roster, server-side source of truth in src/core/silos.ts. LinkedIn: conversation,
@@ -28,6 +28,22 @@ export type Silo =
 export type ContentPlatform = 'linkedin' | 'reddit' | 'web'
 
 // IDs are opaque nanoid strings across every table (phase 01 canonical).
+// A web idea's article, as the queue GET attaches it: the SEO fields plus the whole
+// piece as one markdown `body` (the server flattens legacy structured sections into it).
+export interface QueueArticle {
+  id: string
+  title: string
+  slug: string | null
+  targetKeyword: string
+  searchIntent: string
+  metaDescription: string
+  lengthTarget: number
+  body: string
+  stage: string
+  reviewStatus: ReviewStatus
+  exportPath: string | null
+}
+
 export interface IdeaQueueItem {
   id: string
   pillar: Pillar
@@ -42,6 +58,14 @@ export interface IdeaQueueItem {
   score: number
   status: QueueStatus
   createdAt: number
+  // The register the idea was shaped for (set by spark/discovery; null for older rows).
+  platform?: ContentPlatform | null
+  tone?: string | null
+  // The written content riding with the idea (queue GET join): the latest draft for a
+  // post idea, the article for a web idea. The queue is the review phase — a card shows,
+  // edits, and publishes this content directly.
+  draft?: Draft | null
+  article?: QueueArticle | null
 }
 
 export interface Source {
@@ -99,7 +123,8 @@ export interface Draft {
 
 export interface PublishedPost {
   id: string
-  draftId: string
+  // Null for web rows (an exported article has no draft; `id` is the article id).
+  draftId: string | null
   permalink: string | null
   publishedAt: number
   // Resolved server-side (post -> draft -> idea). Null when the chain is broken.
@@ -108,11 +133,16 @@ export interface PublishedPost {
   // Set only for posts published through the API (server returns linkedin_urn).
   // Null for manually-tracked posts — gates whether delete/comment/like apply.
   linkedinUrn?: string | null
-  // The channel the post went to (published_posts.platform, phase 03). Optional so
-  // legacy/raw rows without it read as LinkedIn.
-  platform?: PlatformKey
+  // The channel the piece went to. 'web' rows are exported long-form articles (the
+  // exported file is the web lane's shipped artifact). Optional so legacy/raw rows
+  // without it read as LinkedIn.
+  platform?: PlatformKey | 'web'
   // For Reddit rows, the stored destination the post went to (r/<sub> or u/<owner>).
   destination?: string | null
+  // Web rows only: the article's title and the exported file's local path. Null for
+  // post-lane rows.
+  title?: string | null
+  exportPath?: string | null
 }
 
 // A planned-post slot from the scheduled_posts table (GET /api/scheduled).
@@ -395,6 +425,8 @@ export interface ArticlePatch {
   searchIntent?: string
   metaDescription?: string
   lengthTarget?: number
+  /** The whole article as one markdown document — the editing surface. */
+  body?: string
   sections?: ArticleSection[]
   stage?: ArticleStage
 }
@@ -407,6 +439,16 @@ export const api = {
     http<IdeaQueueItem>(`/queue/${id}/seed`, {
       method: 'POST',
       body: JSON.stringify({ seed }),
+    }),
+
+  // The queue's approve action: ship the idea's content and move it to Published.
+  // web = export the markdown (export IS publish); reddit / manually-posted linkedin =
+  // record the publish (permalink optional). API-backed LinkedIn publishing stays on
+  // publishLinkedin (the type-PUBLISH-gated modal).
+  publishQueueItem: (id: string, permalink?: string) =>
+    http<{ ok: boolean; exportPath?: string }>(`/queue/${id}/publish`, {
+      method: 'POST',
+      body: JSON.stringify(permalink ? { permalink } : {}),
     }),
 
   // Set the developed points (the 2-4 beats) on a queue item — the console's hand editor.

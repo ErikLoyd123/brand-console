@@ -32,7 +32,7 @@ function Connector({ gate }: { gate?: boolean }) {
         <Flow />
         <span className="flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full bg-primary px-2 py-0.5 text-[10px] font-medium text-primary-fg shadow-sm">
           <UserRound className="size-3" />
-          your take
+          your review
         </span>
         <Flow />
       </div>
@@ -82,7 +82,9 @@ export function PipelineFlow({
           <div className="md:flex-1">
             <Stage stage={stage} onClick={() => onNavigate(stage.key)} />
           </div>
-          {i < stages.length - 1 && <Connector gate={stages[i + 1].key === 'drafts'} />}
+          {/* The gate sits before Published: the queue is where the owner's take and
+              review happen, and nothing ships without passing through them. */}
+          {i < stages.length - 1 && <Connector gate={stages[i + 1].key === 'published'} />}
         </Fragment>
       ))}
     </div>

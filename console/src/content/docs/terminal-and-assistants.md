@@ -13,12 +13,12 @@ no credentials pass through the console.
 
 Most pipeline pages carry their own assistant, scoped to that page's job:
 
-- **Spark** shapes a raw one-liner into a seeded queue item.
+- **Spark** shapes a raw one-liner into a seeded queue item, then writes the full piece
+  onto its queue card.
 - **Discovery**'s "Work up with AI" reads a found article, draws out your take and
-  points, and promotes it into the queue.
-- **Queue** develops an idea's points and drafts the post from your take.
-- **Drafts** revises an existing draft — hook, body, or close — in your voice.
-- **Articles** outlines a long-form piece and drafts or refines its sections.
+  points, promotes it into the queue, and writes the full piece.
+- **Queue** develops an idea's points, writes the full piece (post or long-form article)
+  from your take, and revises what's written, in your voice.
 - **Voice** hosts the setup interview and targeted voice-card edits.
 - **Feeds**, **Pillars**, and **Tags** each have an assistant for managing their own data.
 

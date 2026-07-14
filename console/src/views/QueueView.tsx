@@ -1,17 +1,25 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode, type CSSProperties } from 'react'
-import { api, type IdeaQueueItem, type Silo } from '../lib/api'
+import {
+  api,
+  type Connection,
+  type ContentPlatform,
+  type IdeaQueueItem,
+  type Silo,
+} from '../lib/api'
 import { useResource } from '../lib/useResource'
 import { Button } from '../components/ui/button'
-import { Textarea } from '../components/ui/input'
+import { Input, Textarea } from '../components/ui/input'
 import { PillarBadge } from '../components/PillarBadge'
 import { TagBadge } from '../components/TagBadge'
 import { SiloBadge } from '../components/SiloBadge'
 import { SilosInfoLink } from '../components/SilosInfoLink'
+import { PublishLinkedInModal } from '../components/PublishLinkedInModal'
 import { getConsoleSilos } from '../lib/silos'
+import { useCapabilityToggle } from '../lib/capabilities'
 import { cn } from '../lib/cn'
 import { PageHeader, ScoreChip, EmptyState } from '../components/kit'
 import { SkillSurface } from '../components/SkillSurface'
-import { ListChecks, Plus, Check, Trash2, X, Sparkles } from 'lucide-react'
+import { ListChecks, Plus, Check, Copy, Send, Trash2, X, Sparkles } from 'lucide-react'
 
 // Ambient hints for the develop walk's working state (see SkillSurface.workingHints).
 const DEVELOP_HINTS = [
@@ -45,14 +53,297 @@ const ALL_SILOS = (() => {
   })
 })()
 
+// The written piece riding with the idea — the queue is the review phase, so the card
+// shows the full content, lets the owner edit it by hand (the plain floor), and carries
+// the publish action for the idea's platform. Post ideas edit the latest draft
+// (hook/body/close); web ideas edit the article (one markdown body + SEO fields).
+function ContentBlock({
+  item,
+  linkedinConn,
+  publishEnabled,
+  onChanged,
+  onRevise,
+}: {
+  item: IdeaQueueItem
+  linkedinConn: Connection | null
+  publishEnabled: boolean
+  onChanged: () => void
+  onRevise: () => void
+}) {
+  const platform: ContentPlatform = (item.platform as ContentPlatform | null) ?? 'linkedin'
+  const isWeb = platform === 'web'
+  const draft = item.draft ?? null
+  const article = item.article ?? null
+
+  const [editing, setEditing] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [note, setNote] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  // Post fields
+  const [hooks, setHooks] = useState((draft?.hookOptions ?? []).join('\n'))
+  const [body, setBody] = useState(draft?.body ?? '')
+  const [close, setClose] = useState(draft?.close ?? '')
+  // Web fields
+  const [webBody, setWebBody] = useState(article?.body ?? '')
+  const [metaDescription, setMetaDescription] = useState(article?.metaDescription ?? '')
+  const [slug, setSlug] = useState(article?.slug ?? '')
+  // Publish confirm state
+  const [confirmingPublish, setConfirmingPublish] = useState(false)
+  const [permalink, setPermalink] = useState('')
+  const [linkedinModalOpen, setLinkedinModalOpen] = useState(false)
+
+  useEffect(() => {
+    setHooks((draft?.hookOptions ?? []).join('\n'))
+    setBody(draft?.body ?? '')
+    setClose(draft?.close ?? '')
+    setWebBody(article?.body ?? '')
+    setMetaDescription(article?.metaDescription ?? '')
+    setSlug(article?.slug ?? '')
+    setEditing(false)
+    setConfirmingPublish(false)
+    setError(null)
+  }, [item.id, draft?.id, article?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const hasContent = isWeb ? Boolean(article && article.body.trim() !== '') : Boolean(draft)
+  const assembled = draft
+    ? [draft.hookOptions[0] ?? '', '', draft.body, '', draft.close].join('\n').trim()
+    : ''
+
+  async function saveContent() {
+    setBusy(true)
+    setError(null)
+    try {
+      if (isWeb && article) {
+        await api.updateArticle(article.id, {
+          body: webBody,
+          metaDescription,
+          slug: slug.trim() === '' ? undefined : slug.trim(),
+        })
+      } else if (draft) {
+        await api.updateDraft(draft.id, {
+          hookOptions: hooks.split('\n').map((h) => h.trim()).filter((h) => h !== ''),
+          body,
+          close,
+        })
+      }
+      setEditing(false)
+      setNote('Saved')
+      setTimeout(() => setNote(null), 2000)
+      onChanged()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function publish() {
+    setBusy(true)
+    setError(null)
+    try {
+      const res = await api.publishQueueItem(item.id, permalink.trim() || undefined)
+      setNote(res.exportPath ? `Exported to ${res.exportPath}` : 'Published')
+      onChanged()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+      setConfirmingPublish(false)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  if (!hasContent) {
+    return (
+      <div className="flex flex-col gap-1.5 rounded-lg bg-surface-nested px-4 py-3">
+        <span className="font-mono text-[11px] font-medium uppercase tracking-wide text-text-subtle">
+          Content
+        </span>
+        <p className="text-sm text-text-muted">
+          Nothing written yet. <span className="font-medium">Write with AI</span> below drafts the
+          full {isWeb ? 'article' : 'post'} right here.
+        </p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex flex-col gap-2 rounded-lg bg-surface-nested px-4 py-3">
+      <div className="flex items-center justify-between">
+        <span className="font-mono text-[11px] font-medium uppercase tracking-wide text-text-subtle">
+          {isWeb ? 'Article' : 'Post'}
+          {isWeb && article?.exportPath ? ' · exported' : ''}
+        </span>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={onRevise}
+            className="inline-flex items-center gap-1 text-xs text-primary-ink underline-offset-2 hover:underline"
+          >
+            <Sparkles className="size-3" /> Revise with AI
+          </button>
+          <button
+            type="button"
+            onClick={() => setEditing((v) => !v)}
+            className="text-xs text-text-subtle underline-offset-2 hover:text-text hover:underline"
+          >
+            {editing ? 'Close editor' : 'Edit'}
+          </button>
+        </div>
+      </div>
+
+      {editing ? (
+        isWeb ? (
+          <div className="flex flex-col gap-2">
+            <Textarea
+              value={webBody}
+              onChange={(e) => setWebBody(e.target.value)}
+              className="min-h-64 bg-surface font-mono text-xs leading-relaxed"
+            />
+            <div className="grid gap-2 sm:grid-cols-2">
+              <label className="flex flex-col gap-1 text-[11px] font-medium uppercase tracking-wide text-text-subtle">
+                Meta description
+                <Textarea
+                  value={metaDescription}
+                  onChange={(e) => setMetaDescription(e.target.value)}
+                  className="min-h-0 bg-surface font-sans text-sm normal-case tracking-normal"
+                />
+              </label>
+              <label className="flex flex-col gap-1 text-[11px] font-medium uppercase tracking-wide text-text-subtle">
+                Slug
+                <Input
+                  value={slug}
+                  onChange={(e) => setSlug(e.target.value)}
+                  className="bg-surface font-sans text-sm normal-case tracking-normal"
+                />
+              </label>
+            </div>
+            <Button size="sm" className="self-start" disabled={busy} onClick={saveContent}>
+              <Check className="size-3.5" /> {busy ? 'Saving…' : 'Save content'}
+            </Button>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-2">
+            <label className="flex flex-col gap-1 text-[11px] font-medium uppercase tracking-wide text-text-subtle">
+              Hooks — one per line, first is the {platform === 'reddit' ? 'title' : 'opener'}
+              <Textarea
+                value={hooks}
+                onChange={(e) => setHooks(e.target.value)}
+                className="min-h-0 bg-surface font-sans text-sm normal-case tracking-normal"
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-[11px] font-medium uppercase tracking-wide text-text-subtle">
+              Body
+              <Textarea
+                value={body}
+                onChange={(e) => setBody(e.target.value)}
+                className="min-h-40 bg-surface font-sans text-sm normal-case tracking-normal"
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-[11px] font-medium uppercase tracking-wide text-text-subtle">
+              Close
+              <Textarea
+                value={close}
+                onChange={(e) => setClose(e.target.value)}
+                className="min-h-0 bg-surface font-sans text-sm normal-case tracking-normal"
+              />
+            </label>
+            <Button size="sm" className="self-start" disabled={busy} onClick={saveContent}>
+              <Check className="size-3.5" /> {busy ? 'Saving…' : 'Save content'}
+            </Button>
+          </div>
+        )
+      ) : (
+        <p className="line-clamp-6 whitespace-pre-wrap text-sm leading-relaxed text-text-muted">
+          {isWeb ? article?.body : assembled}
+        </p>
+      )}
+
+      <div className="mt-1 flex flex-wrap items-center gap-2">
+        {!isWeb && (
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={busy}
+            onClick={() => {
+              void navigator.clipboard.writeText(assembled)
+              setNote('Copied')
+              setTimeout(() => setNote(null), 2000)
+            }}
+          >
+            <Copy className="size-3.5" /> Copy
+          </Button>
+        )}
+        {platform === 'linkedin' && linkedinConn?.connected === true && publishEnabled ? (
+          <Button size="sm" disabled={busy} onClick={() => setLinkedinModalOpen(true)}>
+            <Send className="size-3.5" /> Publish to LinkedIn
+          </Button>
+        ) : confirmingPublish ? (
+          <div className="flex flex-wrap items-center gap-2">
+            {!isWeb && (
+              <Input
+                value={permalink}
+                onChange={(e) => setPermalink(e.target.value)}
+                placeholder="Permalink (optional)"
+                className="w-56"
+              />
+            )}
+            <Button size="sm" disabled={busy} onClick={publish}>
+              <Check className="size-3.5" />{' '}
+              {busy ? 'Publishing…' : isWeb ? 'Yes — export + publish' : 'Yes — mark published'}
+            </Button>
+            <Button size="sm" variant="ghost" disabled={busy} onClick={() => setConfirmingPublish(false)}>
+              Cancel
+            </Button>
+          </div>
+        ) : (
+          <Button size="sm" disabled={busy} onClick={() => setConfirmingPublish(true)}>
+            <Send className="size-3.5" /> Publish
+          </Button>
+        )}
+        <span className="text-xs text-text-subtle">
+          {isWeb
+            ? 'Publish writes the markdown file (SEO frontmatter) to data/exports/ and moves this to Published.'
+            : platform === 'reddit'
+              ? 'Reddit is copy-paste: Copy, post it there, then Publish to record it.'
+              : linkedinConn?.connected === true && publishEnabled
+                ? 'Posts via the LinkedIn API behind a typed confirm.'
+                : 'Copy, post it yourself, then Publish to record it.'}
+        </span>
+        {note && (
+          <span className="inline-flex items-center gap-1 text-xs text-success-fg">
+            <Check className="size-3.5" /> {note}
+          </span>
+        )}
+      </div>
+      {error && <p className="text-xs text-error-fg">{error}</p>}
+
+      {linkedinModalOpen && linkedinConn && draft && (
+        <PublishLinkedInModal
+          draft={draft}
+          connection={linkedinConn}
+          onClose={() => setLinkedinModalOpen(false)}
+          onPublished={() => {
+            setLinkedinModalOpen(false)
+            onChanged()
+          }}
+        />
+      )}
+    </div>
+  )
+}
+
 function QueueRow({
   item,
+  linkedinConn,
+  publishEnabled,
   onDone,
   onDevelop,
   onDraft,
   highlight = false,
 }: {
   item: IdeaQueueItem
+  linkedinConn: Connection | null
+  publishEnabled: boolean
   onDone: () => void
   onDevelop: () => void
   onDraft: () => void
@@ -393,16 +684,25 @@ function QueueRow({
               )}
             </div>
           )}
-          <div className="flex items-center gap-3">
-            <Button size="sm" onClick={onDraft}>
-              <Sparkles className="size-3.5" /> Draft with AI
-            </Button>
-            <span className="text-xs text-text-subtle">
-              {hasSeed
-                ? `Drafts from your take${(item.points ?? []).length ? ' and points' : ''}, in your voice.`
-                : 'Factual or curation — drafts from the angle.'}
-            </span>
-          </div>
+          <ContentBlock
+            item={item}
+            linkedinConn={linkedinConn}
+            publishEnabled={publishEnabled}
+            onChanged={onDone}
+            onRevise={onDraft}
+          />
+          {!(item.platform === 'web' ? item.article?.body?.trim() : item.draft) && (
+            <div className="flex items-center gap-3">
+              <Button size="sm" onClick={onDraft}>
+                <Sparkles className="size-3.5" /> Write with AI
+              </Button>
+              <span className="text-xs text-text-subtle">
+                {hasSeed
+                  ? `Writes the full ${item.platform === 'web' ? 'article' : 'post'} from your take${(item.points ?? []).length ? ' and points' : ''}, in your voice.`
+                  : 'Factual or curation — writes from the angle.'}
+              </span>
+            </div>
+          )}
         </div>
       )}
     </article>
@@ -448,8 +748,19 @@ function SiloFilterChip({
 
 export function QueueView() {
   const { data, loading, error, reload } = useResource(() => api.getQueue())
-  const items = data ?? []
+  // The queue is the review phase: shipped and archived ideas have left it.
+  const items = (data ?? []).filter((i) => i.status !== 'published' && i.status !== 'archived')
   const [filter, setFilter] = useState<Silo | 'all'>('all')
+  const [platformFilter, setPlatformFilter] = useState<ContentPlatform | 'all'>('all')
+  // Publish wiring shared by every card: the LinkedIn connection (for the API modal)
+  // and whether direct publishing is enabled on the Connections page.
+  const [linkedinConn, setLinkedinConn] = useState<Connection | null>(null)
+  const publishEnabled = useCapabilityToggle('linkedin', 'publish')
+  useEffect(() => {
+    api.getConnections().then((rows) => {
+      setLinkedinConn(rows.find((c) => c.platform === 'linkedin') ?? null)
+    }).catch(() => setLinkedinConn(null))
+  }, [])
   // One `queue` skill drives this surface; the per-card buttons only vary the first-message
   // directive (develop vs draft) and the local `mode` (which sets the working hints and result
   // link). Each trigger bumps surfaceKey to remount the surface fresh on that item; the bump is
@@ -473,11 +784,18 @@ export function QueueView() {
     )
   }
   function draftItem(item: IdeaQueueItem) {
+    const kind = item.platform === 'web' ? 'article' : 'post'
+    const hasContent =
+      item.platform === 'web' ? Boolean(item.article?.body?.trim()) : Boolean(item.draft)
     runQueue(
       'draft',
-      `Draft the queue item whose id is ${item.id} (angle: "${item.proposedAngle}"). ` +
-        `Do not ask which item — use this one. Load the voice card, then draft it from my take ` +
-        `and points, and save the draft.`,
+      hasContent
+        ? `Revise the written ${kind} for the queue item whose id is ${item.id} (angle: ` +
+            `"${item.proposedAngle}"). Do not ask which item — use this one. Load the voice ` +
+            `card, ask me what to change, and write the revision back.`
+        : `Write the full ${kind} for the queue item whose id is ${item.id} (angle: ` +
+            `"${item.proposedAngle}"). Do not ask which item — use this one. Load the voice ` +
+            `card, then write it from my take and points and save it.`,
     )
   }
   // The generic top entry launches the queue skill in develop mode and lets it pick an item.
@@ -494,15 +812,22 @@ export function QueueView() {
   // that already carries a seed has been handled. This matches how the Overview
   // counts them (tag needs-your-take AND no seed yet), so the two screens agree.
   const needsTake = items.filter((i) => i.tag === 'needs-your-take' && !i.seed).length
-  const countBySilo = (silo: Silo) => items.filter((i) => i.silo === silo).length
-  const shown = filter === 'all' ? items : items.filter((i) => i.silo === filter)
+  // Platform slicing: an idea with no platform column (older rows) reads as LinkedIn,
+  // matching how drafting resolves it.
+  const platformOf = (i: IdeaQueueItem): ContentPlatform =>
+    (i.platform as ContentPlatform | null) ?? 'linkedin'
+  const byPlatform =
+    platformFilter === 'all' ? items : items.filter((i) => platformOf(i) === platformFilter)
+  const countBySilo = (silo: Silo) => byPlatform.filter((i) => i.silo === silo).length
+  const countByPlatform = (p: ContentPlatform) => items.filter((i) => platformOf(i) === p).length
+  const shown = filter === 'all' ? byPlatform : byPlatform.filter((i) => i.silo === filter)
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        eyebrow="Pipeline · Triage"
+        eyebrow="Pipeline · Review"
         title="Queue"
-        description="Ideas you promoted or captured, best-first by score. Add your take and develop the points — the beats you'd make — then send to draft."
+        description="Every idea with its full written piece — the review phase. Read it, edit it by hand or revise with AI, then Publish: LinkedIn posts via the API, Reddit by copy-paste, long-form web pieces as an exported Markdown file. Published items move to the Published screen."
         actions={
           <span className="font-mono text-xs tabular-nums text-text-subtle">
             {items.length} ideas · {needsTake} need your take
@@ -525,7 +850,7 @@ export function QueueView() {
           workingHints={mode === 'draft' ? DRAFT_HINTS : DEVELOP_HINTS}
           resultActions={
             mode === 'draft'
-              ? { linkLabel: 'Open in Drafts', resetLabel: 'Done' }
+              ? { linkLabel: 'Show in Queue', resetLabel: 'Done' }
               : { resetLabel: 'Develop another' }
           }
           onProgress={reload}
@@ -558,9 +883,27 @@ export function QueueView() {
 
       {items.length > 0 && (
         <div className="flex flex-wrap items-center gap-1.5">
+          {(
+            [
+              { key: 'all' as const, label: 'All lanes' },
+              { key: 'linkedin' as const, label: 'LinkedIn' },
+              { key: 'reddit' as const, label: 'Reddit' },
+              { key: 'web' as const, label: 'Web (long-form)' },
+            ]
+          ).map((p) => (
+            <SiloFilterChip
+              key={p.key}
+              label={p.label}
+              count={p.key === 'all' ? items.length : countByPlatform(p.key)}
+              active={platformFilter === p.key}
+              activeStyle={{ backgroundColor: 'var(--color-selected-strong)', color: 'var(--color-selected-strong-fg)' }}
+              onClick={() => setPlatformFilter(p.key)}
+            />
+          ))}
+          <span className="mx-1 h-4 w-px bg-border" />
           <SiloFilterChip
             label="All"
-            count={items.length}
+            count={byPlatform.length}
             active={filter === 'all'}
             activeStyle={{ backgroundColor: 'var(--color-selected-strong)', color: 'var(--color-selected-strong-fg)' }}
             onClick={() => setFilter('all')}
@@ -609,6 +952,8 @@ export function QueueView() {
             <QueueRow
               key={item.id}
               item={item}
+              linkedinConn={linkedinConn}
+              publishEnabled={publishEnabled}
               onDone={reload}
               onDevelop={() => developItem(item)}
               onDraft={() => draftItem(item)}

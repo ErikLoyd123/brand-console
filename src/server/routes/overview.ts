@@ -69,15 +69,14 @@ router.get('/overview', (_req, res) => {
     .where(and(eq(feedItems.profileId, pid), eq(feedItems.triageState, 'inbox')))
     .all();
 
-  // Queue funnel count excludes archived and drafted ideas (retired mock rule).
+  // The queue is the review phase: everything not yet shipped or archived lives there.
   const queueCount = ideaRows.filter(
-    (i) => i.status !== 'archived' && i.status !== 'drafted',
+    (i) => i.status !== 'archived' && i.status !== 'published',
   ).length;
 
   const funnel = [
     { key: 'discovery', label: 'Discovery', count: inbox.length },
     { key: 'queue', label: 'Queue', count: queueCount },
-    { key: 'drafts', label: 'Drafts', count: draftRows.length },
     { key: 'published', label: 'Published', count: posts.length },
   ];
 

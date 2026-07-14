@@ -1,9 +1,9 @@
 # Revise procedure (shared reference)
 
 This is a shared, **non-invokable** procedure — the single written source for revising an
-existing draft in the loaded profile's voice. It is referenced by **both** the `queue` and
-`drafts` page skills (each can revise a draft), not run directly as a button. The page skill
-routes here when the request is to revise/sharpen a draft.
+existing piece in the loaded profile's voice. It is referenced by the `queue` page skill
+(the Queue is the review phase, so revision lives there), not run directly as a button. The
+page skill routes here when the request is to revise/sharpen written content.
 
 Work a **draft** into shape with the owner — the hook options, the body, the close, the media
 suggestion — in the loaded profile's voice, and write the changes back. This is the AI surface
@@ -99,9 +99,28 @@ authority. An unknown id is surfaced verbatim — fix and retry.
 Report plainly what you changed — which parts, and the gist of the revision — so the owner sees
 it at a glance. This is the console's result card: one clear, human sentence.
 
+## Web (long-form) variant
+
+When the idea under revision is a **web piece** (its `silo` is a piece kind / `platform` is
+`web`), there is no draft row — the content is the article's `body`, one markdown document.
+The same discipline applies, with these substitutions:
+
+- **Read** the article and its idea (the lookup in
+  `.claude/skills/article-draft-procedure.md` step 1) instead of the draft.
+- **Refine only what the owner asked** — a named section (a `##` block of the body), the
+  opening, the close, the meta description — and preserve every untouched part of the
+  document byte-for-byte.
+- **Write back** through `npx tsx src/articles/update-article.ts <payload.json>` with
+  `{ "id": "<articleId>", "body": "<the full revised document>" }` (plus
+  `metaDescription`/`slug`/`title` only if asked). A body write resets the article's
+  `reviewStatus` to `pending`, exactly like a draft revision.
+- **Report** what changed the same way. The piece stays on its Queue card for review;
+  Publish/export remains the owner's action.
+
 ## Rules
 
-- **Only the drafts table** (`body`, `hookOptions`, `close`, `mediaSuggestion`). Read the idea
+- **Only the drafts table** (`body`, `hookOptions`, `close`, `mediaSuggestion`) — or, for
+  the web variant, only the articles row via `update-article`. Read the idea
   and the voice card for context; never write them, the queue, or code.
 - **Never invent or shift the opinion.** The take and points are the owner's; you sharpen the
   expression, never the position. If a revision would change what the post argues, stop and ask.

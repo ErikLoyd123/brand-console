@@ -4,37 +4,35 @@ category: Reference
 order: 4
 ---
 
-The **Articles** screen is the long-form lane. It rides the same spine as your short posts —
-a topic pillar, an intent, and your voice — but a long piece is too big for a single
-hook/body/close, so it gets its own workbench: an outline of sections, SEO fields, and a
-Markdown export. Nothing here publishes for you; the last step is a file you place yourself.
+Long-form web pieces ride the same spine as your short posts — a topic pillar, an intent,
+and your voice — and they live in the same place: the **Queue**, which is the review phase
+for every lane. There is no separate Articles screen; a web piece is a queue card whose
+content is the whole article as **one markdown document**, plus the SEO fields that ride
+into its export. Nothing here publishes for you; the last step is a file you place yourself.
 
 ## How a piece flows
 
-A long-form piece moves through the same shape as a short post, one size up:
-
-1. **Intake.** You start a piece the same two ways you start any post — a **spark** (your own
-   idea) or a **Discovery** item (something you read) — and choose the **`web`** platform and a
-   **piece kind** (how-to, explainer, comparison, thought piece, whitepaper). You also type the
-   one **target keyword** and who's searching for it (**search intent**). That creates the queue
-   item and the article together.
-2. **Outline.** Build the argument's shape: an ordered list of **sections**, each with a heading
-   and a one-line **intent** (what that section must accomplish). Do it by hand, or use **Develop
-   the outline with AI** — it reads your idea and the piece kind's guidance and drafts the
-   headings and intents for you to approve. Bodies stay empty at this stage.
-3. **Sectioned draft.** Write each section's body in your voice — **Draft a section with AI**
-   writes them one at a time from each section's intent, so a long piece never has to land in a
-   single generation. This is also where the **meta description** gets filled. Loop back with
-   **Refine with AI** to sharpen any one section.
-4. **Review.** The same voice gate that reads your short posts reads this one, against your active
-   profile's voice card. Long-form adds two checks on top: the piece kind's own guidance (a
-   comparison must actually compare; a how-to must leave you able to do the thing) and a plain SEO
-   sanity check (is the keyword in the title, the lead heading, and the meta description, and is
-   the meta the right length). It reports; you decide.
-5. **Export.** **Export as Markdown** writes the piece to a local file at
-   `data/exports/<profile>/<slug>.md` with an SEO frontmatter block — title, meta description,
-   target keyword, slug, and the date — and shows you the path. Re-exporting overwrites the same
-   file. Publishing is a **manual Markdown drop**: take that file to whatever site or CMS you use.
+1. **Intake.** You start a piece the same two ways you start any post — a **spark** (pick
+   **Web** on the Spark form, and a **piece kind** if you already know it) or a
+   **Discovery** item (work it up and choose the `web` lane). The interview draws out your
+   take and captures the two SEO inputs — the one **target keyword** and who's searching
+   for it (**search intent**) — and saves everything before any writing starts.
+2. **The write.** The same AI run then writes the full article: one light check on the
+   section structure, then the whole piece as a single markdown document (headings
+   inline), with the **meta description** and **slug** filled. It lands on the idea's
+   Queue card. Your take is the spine throughout — the AI never invents your argument, and
+   any fact you haven't supplied is a `[FILL: …]` marker, never a guess.
+3. **Review — on the queue card.** Read the piece in the card's content box. Edit it (and
+   the meta description / slug) by hand, or **Write with AI** again to revise a part of it.
+   The `content-reviewer` agent is the gate: your voice card's rules, the piece kind's own
+   guidance (a comparison must actually compare; a how-to must leave you able to do the
+   thing), and a plain SEO sanity check (keyword in the title, the lead heading, and the
+   meta description; meta the right length). It reports; you decide.
+4. **Publish = export.** When it's good to go, **Publish** on the card writes the piece to
+   a local file at `data/exports/<profile>/<slug>.md` with an SEO frontmatter block —
+   title, meta description, target keyword, slug, and the date — and moves it to the
+   **Published** screen, where the row shows the file's path. The file is the shipped
+   artifact: take it to whatever site or CMS you use.
 
 ## What each field is for
 
@@ -43,12 +41,12 @@ A long-form piece moves through the same shape as a short post, one size up:
 | **Title** | The piece's working title; becomes the `# H1` and frontmatter `title` | Intake, editable throughout |
 | **Target keyword** | The one phrase the piece targets | Intake |
 | **Search intent** | Who's searching and why, in your words | Intake |
-| **Meta description** | The search-result snippet; frontmatter `description` | Draft |
-| **Slug** | The URL slug and export filename | Outline |
-| **Length target** | A target word count — guidance, never a gate | Defaulted per kind; you override |
-| **Stage** | Where the piece is (outlining → exported); advance it by hand or let a skill move it | Throughout |
-| **Review status** | Whether it passed the voice gate — the same badge your drafts carry | Set by review, or by your edits |
+| **Body** | The whole article, one markdown document with `##` headings inline | The write; edit any time on the card |
+| **Meta description** | The search-result snippet; frontmatter `description` | The write; editable on the card |
+| **Slug** | The URL slug and export filename | The write; editable on the card |
+| **Review status** | Whether it passed the voice + SEO gate — the same badge posts carry | Set by review, or reset by your edits |
 
-Everything on this screen belongs to the **active profile**. Switching profiles in the sidebar
-re-scopes the Articles list to that brand's pieces, and each brand's exports land in its own
-folder, so two brands never collide on a shared slug.
+Everything belongs to the **active profile**. Switching profiles in the sidebar re-scopes
+the Queue to that brand's pieces, and each brand's exports land in its own folder, so two
+brands never collide on a shared slug. Deleting the idea from its queue card removes the
+article with it — unless the piece was already exported; shipped history stays.

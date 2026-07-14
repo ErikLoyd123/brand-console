@@ -3,7 +3,6 @@ import {
   LayoutDashboard,
   Inbox,
   ListChecks,
-  PenLine,
   Send,
   Calendar,
   Layers,
@@ -17,7 +16,6 @@ import {
   Plug2,
   Code,
   BookText,
-  FileText,
   TriangleAlert,
 } from 'lucide-react'
 import { AppShell, type NavGroup } from './components/AppShell'
@@ -27,8 +25,6 @@ import { QueueView } from './views/QueueView'
 import { SparkView } from './views/SparkView'
 import { FeedsView } from './views/FeedsView'
 import { DiscoveryView } from './views/DiscoveryView'
-import { DraftsView } from './views/DraftsView'
-import { ArticlesView } from './views/ArticlesView'
 import { PublishedView } from './views/PublishedView'
 import { CalendarView } from './views/CalendarView'
 import { PillarsView } from './views/PillarsView'
@@ -48,8 +44,6 @@ const NAV_KEYS = [
   'overview',
   'discovery',
   'queue',
-  'drafts',
-  'articles',
   'published',
   'calendar',
   'pillars',
@@ -169,15 +163,12 @@ export default function App() {
     Promise.all([
       api.getInbox({ state: 'inbox' }).catch(() => []),
       api.getQueue().catch(() => []),
-      api.getDrafts().catch(() => []),
-      api.getArticles().catch(() => []),
       api.getPosts().catch(() => []),
-    ]).then(([inbox, queue, drafts, articles, posts]) => {
+    ]).then(([inbox, queue, posts]) => {
       setCounts({
         discovery: inbox.length,
-        queue: queue.length,
-        drafts: drafts.length,
-        articles: articles.length,
+        // The queue count is the review workload: shipped/archived ideas have left it.
+        queue: queue.filter((i) => i.status !== 'published' && i.status !== 'archived').length,
         published: posts.length,
       })
     })
@@ -191,8 +182,6 @@ export default function App() {
           { key: 'overview', label: 'Overview', icon: <LayoutDashboard /> },
           { key: 'discovery', label: 'Discovery', icon: <Inbox />, count: counts.discovery },
           { key: 'queue', label: 'Queue', icon: <ListChecks />, count: counts.queue },
-          { key: 'drafts', label: 'Drafts', icon: <PenLine />, count: counts.drafts },
-          { key: 'articles', label: 'Articles', icon: <FileText />, count: counts.articles },
           { key: 'published', label: 'Published', icon: <Send />, count: counts.published },
         ],
       },
@@ -254,8 +243,6 @@ export default function App() {
       {active === 'overview' && <OverviewView onNavigate={navigate} counts={counts} />}
       {active === 'discovery' && <DiscoveryView />}
       {active === 'queue' && <QueueView />}
-      {active === 'drafts' && <DraftsView />}
-      {active === 'articles' && <ArticlesView />}
       {active === 'published' && <PublishedView />}
       {active === 'calendar' && <CalendarView />}
       {active === 'pillars' && <PillarsView />}

@@ -3,9 +3,13 @@ import { and, desc, eq, inArray } from 'drizzle-orm';
 import { db } from '../../db/client';
 import { articles, drafts, ideaQueueItems, publishedPosts, scheduledPosts } from '../../db/schema';
 import { getActiveProfileId } from '../../profile/loader';
+import { exportArticle } from '../../core/export-article';
 
 const router = Router();
 
+// The queue is the review phase: each idea rides with its written content — the latest
+// draft for a post idea, the article (single markdown body + SEO fields) for a web idea —
+// so the workbench can show, edit, and publish the full piece from one card.
 router.get('/', (req, res) => {
   const pid = getActiveProfileId();
   const status = req.query.status as string | undefined;
@@ -18,7 +22,58 @@ router.get('/', (req, res) => {
     .where(where)
     .orderBy(desc(ideaQueueItems.score))
     .all();
-  res.json(rows);
+
+  const ideaIds = rows.map((r) => r.id);
+  const draftsByIdea = new Map<string, (typeof drafts.$inferSelect)[]>();
+  const articleByIdea = new Map<string, typeof articles.$inferSelect>();
+  if (ideaIds.length > 0) {
+    for (const d of db
+      .select()
+      .from(drafts)
+      .where(inArray(drafts.ideaId, ideaIds))
+      .orderBy(desc(drafts.createdAt))
+      .all()) {
+      const list = draftsByIdea.get(d.ideaId) ?? [];
+      list.push(d);
+      draftsByIdea.set(d.ideaId, list);
+    }
+    for (const a of db.select().from(articles).where(inArray(articles.ideaId, ideaIds)).all()) {
+      articleByIdea.set(a.ideaId, a);
+    }
+  }
+
+  res.json(
+    rows.map((idea) => {
+      const ideaDrafts = draftsByIdea.get(idea.id) ?? [];
+      const article = articleByIdea.get(idea.id);
+      return {
+        ...idea,
+        // Latest draft first; the workbench edits draft[0].
+        draft: ideaDrafts[0] ?? null,
+        article: article
+          ? {
+              id: article.id,
+              title: article.title,
+              slug: article.slug,
+              targetKeyword: article.targetKeyword,
+              searchIntent: article.searchIntent,
+              metaDescription: article.metaDescription,
+              lengthTarget: article.lengthTarget,
+              body:
+                article.body.trim() !== ''
+                  ? article.body
+                  : // Legacy structured rows: flatten so the workbench always sees one document.
+                    article.sections
+                      .map((s) => `## ${s.heading}\n\n${s.body}`.trim())
+                      .join('\n\n'),
+              stage: article.stage,
+              reviewStatus: article.reviewStatus,
+              exportPath: article.exportPath,
+            }
+          : null,
+      };
+    }),
+  );
 });
 
 router.post('/:id/seed', (req, res) => {
@@ -48,6 +103,63 @@ router.post('/:id/points', (req, res) => {
     .all();
   if (updated.length === 0) return res.status(404).json({ error: 'not found' });
   res.json(updated[0]);
+});
+
+// POST /api/queue/:id/publish — the queue's approve action: the idea's content is good to
+// go, ship it and move the idea to Published. Per platform: `web` exports the markdown file
+// (export IS publish for the long-form lane — the file is the shipped artifact); `reddit`
+// and manually-posted LinkedIn record a published_posts row (with the pasted permalink when
+// given). API-backed LinkedIn publishing stays on its own type-PUBLISH-gated route
+// (/api/publish/linkedin), which flips the idea the same way after a real post. Either
+// path sets the idea's status to 'published', which removes it from the queue view.
+router.post('/:id/publish', (req, res) => {
+  const pid = getActiveProfileId();
+  const idea = db
+    .select()
+    .from(ideaQueueItems)
+    .where(and(eq(ideaQueueItems.id, req.params.id), eq(ideaQueueItems.profileId, pid)))
+    .get();
+  if (!idea) return res.status(404).json({ error: 'not found' });
+
+  if (idea.platform === 'web') {
+    const article = db.select().from(articles).where(eq(articles.ideaId, idea.id)).get();
+    if (!article) return res.status(409).json({ error: 'no article for this idea yet' });
+    if (article.slug === null || article.slug.trim() === '') {
+      return res.status(409).json({ error: 'article has no slug yet — set one before publishing' });
+    }
+    if (article.body.trim() === '' && article.sections.length === 0) {
+      return res.status(409).json({ error: 'article has no body yet — write it before publishing' });
+    }
+    const result = exportArticle(article.id);
+    if (!result.ok) return res.status(400).json({ error: result.error });
+    db.update(ideaQueueItems)
+      .set({ status: 'published' })
+      .where(eq(ideaQueueItems.id, idea.id))
+      .run();
+    return res.json({ ok: true, exportPath: result.path });
+  }
+
+  // Post lanes (reddit / manually-posted linkedin): record the publish against the latest draft.
+  const draft = db
+    .select()
+    .from(drafts)
+    .where(eq(drafts.ideaId, idea.id))
+    .orderBy(desc(drafts.createdAt))
+    .get();
+  if (!draft) return res.status(409).json({ error: 'no draft for this idea yet' });
+  const permalink = typeof req.body?.permalink === 'string' && req.body.permalink.trim() !== ''
+    ? req.body.permalink.trim()
+    : null;
+  const inserted = db
+    .insert(publishedPosts)
+    .values({ draftId: draft.id, permalink, platform: idea.platform ?? 'linkedin' })
+    .returning()
+    .all();
+  db.update(ideaQueueItems)
+    .set({ status: 'published' })
+    .where(eq(ideaQueueItems.id, idea.id))
+    .run();
+  res.status(201).json({ ok: true, post: inserted[0] });
 });
 
 // DELETE /api/queue/:id — remove an idea and everything downstream of it: its drafts
@@ -81,6 +193,16 @@ router.delete('/:id', (req, res) => {
         .status(409)
         .json({ error: 'a draft of this idea was published — it is part of the Published archive' });
     }
+  }
+  const exportedArticle = db
+    .select({ id: articles.id, stage: articles.stage })
+    .from(articles)
+    .where(eq(articles.ideaId, idea.id))
+    .get();
+  if (exportedArticle && exportedArticle.stage === 'exported') {
+    return res
+      .status(409)
+      .json({ error: 'this piece was published (exported) — it is part of the Published archive' });
   }
 
   let articleDeleted = false;

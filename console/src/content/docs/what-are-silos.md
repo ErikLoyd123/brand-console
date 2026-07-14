@@ -16,7 +16,7 @@ curate). You pick one per post, but you don't add or remove them (see "Why the s
 fixed" below).
 
 Long-form has its own roster on the same axis: the `web` platform's **piece kinds**
-(how-to, explainer, comparison, thought piece, whitepaper) are the silos of the Articles
+(how-to, explainer, comparison, thought piece, whitepaper) are the silos of the long-form web
 lane. They're covered in **Long-form articles** in this Docs section.
 
 ## The LinkedIn intents

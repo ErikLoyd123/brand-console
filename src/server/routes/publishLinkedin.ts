@@ -1,7 +1,7 @@
 import { Router, type Response as ExpressResponse } from 'express';
 import { and, eq } from 'drizzle-orm';
 import { db } from '../../db/client';
-import { drafts, linkedinTokens, publishedPosts } from '../../db/schema';
+import { drafts, ideaQueueItems, linkedinTokens, publishedPosts } from '../../db/schema';
 import { getActiveProfileId } from '../../profile/loader';
 import { linkedinConfigured } from '../env';
 
@@ -221,6 +221,12 @@ router.post('/linkedin', async (req, res) => {
     })
     .returning()
     .all();
+
+  // The queue is the review phase: a shipped idea leaves it.
+  db.update(ideaQueueItems)
+    .set({ status: 'published' })
+    .where(eq(ideaQueueItems.id, draft.ideaId))
+    .run();
 
   res.status(201).json(inserted[0]);
 });

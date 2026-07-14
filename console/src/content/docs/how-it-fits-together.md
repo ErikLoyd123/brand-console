@@ -50,12 +50,12 @@ files; some now have console editors too.
   These are product structure; they change only in code, and the same menus ship to
   everyone.
 - **The skills and agents** — the `.claude/skills/` and `.claude/agents/` definitions.
-  There is **one skill per console page** — `spark`, `discovery`, `queue`, `drafts`, `articles`,
+  There is **one skill per console page** — `spark`, `discovery`, `queue`,
   `feeds`, `pillars`, `register`, `voice` — plus `setup`, the content
   reviewer, and the shared references skills pull from (`voice-card`, `content-doctrine`,
-  `onboarding-gate`, the `develop`/`draft`/`revise` procedure files the `queue` and `drafts`
-  skills share, and the `outline`/`section-draft`/`section-revise` procedure files the `articles`
-  skill dispatches to). The console turns the page skills into buttons and can run them, but it
+  `onboarding-gate`, and the procedure files the page skills dispatch to:
+  `develop`/`draft`/`revise` for posts and `article-draft` for long-form web pieces).
+  The console turns the page skills into buttons and can run them, but it
   does not edit them.
 
 ## Console-based — you create and edit it here, it lives in the database
@@ -66,43 +66,30 @@ are stored in the local database.
 - **Tags** — the **Tags** screen fully manages them: create, rename, recolor, and delete by
   hand, or **add with AI** (the `tags` skill dedups a new tag against near-duplicates and can
   suggest tags drawn from your untagged items — add-only; rename/recolor/delete stay here).
-- **Drafts** — the **Drafts** editor: edit the hook/body/close by hand or **Revise with AI**
-  (the `drafts` skill sharpens them in your voice and writes them back), see the live
-  voice-check findings, then **publish to LinkedIn** (a real API post behind a type-`PUBLISH` gate)
-  or **Copy to publish** — which copies the finished text out for you to paste anywhere. Reddit
-  is copy-paste only: draft it here, copy it, and post it on Reddit by hand. **Delete** (in the
-  action bar, with a confirm) removes a draft and returns its idea to the queue as seeded; a
-  draft that was published can't be deleted — it's the Published archive's record.
-- **Articles (long-form)** — the **Articles** editor is the long-form workbench: an ordered
-  **outline** of sections (each a heading, a one-line intent, and a body), the **SEO fields**
-  (target keyword, search intent, meta description, slug, length target), a **stage** you can
-  advance by hand, and the same live **voice check** the Drafts editor runs. **Develop the
-  outline / Draft a section / Refine with AI** run the `articles` skill in your voice; the
-  per-section editing is the plain floor beneath it. **Export as Markdown** writes a local file
-  to `data/exports/` (with SEO frontmatter) and shows you its path — it does not publish. A piece
-  starts from a **spark** or from **Discovery** by choosing the `web` platform and a piece kind.
-  **Delete article** (bottom of the editor, with a confirm) removes the piece *and* the queue
-  idea it grew from; the raw spark capture stays in the database log.
 - **The discovery inbox** — the **Discovery** screen: triage incoming feed items. Archive
   the noise, **save** a keeper for later (a low-friction, pre-queue shortlist — no take
   required), or move one into the queue two ways: **promote** it with a one-line take you type
   (the fast path, where you pick its **silo**), or **Work up with AI** — the `discovery` skill
-  reads the piece and its source, draws out your take and the 2–4 points, and promotes it with
-  those beats already attached (the discovery-lane mirror of `spark`). The flow is a substance
-  ladder: *inbox → saved → queue → draft*.
-- **The idea queue** — the **Queue** screen: your ideas (promoted or captured), carrying more
-  than a bare angle. Add your **seed** (your take) and **develop the points** — the 2–4 beats
-  you'd make — by hand or with the `queue` skill's **Develop with AI**. Then **Draft with AI**
-  on the card has the same `queue` skill write the post (using your take + points as the spine)
-  and lands the result on the Drafts screen. The `queue` skill can also revise a draft — the same
-  revise the Drafts page offers, since both share one revise procedure. A **spark** skips the
-  inbox and lands here directly: it's already yours. The trash button on a card **deletes the
-  idea and everything downstream** (its drafts and, for a web piece, its article — with a
-  confirm); it's refused if one of its drafts was published, since the Published archive
-  references that draft.
-- **Scheduling & calendar** — the **Calendar** screen plans when a draft goes out.
-- **Published** — the **Published** screen is the archive of what shipped, with a link
-  back to each post.
+  reads the piece and its source, draws out your take and the 2–4 points, promotes it, and
+  **writes the full piece** onto the new queue card (the discovery-lane mirror of `spark`).
+  The flow is a substance ladder: *inbox → saved → queue (with the full piece) → published*.
+- **The queue — the review phase** — the **Queue** screen is the workbench: every idea sits
+  with its **full written piece** on the card. Slice by lane (LinkedIn / Reddit / Web) and by
+  intent. Add or edit your **seed** (your take) and **points** (the 2–4 beats) by hand or with
+  **Develop with AI**; **Write with AI** has the `queue` skill write the full piece (a post's
+  hook/body/close, or a web article as one markdown document) from your take + points, and
+  turns into a revise once content exists. The card's **content box** is the plain floor —
+  edit the text (and, for web, the meta description and slug) directly. When it's good to go,
+  **Publish** on the card: LinkedIn posts via the API behind a type-`PUBLISH` gate (or Copy +
+  record it manually), Reddit is Copy + record (a manual copy-paste channel), and a web piece
+  **exports the Markdown file** (with SEO frontmatter, to `data/exports/`) — export *is* the
+  web lane's publish. Publishing moves the idea to the Published screen. The trash button
+  **deletes the idea and everything downstream** (with a confirm); it's refused once anything
+  shipped, since the Published archive references it.
+- **Scheduling & calendar** — the **Calendar** screen plans when a piece goes out.
+- **Published** — the **Published** screen is the archive of everything shipped, across all
+  three lanes, sliceable by platform: posts link back to the live post, web rows show the
+  exported file's path.
 - **Connections** — the **Connections** screen runs the **LinkedIn** sign-in and disconnect.
   Reddit shows here too, but only as a note that it's a manual copy-paste channel — there's
   nothing to connect.
@@ -129,15 +116,13 @@ recognize.
   code or `identity.yaml` editing. (A legacy `feed_groups` block in an older profile is ignored;
   `npx tsx src/ingest/migrate-feeds.ts` imports it into the DB once.)
 - **Sparks** — drop a spark from the **Spark** screen: the plain "Save spark" button stores it
-  raw (via `src/ingest/capture.ts`), or the AI path runs `spark` to shape it first. Either way it
-  lands in the same queue. A **platform picker** on the form (LinkedIn / Reddit / Web, defaulting
-  to your register default) tells the AI path up front where the spark is headed: a social
-  platform shapes a post and, once the seed is saved, offers to draft it on the spot; **Web**
-  runs the long-form pipeline end to end — seed, article row, outline, and section drafts on the
-  Articles screen — without re-asking. Picking Web also reveals a **piece-kind dropdown**
-  (how-to, explainer, comparison, thought piece, whitepaper — the web intents) if you already
-  know the shape; leave it on "Let spark propose" and the interview suggests one. (A plain save
-  ignores both; a raw spark is destination-free.)
+  raw (via `src/ingest/capture.ts`), or the AI path runs `spark` to shape it — and then **write
+  the full piece**, so the run ends with a finished post or article on its Queue card, ready
+  for review. A **platform picker** on the form (LinkedIn / Reddit / Web, defaulting to your
+  register default) tells the AI path up front where the spark is headed; picking Web also
+  reveals a **piece-kind dropdown** (how-to, explainer, comparison, thought piece, whitepaper —
+  the web intents) if you already know the shape; leave it on "Let spark propose" and the
+  interview suggests one. (A plain save ignores both; a raw spark is destination-free.)
 - **Register (platform + tone)** — the *menu* of tones/themes is in code (read-only) and
   now spans **both LinkedIn and Reddit**, but the **Register** screen edits your *selection*
   (which platforms are active/default, which tones you lean on, and custom tones/themes) and
@@ -190,15 +175,13 @@ the console is where you then run the pipeline day to day.**
 | Tags | — | ✅ full CRUD (form / AI `tags` skill) | ✅ | Console-owned; the `tags` skill adds with anti-bloat judgment, rename/recolor/delete stay in the console |
 | Sparks | ✅ (`spark` / plain button) | ✅ Spark screen | ✅ | Raw save or AI-shaped via `spark` |
 | Discovery inbox / saved | — | ✅ triage · archive / save-for-later / promote (type a take) or **Work up with AI** | ✅ (`feed_items`) | Promote needs a one-line take; the `discovery` skill draws out your take + points and promotes (mirror of `spark`) |
-| Queue / seeds / points | — | ✅ seed + develop points (form / AI `queue` skill) | ✅ | Console-owned; points are the developed take draft uses as the spine |
-| Drafts | — | ✅ edit + publish | ✅ | Console-owned |
-| Articles (long-form) | — | ✅ edit + AI (`articles` skill) | ✅ | Console-owned; outline + sections editor, per-section AI in your voice |
-| Article SEO fields | — | ✅ edit | ✅ | Target keyword / search intent captured at intake; meta / slug filled later; all feed the export frontmatter |
-| Article export | — | ✅ Export as Markdown (action) | — | Writes `data/exports/<profile>/<slug>.md` (gitignored) and shows the path; never publishes |
+| Queue (ideas + full content) | — | ✅ the review phase: seed, points, content editor, AI write/revise, Publish | ✅ | Console-owned; every idea carries its full written piece (post fields, or a web article's markdown body) on the card |
+| Article SEO fields | — | ✅ edit (on the web idea's queue card) | ✅ | Target keyword / search intent captured at intake; meta / slug filled at write time; all feed the export frontmatter |
+| Web publish (= export) | — | ✅ Publish on the queue card | ✅ | Writes `data/exports/<profile>/<slug>.md` (gitignored) and moves the piece to Published; the file is the shipped artifact |
 | Profiles / active profile | ✅ (`profiles/<slug>/`, via `setup`) | ✅ switcher | ✅ setting | Disk holds each profile; the sidebar switcher sets the active one and re-scopes the console |
 | Scheduled / published | — | ✅ | ✅ | Console-owned |
 | LinkedIn connection | — | ✅ Connections | ✅ token | OAuth in the console |
-| Reddit posting | — | ✅ Copy to publish (Drafts) | — | Manual copy-paste channel; no API, no connection, no token |
+| Reddit posting | — | ✅ Copy + Publish on the queue card | — | Manual copy-paste channel; no API, no connection, no token — Publish just records it |
 | Reddit destinations | ✅ (`identity.yaml`, optional) | — | — | A personal note of where you post; nothing in the console reads it |
 | Skills / agents / review rules | ✅ (code) | ▶ run only | — | Structure, not edited in UI |
 

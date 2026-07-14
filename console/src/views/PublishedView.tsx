@@ -5,7 +5,7 @@ import { Input } from '../components/ui/input'
 import { Button } from '../components/ui/button'
 import { PageHeader, SectionHeading, EmptyState } from '../components/kit'
 import { PillarBadge } from '../components/PillarBadge'
-import { Send, ExternalLink, Pencil, Check, X, Trash2, MessageSquarePlus, ThumbsUp, AlertCircle, Loader2, Linkedin, MessageCircle } from 'lucide-react'
+import { Send, ExternalLink, Globe, Pencil, Check, X, Trash2, MessageSquarePlus, ThumbsUp, AlertCircle, Loader2, Linkedin, MessageCircle } from 'lucide-react'
 import { useCapabilityToggle } from '../lib/capabilities'
 import { cn } from '../lib/cn'
 
@@ -277,11 +277,18 @@ function LinkedInRowActions({ post, onChanged }: { post: PublishedPost; onChange
 
 // The channel a published post went to, off published_posts.platform. Legacy /
 // raw rows without a platform read as LinkedIn.
-function PlatformBadge({ platform }: { platform?: PlatformKey | null }) {
+function PlatformBadge({ platform }: { platform?: PlatformKey | 'web' | null }) {
   if (platform === 'reddit') {
     return (
       <span className="inline-flex items-center gap-1.5 text-text-muted">
         <MessageCircle className="size-3.5 text-[#ff4500]" /> Reddit
+      </span>
+    )
+  }
+  if (platform === 'web') {
+    return (
+      <span className="inline-flex items-center gap-1.5 text-text-muted">
+        <Globe className="size-3.5 text-text-subtle" /> Web (long-form)
       </span>
     )
   }
@@ -294,7 +301,15 @@ function PlatformBadge({ platform }: { platform?: PlatformKey | null }) {
 
 export function PublishedView() {
   const { data, loading, error, reload } = useResource(() => api.getPosts())
-  const posts = data ?? []
+  const all = data ?? []
+  // Slice by lane. Rows without a platform predate the column and read as LinkedIn.
+  const [platformFilter, setPlatformFilter] = useState<'all' | 'linkedin' | 'reddit' | 'web'>('all')
+  const posts =
+    platformFilter === 'all'
+      ? all
+      : all.filter((p) => (p.platform ?? 'linkedin') === platformFilter)
+  const countBy = (key: 'linkedin' | 'reddit' | 'web') =>
+    all.filter((p) => (p.platform ?? 'linkedin') === key).length
 
   const [editingId, setEditingId] = useState<string | null>(null)
   const [permalink, setPermalink] = useState('')
@@ -342,11 +357,39 @@ export function PublishedView() {
         <div className="rounded-lg bg-error-bg p-4 text-sm text-error-fg shadow-sm">
           Couldn't load published posts. {error}
         </div>
-      ) : posts.length === 0 ? (
-        <EmptyState icon={<Send className="size-5" />} title="Nothing published yet" hint="Approved drafts you publish get archived here for reference." />
+      ) : all.length === 0 ? (
+        <EmptyState icon={<Send className="size-5" />} title="Nothing published yet" hint="Pieces you publish from the Queue get archived here for reference." />
       ) : (
         <section className="flex flex-col gap-3">
-          <SectionHeading title="All posts" hint={`${posts.length} total`} />
+          <div className="flex flex-wrap items-center gap-1.5">
+            {(
+              [
+                { key: 'all' as const, label: 'All lanes', count: all.length },
+                { key: 'linkedin' as const, label: 'LinkedIn', count: countBy('linkedin') },
+                { key: 'reddit' as const, label: 'Reddit', count: countBy('reddit') },
+                { key: 'web' as const, label: 'Web (long-form)', count: countBy('web') },
+              ]
+            ).map((c) => (
+              <button
+                key={c.key}
+                type="button"
+                onClick={() => setPlatformFilter(c.key)}
+                aria-pressed={platformFilter === c.key}
+                className={cn(
+                  'inline-flex items-center gap-1.5 rounded-full py-1 pl-2.5 pr-2 text-xs font-medium outline-none transition-colors',
+                  'focus-visible:ring-2 focus-visible:ring-primary/40',
+                  platformFilter === c.key
+                    ? 'bg-selected-strong text-selected-strong-fg shadow-sm'
+                    : 'bg-surface-sunken text-text-muted hover:bg-row-hover',
+                  platformFilter !== c.key && c.count === 0 && 'opacity-45',
+                )}
+              >
+                {c.label}
+                <span className="tabular-nums opacity-70">{c.count}</span>
+              </button>
+            ))}
+          </div>
+          <SectionHeading title="Everything shipped" hint={`${posts.length} shown`} />
           <div className="overflow-x-auto rounded-lg bg-surface shadow-sm">
             <table className="w-full text-sm">
               <thead>
@@ -370,6 +413,9 @@ export function PublishedView() {
                           <PlatformBadge platform={p.platform} />
                           {p.platform === 'reddit' && p.destination && (
                             <span className="font-mono text-[11px] text-text-subtle">{p.destination}</span>
+                          )}
+                          {p.platform === 'web' && p.title && (
+                            <span className="text-xs text-text-muted">{p.title}</span>
                           )}
                         </div>
                       </td>
@@ -409,6 +455,19 @@ export function PublishedView() {
                                 Couldn't save. {saveError}
                               </div>
                             )}
+                          </div>
+                        </td>
+                      ) : p.platform === 'web' ? (
+                        <td className="px-5 py-3">
+                          {/* A web row is an exported article; its artifact is the local
+                              markdown file, so the link cell shows the export path. */}
+                          <div className="flex items-center justify-end">
+                            <code
+                              className="max-w-64 truncate font-mono text-[11px] text-text-muted"
+                              title={p.exportPath ?? undefined}
+                            >
+                              {p.exportPath ?? '-'}
+                            </code>
                           </div>
                         </td>
                       ) : (

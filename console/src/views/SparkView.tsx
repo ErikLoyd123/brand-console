@@ -26,7 +26,7 @@ const PLATFORMS: Array<{ key: ContentPlatform; label: string; hint: string }> = 
   {
     key: 'web',
     label: 'Web',
-    hint: 'A long-form web piece — outlined and drafted on the Articles screen',
+    hint: 'A long-form web piece — written in full and reviewed on its Queue card, published as an exported Markdown file',
   },
 ]
 

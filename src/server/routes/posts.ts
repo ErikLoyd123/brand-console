@@ -1,11 +1,15 @@
 import { Router } from 'express';
-import { desc, eq } from 'drizzle-orm';
+import { and, desc, eq } from 'drizzle-orm';
 import { db } from '../../db/client';
-import { publishedPosts, drafts, ideaQueueItems } from '../../db/schema';
+import { publishedPosts, drafts, ideaQueueItems, articles } from '../../db/schema';
 import { getActiveProfileId } from '../../profile/loader';
 
 const router = Router();
 
+// Everything shipped, across every lane: post-lane publishes (published_posts rows —
+// LinkedIn/Reddit) unioned with web-lane exports (articles at stage 'exported'; the
+// exported file IS the web lane's shipped artifact). Each row carries a platform so the
+// Published screen can slice by lane; web rows carry the article title and export path.
 router.get('/', (_req, res) => {
   const pid = getActiveProfileId();
 
@@ -13,13 +17,13 @@ router.get('/', (_req, res) => {
   const draftIdeaById = new Map(
     db.select().from(drafts).where(eq(drafts.profileId, pid)).all().map((d) => [d.id, d.ideaId]),
   );
-  const ideaPillarById = new Map(
+  const ideaById = new Map(
     db
       .select()
       .from(ideaQueueItems)
       .where(eq(ideaQueueItems.profileId, pid))
       .all()
-      .map((i) => [i.id, i.pillar]),
+      .map((i) => [i.id, i]),
   );
 
   const posts = db
@@ -29,13 +33,42 @@ router.get('/', (_req, res) => {
     .all()
     .filter((p) => draftIdeaById.has(p.draftId));
 
-  res.json(
-    posts.map((p) => {
-      const ideaId = draftIdeaById.get(p.draftId);
-      const pillar = ideaId ? ideaPillarById.get(ideaId) ?? null : null;
-      return { ...p, pillar };
-    }),
-  );
+  const postRows = posts.map((p) => {
+    const ideaId = draftIdeaById.get(p.draftId);
+    const idea = ideaId ? ideaById.get(ideaId) : undefined;
+    return {
+      ...p,
+      pillar: idea?.pillar ?? null,
+      // The idea's platform wins over the row's (older rows default to linkedin).
+      platform: idea?.platform ?? p.platform ?? 'linkedin',
+      title: null as string | null,
+      exportPath: null as string | null,
+    };
+  });
+
+  const webRows = db
+    .select()
+    .from(articles)
+    .where(and(eq(articles.profileId, pid), eq(articles.stage, 'exported')))
+    .all()
+    .map((a) => {
+      const idea = ideaById.get(a.ideaId);
+      return {
+        id: a.id,
+        draftId: null as string | null,
+        permalink: null as string | null,
+        publishedAt: a.exportedAt ?? a.updatedAt,
+        platform: 'web',
+        destination: null as string | null,
+        platformPostId: null as string | null,
+        linkedinUrn: null as string | null,
+        pillar: idea?.pillar ?? null,
+        title: a.title as string | null,
+        exportPath: a.exportPath,
+      };
+    });
+
+  res.json([...postRows, ...webRows].sort((x, y) => y.publishedAt - x.publishedAt));
 });
 
 // PATCH /api/posts/:id — update a published post's permalink after the fact (the

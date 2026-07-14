@@ -15,7 +15,7 @@ The pipeline moves an idea through four stages:
 3. **Draft.** A drafter writes a post in your voice, from the queued idea. Every draft goes through a review gate before it is considered done.
 4. **Publish.** You read the draft, decide if it's ready, and either copy it out to publish by hand or, once LinkedIn is connected, publish it directly from the console.
 
-Alongside the short-form pipeline, the **Articles** view is a long-form lane: pieces for the web (how-tos, explainers, comparisons and more) built section by section in the same voice, reviewed by the same gate, and exported as Markdown. See **Long-form articles** in this Docs section.
+Alongside the short posts, the **web lane** carries long-form pieces (how-tos, explainers, comparisons and more): written in full in the same voice, reviewed by the same gate on their queue card, and published as an exported Markdown file. See **Long-form articles** in this Docs section.
 
 Nothing in this pipeline auto-publishes. Every post reaches a human decision point before it goes anywhere public.
 

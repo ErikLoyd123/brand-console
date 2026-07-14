@@ -23,7 +23,7 @@ That is the whole surface. Notably it does **not** include your headline, which 
 Of the above, the console currently implements:
 
 - **Connect / disconnect**, showing your real name and avatar.
-- **Publish**, behind the type-`PUBLISH` gate, from the Drafts editor: a text post, a link/article, or an image (with alt text).
+- **Publish**, behind the type-`PUBLISH` gate, from the queue card: a text post, a link/article, or an image (with alt text).
 - **Delete, comment on, or like** a post you published through the console, from the Published page. These only appear on posts the console published (it has the post's id); manually tracked posts have no such actions.
 
 Not built: video posts. That is the only part of the scope still left on the table.

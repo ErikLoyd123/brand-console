@@ -80,13 +80,15 @@ five `web` piece kinds. Then:
 1. **Load the voice card first**, exactly as above — the active profile's card is the authority.
 
 2. **Load the article and its idea.** Read the article row (`title`, `slug`, `targetKeyword`,
-   `metaDescription`, `sections`, `reviewStatus`) and the `web` queue idea it grew from (its `silo` —
-   the piece kind — and `seed`/`points`):
+   `metaDescription`, `body` — the whole piece as one markdown document; legacy rows may carry
+   structured `sections` instead — and `reviewStatus`) and the `web` queue idea it grew from (its
+   `silo` — the piece kind — and `seed`/`points`):
 
        npx tsx -e "import('./src/db/client.js').then(async ({db})=>{const {articles,ideaQueueItems}=await import('./src/db/schema.js');const {eq}=await import('drizzle-orm');const a=db.select().from(articles).where(eq(articles.id,process.argv[1])).get();const idea=a?db.select().from(ideaQueueItems).where(eq(ideaQueueItems.id,a.ideaId)).get():null;console.log(JSON.stringify({article:a,idea},null,2))})" "<articleId>"
 
-3. **Run the mechanical voice checks over the concatenated section bodies.** Join every section's
-   `body` in order into one text and run `runVoiceChecks` exactly as in Step 3 above, with `SILO` set
+3. **Run the mechanical voice checks over the article text.** Use the article's `body` (or, for a
+   legacy row with no body, join every section's `body` in order) and run `runVoiceChecks` exactly
+   as in Step 3 above, with `SILO` set
    to the piece kind and `ADJACENT` set to `1` only for a `how-to` that genuinely touches a profile
    product (the other four kinds are never adjacent; `siloMayBeProductAdjacent` enforces this, so a
    stray ask in an explainer/comparison/thought-piece/whitepaper fails regardless of `ADJACENT`). An em
@@ -105,10 +107,10 @@ five `web` piece kinds. Then:
 5. **Run the SEO checks.** These are mechanical and deterministic (`src/review/seo-checks.ts`), over
    the article's fields:
 
-       npx tsx -e "import('./src/db/client.js').then(async ({db})=>{const {articles}=await import('./src/db/schema.js');const {eq}=await import('drizzle-orm');const a=db.select().from(articles).where(eq(articles.id,process.argv[1])).get();const m=await import('./src/review/seo-checks.ts');console.log(JSON.stringify(m.runSeoChecks({title:a.title,sections:a.sections,targetKeyword:a.targetKeyword,metaDescription:a.metaDescription}),null,2))})" "<articleId>"
+       npx tsx -e "import('./src/db/client.js').then(async ({db})=>{const {articles}=await import('./src/db/schema.js');const {eq}=await import('drizzle-orm');const a=db.select().from(articles).where(eq(articles.id,process.argv[1])).get();const m=await import('./src/review/seo-checks.ts');console.log(JSON.stringify(m.runSeoChecks({title:a.title,body:a.body,sections:a.sections,targetKeyword:a.targetKeyword,metaDescription:a.metaDescription}),null,2))})" "<articleId>"
 
    The checks return the same `Finding[]` shape: the target keyword present in the `title` (fail if
-   absent), in the first section's heading (warn if absent), and in `metaDescription` (warn if absent);
+   absent), in the lead heading (warn if absent), and in `metaDescription` (warn if absent);
    and `metaDescription` length within 150-160 characters (warn outside, fail if empty). Length-target
    proximity is **not** a gate — `lengthTarget` is guidance. A `warn` is a recommendation, not a block;
    only a `fail` blocks.

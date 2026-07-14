@@ -584,14 +584,9 @@ function ResultCard({
   onReset: () => void
   actions?: { linkLabel?: string; resetLabel?: string }
 }) {
-  // A run can finish on a different screen than its usual one (spark ends in Drafts or
-  // Articles when the owner carries on into a draft), so an unconfigured label follows
-  // the link's actual destination rather than assuming the queue.
-  const derivedLabel = result.link?.startsWith('#/drafts')
-    ? 'Open in Drafts'
-    : result.link?.startsWith('#/articles')
-      ? 'Open in Articles'
-      : 'Open in Queue'
+  // Every content run ends on the Queue (the review phase), so the unconfigured label
+  // says so; a tenant with a different destination passes its own linkLabel.
+  const derivedLabel = 'Open in Queue'
   return (
     <div className="flex flex-col items-center gap-4 rounded-lg bg-surface p-6 text-center shadow-sm">
       <div className="flex size-11 items-center justify-center rounded-full bg-success-bg text-success-fg">

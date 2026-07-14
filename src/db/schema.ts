@@ -282,11 +282,16 @@ export const articles = sqliteTable(
     searchIntent: text('search_intent').notNull().default(''),
     metaDescription: text('meta_description').notNull().default(''),
     lengthTarget: integer('length_target').notNull().default(0),
-    // The single ordered representation of the body — outline and prose together.
+    // Legacy structured representation (outline + prose per section). Superseded by `body`
+    // as the editing surface; kept for backfill of pre-restructure rows. New writes leave
+    // it empty.
     sections: text('sections', { mode: 'json' })
       .$type<ArticleSection[]>()
       .notNull()
       .$defaultFn(() => []),
+    // The whole article as one markdown document (headings inline). The single editing
+    // surface: the Queue workbench edits it, the AI writes it, export renders it.
+    body: text('body').notNull().default(''),
     // Pipeline position: outlining | outlined | drafting | drafted | reviewed | exported.
     stage: text('stage').notNull().default('outlining'),
     // Mirrors drafts.reviewStatus: pending | passed | failed | edited.

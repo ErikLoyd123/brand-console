@@ -18,13 +18,17 @@ operated through a local **brand-console** web UI.
 - **Ingest** — discovery/capture scripts under `src/ingest/`
   (`discover-rss.ts`, `capture.ts`, `add-feed.ts`, `manage-feed.ts`).
 - **Content engine** — skills in `.claude/skills/<name>/SKILL.md`
-  (`spark`, `discovery`, `queue`, `drafts`, `articles`, `feeds`, `pillars`,
+  (`spark`, `discovery`, `queue`, `feeds`, `pillars`,
   `register`, `tags`, `voice`, `setup`, `voice-card`) and agents in
   `.claude/agents/<name>.md` (`content-reviewer`, `discover`). Shared, non-invokable
   skill references (no `name:` frontmatter, linked not run) live directly under
   `.claude/skills/`: `onboarding-gate.md`, `content-doctrine.md`, and the
-  `*-procedure.md` files the router skills dispatch to. The fixed
-  product rosters — a post's axes — live in `src/core/`: `silos.ts` (intent),
+  `*-procedure.md` files the router skills dispatch to (`develop`/`draft`/`revise` for
+  posts, `article-draft` for long-form web pieces written as one markdown document). The
+  pipeline is capture → **queue (the review phase — every idea carries its full written
+  piece)** → published; spark/discovery write the full piece in the same run, and Publish
+  on a queue card ships it (LinkedIn API, Reddit copy-paste, web = markdown export). The
+  fixed product rosters — a post's axes — live in `src/core/`: `silos.ts` (intent),
   `registers.ts` (platform/tone menu), and pillars; per-user selection layers on top in
   the active profile's `identity.yaml` (under gitignored `profiles/<slug>/`, resolved by
   `src/profile/loader.ts` — never hardcode a profile path).

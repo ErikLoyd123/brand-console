@@ -28,6 +28,9 @@ export interface UpdateArticleFields {
   lengthTarget?: number;
   stage?: string;
   reviewStatus?: string;
+  /** The whole article as one markdown document — the editing surface since the queue-
+   *  workbench restructure. Writing it is a content write like any other. */
+  body?: string;
   /** Full replacement of the ordered sections — the outline stage writes the whole array. */
   sections?: import('../db/schema').ArticleSection[];
   /** Patch individual sections by id — the draft/revise stages fill or rewrite one section. */
@@ -46,6 +49,7 @@ export function updateArticle(id: string, fields: UpdateArticleFields): void {
   if (fields.metaDescription !== undefined) set.metaDescription = fields.metaDescription;
   if (fields.lengthTarget !== undefined) set.lengthTarget = fields.lengthTarget;
   if (fields.stage !== undefined) set.stage = fields.stage;
+  if (fields.body !== undefined) set.body = fields.body;
 
   if (fields.sections !== undefined) {
     set.sections = fields.sections;
@@ -71,6 +75,7 @@ export function updateArticle(id: string, fields: UpdateArticleFields): void {
   const wroteContent =
     fields.title !== undefined ||
     fields.metaDescription !== undefined ||
+    fields.body !== undefined ||
     fields.sections !== undefined ||
     (fields.sectionPatches !== undefined && fields.sectionPatches.length > 0);
   if (fields.reviewStatus !== undefined) {

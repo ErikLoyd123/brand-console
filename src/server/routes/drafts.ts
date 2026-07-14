@@ -152,6 +152,11 @@ router.post('/:id/publish', (req, res) => {
     })
     .returning()
     .all();
+  // The queue is the review phase: a shipped idea leaves it.
+  db.update(ideaQueueItems)
+    .set({ status: 'published' })
+    .where(eq(ideaQueueItems.id, draft.ideaId))
+    .run();
   res.status(201).json(inserted[0]);
 });
 

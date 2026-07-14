@@ -48,11 +48,10 @@ Step 3's shaping. `platform`/`tone` are the register the item was shaped for (se
 
 **Web guard:** if the `silo` is one of the web piece kinds (`how-to | explainer | comparison |
 thought-piece | whitepaper`), this item is a **long-form article**, not a post — do not draft
-it here. Stop and route to the long-form pipeline instead: the linked `articles` row (created
-by `spark`/`discovery`) is outlined via `.claude/skills/outline-procedure.md` and drafted
-section by section via `.claude/skills/section-draft-procedure.md`. Without this guard the
-"unknown silo → teach" default in Step 3 would silently draft a LinkedIn-shaped post from an
-article idea.
+it here. Stop and route to the long-form lane instead: the linked `articles` row (created by
+`spark`/`discovery`) is written as one markdown document via
+`.claude/skills/article-draft-procedure.md`. Without this guard the "unknown silo → teach"
+default in Step 3 would silently draft a LinkedIn-shaped post from an article idea.
 
 `points` is the owner's **developed take** — an ordered list of the beats they want to make
 (often drawn out by the develop procedure). When present, use it as the **spine of the body**:

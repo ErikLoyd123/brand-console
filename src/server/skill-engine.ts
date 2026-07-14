@@ -407,6 +407,7 @@ function statusForTool(name: string, input: unknown): string | null {
     if (/write-register|write-identity/i.test(cmd)) return 'Saving your register';
     if (/write-voice-card/i.test(cmd)) return 'Saving your voice card';
     if (/create-article/i.test(cmd)) return 'Creating the article';
+    if (/update-article/i.test(cmd)) return 'Writing the article';
     if (/capture\.ts|ingest\/capture/i.test(cmd)) return 'Saving to the queue';
     if (/completeness|checkCompleteness|identity|\bprofile\b/i.test(cmd)) return 'Checking your setup';
     return 'Working through it';
@@ -442,25 +443,13 @@ function statusFromAssistant(message: unknown): { label?: string; suppress?: boo
 // result card shows just a summary. Default: no link. Keyed on skillName so adding a
 // tenant is one explicit line, not a parsing heuristic.
 function resultLink(skillName: string, finalText: string): string | undefined {
-  // spark files a spark into the queue; discovery promotes a discovered item into it. Both
-  // land a new idea, so both deep-link to the created item (else the queue). But spark can
-  // now carry on past the seed: when its final report names an article (web long-form) or a
-  // draft, the work product lives on that screen, so land there instead of the queue.
-  if (skillName === 'spark' || skillName === 'discovery') {
-    if (/\barticle\b/i.test(finalText)) return '#/articles';
-    if (/\bdraft\b/i.test(finalText)) return '#/drafts';
+  // The queue is the review phase: spark, discovery, and queue runs all end with their
+  // work product (idea, or idea + full written piece) on a Queue card, so every one
+  // deep-links to the created/worked item there (else the queue itself).
+  if (skillName === 'spark' || skillName === 'discovery' || skillName === 'queue') {
     const ideaId = extractIdeaId(finalText);
     return ideaId ? `#/queue?item=${ideaId}` : '#/queue';
   }
-  // The queue skill does three things: develop (shapes the idea — stay on the Queue, deep-linked
-  // to the item), or draft/revise (lands or changes a draft — go to the Drafts screen). The final
-  // report names a draft only in the draft/revise branches, so that word disambiguates.
-  if (skillName === 'queue') {
-    if (/\bdraft\b/i.test(finalText)) return '#/drafts';
-    const ideaId = extractIdeaId(finalText);
-    return ideaId ? `#/queue?item=${ideaId}` : '#/queue';
-  }
-  // The drafts skill revises a draft in place on the Drafts screen — no navigation needed.
   return undefined;
 }
 

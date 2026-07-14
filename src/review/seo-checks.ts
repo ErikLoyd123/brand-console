@@ -15,9 +15,24 @@ export interface SeoCheckSection {
 
 export interface SeoCheckInput {
   title: string;
+  /** Legacy structured sections (pre-restructure rows). Used only when `body` is absent. */
   sections: SeoCheckSection[];
+  /** The whole article as one markdown document — the editing surface since the
+   *  queue-workbench restructure. When present, headings are read from its `##` lines. */
+  body?: string;
   targetKeyword: string;
   metaDescription: string;
+}
+
+// The lead heading: the first markdown `##`/`###` line of the body when the article is a
+// single document, else the first structured section's heading (legacy rows).
+function firstHeadingOf(input: SeoCheckInput): string {
+  const body = (input.body ?? '').trim();
+  if (body !== '') {
+    const m = body.match(/^#{2,3}\s+(.+)$/m);
+    return m ? m[1].trim() : '';
+  }
+  return input.sections.length > 0 ? input.sections[0].heading : '';
 }
 
 function includesInsensitive(haystack: string, needle: string): boolean {
@@ -42,8 +57,8 @@ export function runSeoChecks(input: SeoCheckInput): Finding[] {
     });
   }
 
-  // Keyword present in the first section's heading (the lead heading) — warn if absent.
-  const firstHeading = input.sections.length > 0 ? input.sections[0].heading : '';
+  // Keyword present in the lead heading — warn if absent.
+  const firstHeading = firstHeadingOf(input);
   if (keyword !== '' && !includesInsensitive(firstHeading, keyword)) {
     findings.push({
       rule: 'seo-keyword-in-first-heading',

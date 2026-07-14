@@ -1,6 +1,6 @@
 ---
 name: discovery
-description: Work up a discovered article into a queued take. Reads a Discovery inbox item and its source, infers the intent (silo) and confirms it, interviews you to draw out your take and the 2-4 points, then promotes it into the queue with those beats attached — and offers to carry straight on into the draft (or, for a web piece, the outline). The discovery-lane mirror of spark. Never invents an opinion.
+description: Work up a discovered article into a finished piece on the queue. Reads a Discovery inbox item and its source, infers the intent (silo) and confirms it, interviews you to draw out your take and the 2-4 points, promotes it into the queue — then writes the full piece (a post, or a long-form web article as one markdown document) onto its Queue card for your review. The discovery-lane mirror of spark. Never invents an opinion, never publishes.
 type: skill
 ---
 
@@ -159,46 +159,43 @@ npx tsx src/articles/create-article.ts "<ideaId>" '{
 ```
 
 `create-article` is idempotent per `ideaId` (a re-run never double-creates) and prints the new article
-id in backticks. The article lands at stage `outlining`; the `articles` skill's outline procedure is
-the next step. `promoteFeedItem` does not store a platform column, but the `web` piece-kind silo key
+id in backticks. `promoteFeedItem` does not store a platform column, but the `web` piece-kind silo key
 is globally unique, so downstream reads the platform as `web` from the silo. For a LinkedIn reaction
 there is no article row and this step is skipped. When it applies, report the article id alongside the
 idea id.
 
-## 8. Keep going — offer to draft it now
+## 8. Keep going — write the full piece
 
 The promoted idea (and, for web, the article row) is saved and safe whatever happens next. The
-owner just gave you their take and beats — do not make them re-run the pipeline to see it
-written. Ask **one light closing question** — "It's promoted to the queue. Want me to draft it
-now, or leave it there?" — with drafting as the recommended option.
-
-If the owner says draft:
+owner just gave you their take and beats — **do not stop and do not ask**: a discovery work-up
+ends with the full piece written and sitting on the idea's Queue card, ready for review.
 
 - **LinkedIn** — follow the shared draft procedure (`.claude/skills/draft-procedure.md`) with
   the just-created idea id. The take and beats are already on the row, so it drafts straight
-  from what this interview produced. Report the draft id and that it awaits review.
-- **web** — follow the shared outline procedure (`.claude/skills/outline-procedure.md`) with
-  the just-created article id to draw the sections with the owner; when the outline lands,
-  confirm there and continue into the section bodies via
-  `.claude/skills/section-draft-procedure.md`. Stopping after the outline is a fine answer.
+  from what this interview produced.
+- **web** — follow the article draft procedure
+  (`.claude/skills/article-draft-procedure.md`) with the just-created article id: one light
+  structure confirm, then the whole piece written as a single markdown document, with the
+  meta description and slug filled.
 
-If the owner declines, stop as before. Either way, everything the interview drew out was
-persisted **before** any drafting started.
+Everything the interview drew out was persisted **before** the writing started, so an
+abandoned or failed write never loses the take — rerunning picks up from the promoted idea.
 
 ## 9. Report
 
 Report plainly what landed: the idea it became, your take in one line, and the beats saved
 (quoted), so you see exactly what the queue now carries. **Report the created idea id in
 backticks, labeled — `promoted to idea \`<ideaId>\``** — so the console's result card can deep-link
-to it in the Queue (name the article or draft too when Step 8 went further, so the card lands on
-the right screen). This is the surface's result card: one clear human sentence plus the beats.
+to it in the Queue. Name the draft or article id too. This is the surface's result card: one
+clear human sentence plus the beats.
 
 ## Hand off
 
 Report what exists when the run ends — the idea id always; the article id for web; the draft id
-when Step 8 drafted. The rest of the pipeline is unchanged: `queue` can add or refine beats on a
-queued item and turns a developed take into prose silo-aware, and `content-reviewer` judges
-every draft by its silo's rules. `discovery` never reviews or publishes.
+for a post — and that the full piece is on its **Queue card**, the review phase: the owner reads
+it there, edits by hand or revises with AI, and clicks Publish when it's good to go.
+`content-reviewer` judges every piece by its silo's rules. `discovery` never reviews or
+publishes.
 
 ## Rules
 
@@ -213,6 +210,6 @@ every draft by its silo's rules. `discovery` never reviews or publishes.
   `src/ingest/promote-item.ts` (the seeded idea + the promoted flag) and, for a `web` piece kind,
   `src/articles/create-article.ts` (the linked article row); never the voice card, pillars,
   register, feeds, or code, and never a different item.
-- Never review or publish. Drafting happens only via the shared procedures, only after the
-  promoted idea is saved, and only when the owner says yes in Step 8 — declining leaves the
-  classic promote-and-stop behavior untouched.
+- Never review or publish. Writing happens only via the shared procedures and only after the
+  promoted idea is saved — an abandoned write can always be rerun without losing the take.
+  Review and Publish belong to the owner, on the Queue card.

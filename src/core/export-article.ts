@@ -47,10 +47,17 @@ export function exportArticle(articleId: string): ExportArticleResult {
     '---',
   ].join('\n');
 
+  // The body is one markdown document (the editing surface since the queue-workbench
+  // restructure). Pre-restructure rows may carry structured sections instead — flatten
+  // those the way the old exporter did, so re-exporting an old piece still works.
   const bodyParts: string[] = [`# ${article.title}`];
-  for (const section of article.sections) {
-    bodyParts.push(`## ${section.heading}`);
-    bodyParts.push(section.body);
+  if (article.body.trim() !== '') {
+    bodyParts.push(article.body.trim());
+  } else {
+    for (const section of article.sections) {
+      bodyParts.push(`## ${section.heading}`);
+      bodyParts.push(section.body);
+    }
   }
 
   const contents = `${frontmatter}\n\n${bodyParts.join('\n\n')}\n`;

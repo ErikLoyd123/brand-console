@@ -1,6 +1,8 @@
-# Typecheck both sides on every push and PR. This is the repo's build gate
-# (the same `npx tsc --noEmit` the Cadence build-validator runs locally) and
-# the status check branch protection points at.
+# The repo's build gate, sized to what can actually break here (no deploy, no
+# test suite — a local-first tool): server typecheck, migrations applying to a
+# fresh database (a broken migration bricks every new clone), and the console's
+# production build (vite catches bundling/import breakage tsc alone misses).
+# This is the status check branch protection points at.
 name: ci
 
 on:
@@ -26,5 +28,9 @@ jobs:
         env:
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
       - run: npx tsc --noEmit
+      # Fresh-clone integrity: the full migration chain must apply to an empty
+      # data/brand.db exactly like it will on a contributor's first checkout.
+      - run: npm run db:migrate
       - run: npm ci --prefix console
-      - run: npx tsc --noEmit -p console
+      # Includes the console typecheck (build = tsc --noEmit && vite build).
+      - run: npm run build --prefix console

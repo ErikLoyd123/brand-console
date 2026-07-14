@@ -50,6 +50,15 @@ needs to be profound; demanding depth a post's purpose does not want deforms it.
 
 Read depth off the axes; do not apply it uniformly.
 
+## Principle 4 — voice-rules-everywhere
+
+**Everything an agent writes into the pipeline is written under the voice card's mechanical
+rules — not just the piece that publishes.** Takes and angles, seeds, points, titles, meta
+descriptions: all of it sits on the owner's screens in the owner's voice, and the console's
+live checks scan it. An em dash or an AI-tell in a take reads exactly as badly as one in a
+post, and makes the checks look broken besides. Follow the voice card's hard mechanical
+rules (no em dashes, no AI-tells, plain language) in every string you save, at every stage.
+
 ## How skills link this fragment
 
 Each consuming skill restates the doctrine at its choke point and links back here as the

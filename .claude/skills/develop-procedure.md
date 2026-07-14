@@ -107,6 +107,8 @@ human sentence plus the beats.
   the owner won't supply the substance, stop — a developed idea with a fabricated argument is
   worse than a bare angle.
 - **2-4 beats, in order, in their voice**, consistent with the item's silo and the voice card's
-  hard rules. Respect show-don't-tell and the AI-tells list.
+  hard rules. Respect show-don't-tell and the AI-tells list. The mechanical rules bind every
+  string this procedure saves — the seed and each beat carry no em dashes and no AI-tells
+  (doctrine Principle 4, voice-rules-everywhere), not just the eventual piece.
 - **One item per run**, then report. Never draft, review, or publish — the draft procedure turns the
   developed idea into prose; this skill only gives it meat.

@@ -140,7 +140,14 @@ function ContentBlock({
   // cards must not hammer the API. Silo rides along so adjacency derives correctly.
   const [findings, setFindings] = useState<ReviewFinding[]>([])
   const [checking, setChecking] = useState(false)
-  const editedText = isWeb ? webBody : [hooks.split('\n')[0] ?? '', '', body, '', close].join('\n').trim()
+  // The take rides into the check text even though it never publishes: it's on the card
+  // in the owner's voice, and an em dash there next to an "all clear" panel reads as a
+  // broken checker. A web piece also ships its title and meta description (export
+  // frontmatter + H1), so those join the body. Slug stays out: kebab-case can't carry
+  // the prose tells these rules scan for.
+  const editedText = isWeb
+    ? [item.proposedAngle, article?.title ?? '', metaDescription, webBody].join('\n\n').trim()
+    : [item.proposedAngle, hooks.split('\n')[0] ?? '', '', body, '', close].join('\n').trim()
   useEffect(() => {
     if (!editing) return
     setChecking(true)
@@ -333,7 +340,8 @@ function ContentBlock({
       {editing && (
         <div className="flex flex-col gap-1.5">
           <span className="font-mono text-[11px] text-text-subtle">
-            Voice check — the active profile's voice card. Advisory; the review gate is the authority.
+            Voice check over {isWeb ? 'your take, the title, meta description, and body' : 'your take, hook, body, and close'} — the
+            active profile's voice card. Advisory; the review gate is the authority.
           </span>
           <ChecksPanel findings={findings} loading={checking} />
         </div>

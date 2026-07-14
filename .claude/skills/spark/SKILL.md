@@ -54,8 +54,10 @@ Run this first. This is the shared detect-and-offer gate (`.claude/skills/onboar
 
 `spark` obeys the shared content doctrine (`.claude/skills/content-doctrine.md`) — the single
 source for **take-origination** (never invent an opinion), **never-fabricate-a-fact**
-(`[FILL: ...]` markers, never a plausible guess), and **depth-calibration** (depth is a
-function of silo × register, not every post must be profound). Riff's fill on that doctrine:
+(`[FILL: ...]` markers, never a plausible guess), **depth-calibration** (depth is a
+function of silo × register, not every post must be profound), and **voice-rules-everywhere**
+(every string you save — the seed, the angle, the points, not just the piece — follows the
+voice card's hard mechanical rules: no em dashes, no AI-tells). Riff's fill on that doctrine:
 the **seed** is the unit that must stay the owner's own thought, any `[FILL: ...]` goes in
 the seed, and depth is set by the silo inferred in Step 3 *before* the interview runs. The
 doctrine binds every step below; this file does not restate it.

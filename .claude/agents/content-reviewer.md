@@ -37,6 +37,12 @@ Your output is two things, always both:
 
     An empty array (`[]`) means the mechanical checks pass. Any finding with `"severity": "fail"` is a blocking failure. A `"severity": "warn"` finding is a fix to recommend, not an automatic block.
 
+    Also scan the idea's take (`idea_queue_items.proposed_angle`) with the same command, **as
+    advisory only**: the take never publishes, so its findings are never blocking and never flip
+    the verdict — but report them as recommendations, because the take sits on the queue card in
+    the owner's voice and the console's live checks scan it too. A verdict that ignores a visibly
+    flagged take reads as a broken gate.
+
 4. **Apply judgment to the soft rules the module cannot see.** Read the draft against the voice card and check each of these by hand. Three of these rules are **teach-shaped packaging** rules that **relax for the conversation-shaped intent only** (`conversation` on LinkedIn, `discuss` on Reddit); the rest are universal and apply to every silo, on either platform. Do not relax any rule for a silo it is not listed as relaxing for.
 
     Universal (apply to every silo, on either platform):
@@ -86,8 +92,10 @@ five `web` piece kinds. Then:
 
        npx tsx -e "import('./src/db/client.js').then(async ({db})=>{const {articles,ideaQueueItems}=await import('./src/db/schema.js');const {eq}=await import('drizzle-orm');const a=db.select().from(articles).where(eq(articles.id,process.argv[1])).get();const idea=a?db.select().from(ideaQueueItems).where(eq(ideaQueueItems.id,a.ideaId)).get():null;console.log(JSON.stringify({article:a,idea},null,2))})" "<articleId>"
 
-3. **Run the mechanical voice checks over the article text.** Use the article's `body` (or, for a
-   legacy row with no body, join every section's `body` in order) and run `runVoiceChecks` exactly
+3. **Run the mechanical voice checks over everything that ships.** The exported markdown carries
+   the `title` and `metaDescription` (frontmatter + H1) alongside the `body`, so scan all three:
+   join `title`, `metaDescription`, and `body` (or, for a legacy row with no body, join every
+   section's `body` in order) with blank lines and run `runVoiceChecks` on the joined text exactly
    as in Step 3 above, with `SILO` set
    to the piece kind and `ADJACENT` set to `1` only for a `how-to` that genuinely touches a profile
    product (the other four kinds are never adjacent; `siloMayBeProductAdjacent` enforces this, so a

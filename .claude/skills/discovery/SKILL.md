@@ -57,9 +57,11 @@ Run this first. This is the shared detect-and-offer gate (`.claude/skills/onboar
 
 `discovery` obeys the shared content doctrine (`.claude/skills/content-doctrine.md`) — the single
 source for **take-origination** (never invent an opinion), **never-fabricate-a-fact**
-(`[FILL: ...]` markers, never a plausible guess), and **depth-calibration** (depth is a
-function of silo × register). The **seed** is the unit that must stay your own thought; any
-`[FILL: ...]` goes in the seed or a beat. The doctrine binds every step below.
+(`[FILL: ...]` markers, never a plausible guess), **depth-calibration** (depth is a
+function of silo × register), and **voice-rules-everywhere** (every string you save — the
+seed, the angle, the beats, not just the piece — follows the voice card's hard mechanical
+rules: no em dashes, no AI-tells). The **seed** is the unit that must stay your own thought;
+any `[FILL: ...]` goes in the seed or a beat. The doctrine binds every step below.
 
 ## 3. Pick the feed item
 

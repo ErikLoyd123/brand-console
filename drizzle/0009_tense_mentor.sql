@@ -1,0 +1,1 @@
+ALTER TABLE `idea_queue_items` ADD `points` text DEFAULT '[]' NOT NULL;

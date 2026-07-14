@@ -1,0 +1,1 @@
+ALTER TABLE `idea_queue_items` ADD `silo` text DEFAULT 'teach' NOT NULL;

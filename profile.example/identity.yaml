@@ -1,0 +1,88 @@
+display_name: Jordan Rivera
+
+products:
+  - RoastLog
+
+protected_relationships:
+  - Harbor Roasters
+  - Harbor Roasters founder
+
+pillars:
+  - key: brewing
+    label: Brewing
+    weight: 40
+  - key: sourcing
+    label: Green Sourcing
+    weight: 20
+  - key: gear
+    label: Gear
+    weight: 20
+  - key: wins
+    label: Wins
+    weight: 15
+  - key: business
+    label: Business
+    weight: 5
+
+# RSS feeds are NOT configured here — they live in the database (the `sources` table)
+# and are managed entirely from the console: the Feeds page (add form + run buttons) or
+# the `feeds` skill. This keeps per-user feed data out of committed code/config; a fresh
+# profile starts with no feeds and you add your own from the console. A legacy `feed_groups`
+# block in an existing identity.yaml is ignored by discovery (import it once with
+# `npx tsx src/ingest/migrate-feeds.ts`). See design 2026-07-04-db-driven-feeds.
+
+cta_policy:
+  personal_posts_carry_ask: false
+  product_posts_max_ask_lines: 1
+  ask_style: soft-honest
+
+# Which platforms this persona posts to, and how they sound there. The menu of
+# platforms and shipped tones/themes lives in committed code (src/core/registers.ts);
+# this block is the per-user selection layered on top. Omitting it is fine — the
+# engine defaults to LinkedIn with the shipped menu. See design
+# 2026-07-03-content-spine-register-axis/01-register-axis.
+platforms:
+  - key: linkedin        # must match a Platform key in src/core/registers.ts
+    active: true
+    default: true        # the platform riff/draft assume when none is named
+    tones:               # a soft lean — shipped tone keys, plus any custom ones
+      - key: plain-professional
+        note: Plain and credible. Never hype, never a hard sell.
+      - key: warm-story
+        note: Open on the cup, the roast, or the person; let the point land through it.
+      - key: tasting-notes    # a user-custom tone key, not in the shipped roster
+        note: Sensory and specific — name what you actually smelled and tasted.
+    themes:              # a soft lean — shipped theme keys, plus any custom ones
+      - key: lessons-learned
+        note: What a bad batch or a blown extraction actually taught me.
+      - key: roast-craft      # a user-custom theme key
+        note: The craft calls behind a roast, framed for someone learning to taste.
+
+  - key: reddit          # must match a Platform key in src/core/registers.ts
+    active: true
+    default: false       # linkedin stays the default platform for this persona
+    # The subreddits this persona posts to. The destination is chosen per post at
+    # publish time, never baked into a draft. The owner's own u/ profile is ALWAYS
+    # available as a destination and is never listed here. Omit this whole block and
+    # you can still post — to your profile only. `subreddit` is the bare name, no "r/".
+    # See design 2026-07-03-reddit-publishing-channel/03-destinations.
+    destinations:
+      - subreddit: coffee            # bare name, no "r/" prefix
+        label: r/coffee — general questions
+      - subreddit: espresso
+        label: r/espresso — gear + technique
+    tones:               # reddit's own shipped/custom tone leans (menu in registers.ts)
+      - key: plain-direct
+        note: Straight and useful. Reddit smells a pitch instantly.
+    themes:
+      - key: field-notes
+        note: What actually happened at the machine, no polish.
+
+enabled_lenses:
+  - opensourcedrop
+
+lenses:
+  opensourcedrop:
+    name: Gear Drop
+    url: https://example.com/gear-drop/feed/
+    pillar: gear

@@ -1,0 +1,37 @@
+node_modules/
+data/
+dist/
+*.db
+*.db-wal
+*.db-shm
+
+# Obsidian per-machine UI state (open panes, sidebar layout). Volatile editor
+# noise, not shared config; untracked so it stops churning the diff.
+docs/.obsidian/workspace.json
+
+# Local LinkedIn OAuth credentials. Never committed; .env.example documents
+# the required keys with no real values.
+/.env
+
+# Cadence design/plan/future docs live here and may contain personal or
+# professionally identifiable information. Kept out of version control so the
+# shared repo carries no PII. docs/ itself stays tracked for real product docs.
+docs/cadence/
+
+# The owner's brand/design docs may contain personal or professionally
+# identifiable information (voice, positioning, product names). Kept out of
+# version control so the shared repo carries no PII; stays on disk locally.
+docs/brand/
+
+# Superpowers design/plan specs are private planning artifacts and reference the
+# owner by name, company, and domain. Kept out of version control so the shared
+# repo carries no PII; stays on disk locally.
+docs/superpowers/
+
+# The owner's real per-user identity, now one sub-folder per profile. Never committed;
+# the tool reads profiles/ purely as local runtime data. Only profile.example/ (a fictional
+# persona) is tracked. Anchored to the repo root so it never over-matches src/profile/
+# (tracked code). The singular /profile/ is also ignored defensively: older docs used
+# that path, and a hand-made profile/ holding real identity data must never be trackable.
+/profiles/
+/profile/

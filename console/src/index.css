@@ -1,0 +1,259 @@
+@import 'tailwindcss';
+
+/* Self-hosted variable fonts (no network needed for a local tool).
+ * Sans = chrome, Serif = the words the owner writes, Mono = the numbers the machine computes. */
+@import '@fontsource-variable/inter';
+@import '@fontsource-variable/fraunces';
+@import '@fontsource-variable/jetbrains-mono';
+
+/* Tier 2 semantic roles. Canonical values live here. The accent is a single-line swap. */
+:root {
+  /* Type roles */
+  --font-sans: 'Inter Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-serif: 'Fraunces Variable', ui-serif, Georgia, Cambria, 'Times New Roman', serif;
+  --font-mono: 'JetBrains Mono Variable', ui-monospace, SFMono-Regular, 'SF Mono', Menlo, monospace;
+
+  /* Text (ink) */
+  --text: #2f2b25;
+  --text-muted: #635c50;
+  --text-subtle: #837b6d;
+  --text-heading: #1c1a15;
+  --text-strong: #1c1a15;
+  --text-inverse: #ffffff;
+
+  /* Surfaces */
+  --background: #faf9f7;
+  --surface: #ffffff;
+  --surface-raised: #ffffff;
+  --surface-sunken: #f4f2ee;
+  --surface-nested: #f7f5f1;
+  --row-hover: #f4f2ee;
+
+  /* Borders (internal dividers only) */
+  --border: #e7e3dc;
+  --border-strong: #d4cec3;
+
+  /* Interactive (the one accent: brass). Three roles to re-brand together:
+   *   --primary      the brass fill/rail (bright, brand)
+   *   --primary-fg   ink that rides ON a brass fill — brass wants dark text, never white
+   *   --primary-ink  deeper brass for accent TEXT on light/soft surfaces (AA on white) */
+  --primary: #a9781a;
+  --primary-hover: #946816;
+  --primary-soft: #f4ead0;
+  --primary-fg: #221c0c;
+  --primary-ink: #7c5712;
+  --selected-bg: #f4ead0;
+  --selected-strong: #a9781a;
+  --selected-strong-fg: #221c0c;
+  --focus-ring: rgb(169 120 26 / 0.45);
+
+  /* Status (base + -fg + -bg) */
+  --success: #15803d; --success-fg: #15803d; --success-bg: #eaf4ee;
+  --warning: #b45309; --warning-fg: #b45309; --warning-bg: #fbf1e3;
+  --error: #b91c1c;   --error-fg: #b91c1c;   --error-bg: #fbeaea;
+  --info: #1d4ed8;    --info-fg: #1d4ed8;    --info-bg: #e8edfb;
+
+  /* Sidebar: a light panel, not a slab. Dark ink text, a brass active pill + rail,
+   * and a hairline right border (--sidebar-border) to part it from the white room. */
+  --sidebar: #f1eee5;
+  --sidebar-raised: #ffffff;
+  --sidebar-fg: #221f18;
+  --sidebar-muted: #6b6555;
+  --sidebar-subtle: #857e6c;
+  --sidebar-hover: rgb(20 18 12 / 0.04);
+  --sidebar-active-bg: #f4ead0;
+  --sidebar-rail: #a9781a;
+  --sidebar-border: #eae5da;
+
+  /* Data-viz: warm categorical palette. Series 1 = brass, the brand's "good signal";
+   * series 2 is a cool steel to hold contrast against the warm accent. */
+  --chart-1: #a9781a; /* brass — brand accent */
+  --chart-2: #3f6f8f; /* steel */
+  --chart-3: #c2683f; /* clay */
+  --chart-4: #7e5a86; /* plum */
+  --chart-5: #5c6670; /* slate */
+  --chart-6: #a68a3f; /* ochre */
+  --chart-grid: #ece8e1;
+  --chart-cursor: rgb(47 43 37 / 0.05);
+
+  /* Overlays: a warm-tinted scrim, never black. */
+  --overlay-scrim: rgb(47 43 37 / 0.45);
+}
+
+/* Map semantic roles to Tailwind v4 utilities. Components consume only these. */
+@theme inline {
+  --font-sans: var(--font-sans);
+  --font-serif: var(--font-serif);
+  --font-mono: var(--font-mono);
+
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-sunken: var(--surface-sunken);
+  --color-surface-nested: var(--surface-nested);
+  --color-row-hover: var(--row-hover);
+
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+
+  --color-text: var(--text);
+  --color-text-muted: var(--text-muted);
+  --color-text-subtle: var(--text-subtle);
+  --color-text-heading: var(--text-heading);
+  --color-text-strong: var(--text-strong);
+  --color-text-inverse: var(--text-inverse);
+
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-soft: var(--primary-soft);
+  --color-primary-fg: var(--primary-fg);
+  --color-primary-ink: var(--primary-ink);
+  --color-selected-bg: var(--selected-bg);
+  --color-selected-strong: var(--selected-strong);
+  --color-selected-strong-fg: var(--selected-strong-fg);
+
+  --color-success: var(--success);
+  --color-success-fg: var(--success-fg);
+  --color-success-bg: var(--success-bg);
+  --color-warning: var(--warning);
+  --color-warning-fg: var(--warning-fg);
+  --color-warning-bg: var(--warning-bg);
+  --color-error: var(--error);
+  --color-error-fg: var(--error-fg);
+  --color-error-bg: var(--error-bg);
+  --color-info: var(--info);
+  --color-info-fg: var(--info-fg);
+  --color-info-bg: var(--info-bg);
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-raised: var(--sidebar-raised);
+  --color-sidebar-fg: var(--sidebar-fg);
+  --color-sidebar-muted: var(--sidebar-muted);
+  --color-sidebar-subtle: var(--sidebar-subtle);
+  --color-sidebar-hover: var(--sidebar-hover);
+  --color-sidebar-active-bg: var(--sidebar-active-bg);
+  --color-sidebar-rail: var(--sidebar-rail);
+  --color-sidebar-border: var(--sidebar-border);
+
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-chart-6: var(--chart-6);
+  --color-chart-grid: var(--chart-grid);
+
+  --color-overlay-scrim: var(--overlay-scrim);
+
+  /* One radius. -md and -sm are for inner pills and chart cells only. */
+  --radius-sm: 2px;
+  --radius-md: 4px;
+  --radius-lg: 0.375rem;
+
+  /* Shadow ladder, warm ink tint rgb(47 43 37). Boundaries, not borders. */
+  --shadow-sm: 0 1px 2px 0 rgb(47 43 37 / 0.06), 0 1px 3px 0 rgb(47 43 37 / 0.08);
+  --shadow-control: 0 0 0 1px rgb(47 43 37 / 0.06), 0 1px 2px 0 rgb(47 43 37 / 0.05);
+  --shadow-control-hover: 0 0 0 1px rgb(47 43 37 / 0.10), 0 2px 4px 0 rgb(47 43 37 / 0.08);
+  --shadow-md: 0 4px 6px -1px rgb(47 43 37 / 0.10), 0 2px 4px -2px rgb(47 43 37 / 0.08);
+  --shadow-lg: 0 10px 15px -3px rgb(47 43 37 / 0.12), 0 4px 6px -4px rgb(47 43 37 / 0.10);
+  --shadow-xl: 0 24px 48px -12px rgb(47 43 37 / 0.24);
+
+  /* Motion */
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@layer base {
+  html, body, #root {
+    height: 100%;
+  }
+  body {
+    background-color: var(--background);
+    color: var(--text);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  table {
+    font-variant-numeric: tabular-nums;
+  }
+  /* Fraunces reads best a touch tighter as display copy. */
+  .font-serif {
+    font-optical-sizing: auto;
+    letter-spacing: -0.01em;
+  }
+}
+
+/*
+ * Global enforcement (unlayered, wins over shadcn defaults):
+ * force-transparent any border and inject white fill plus the control shadow on
+ * stock slots, so primitives read borderless with a warm shadow boundary.
+ */
+[data-slot='card'],
+[data-slot='select-trigger'],
+[data-slot='select-content'],
+[data-slot='popover-content'],
+[data-slot='dialog-content'],
+[data-slot='dropdown-menu-content'] {
+  border-color: transparent !important;
+}
+[data-slot='select-trigger'] {
+  background-color: var(--surface);
+  box-shadow: var(--shadow-control);
+}
+[data-slot='select-content'],
+[data-slot='popover-content'],
+[data-slot='dropdown-menu-content'] {
+  background-color: var(--surface-raised);
+  box-shadow: var(--shadow-md);
+}
+
+/* Motion utilities. Orchestrated, quiet, and reduced-motion aware. */
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes shimmer {
+  from { background-position: -200% 0; }
+  to   { background-position: 200% 0; }
+}
+
+.animate-fade-up {
+  animation: fade-up 0.5s var(--ease-out-soft) both;
+}
+.animate-fade-in {
+  animation: fade-in 0.4s var(--ease-out-soft) both;
+}
+
+/* Cards that are themselves links/actions lift on hover. */
+.card-lift {
+  transition: transform 0.2s var(--ease-out-soft), box-shadow 0.2s var(--ease-out-soft);
+}
+.card-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+/* Skeleton shimmer for loading states. */
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--surface-sunken) 25%,
+    var(--surface-nested) 37%,
+    var(--surface-sunken) 63%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

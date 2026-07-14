@@ -1,0 +1,747 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Brand Console API",
+    "version": "0.1.0",
+    "description": "The local Express API behind the brand console. Runs unauthenticated on http://localhost:5174. Read-only reference; the console never holds a secret because there is no secret to hold."
+  },
+  "servers": [{ "url": "http://localhost:5174", "description": "Local dev server" }],
+  "tags": [
+    { "name": "Profile", "description": "Active-profile pillars and summary." },
+    { "name": "Connections", "description": "Platform connection status (identity only, never tokens)." },
+    { "name": "Sources", "description": "Configured discovery sources." },
+    { "name": "Queue", "description": "The scored idea queue." },
+    { "name": "Drafts", "description": "Draft posts and their lifecycle." },
+    { "name": "Sparks", "description": "Raw one-liner capture." },
+    { "name": "Posts", "description": "Published post archive." },
+    { "name": "Scheduled", "description": "Planned-post slots." },
+    { "name": "Tags", "description": "The tag vocabulary." },
+    { "name": "Discovery", "description": "The triage inbox of ingested feed items." },
+    { "name": "Database", "description": "Read-only introspection of the local SQLite store." }
+  ],
+  "paths": {
+    "/api/pillars": {
+      "get": {
+        "tags": ["Profile"],
+        "summary": "List the active profile's pillars",
+        "responses": {
+          "200": {
+            "description": "Pillars as { key, label }.",
+            "content": {
+              "application/json": {
+                "schema": { "type": "array", "items": { "$ref": "#/components/schemas/PillarInfo" } }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/profile": {
+      "get": {
+        "tags": ["Profile"],
+        "summary": "Active-profile summary",
+        "description": "Returns name, products, and pillars today. This pass shapes an extended payload (voiceCard, ctaPolicy, feedSources) mock-first; the server extension is deferred.",
+        "responses": {
+          "200": {
+            "description": "The profile summary.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Profile" } } }
+          }
+        }
+      }
+    },
+    "/api/connections": {
+      "get": {
+        "tags": ["Connections"],
+        "summary": "Platform connection status",
+        "description": "Read-only status list. Carries identity/status only — never an access token, client secret, or password. Added in phase 01; served mock-first until the backend route exists.",
+        "responses": {
+          "200": {
+            "description": "One record per platform.",
+            "content": {
+              "application/json": {
+                "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Connection" } }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sources": {
+      "get": {
+        "tags": ["Sources"],
+        "summary": "List configured sources (newest first)",
+        "responses": {
+          "200": {
+            "description": "The source list.",
+            "content": {
+              "application/json": {
+                "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Source" } }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Sources"],
+        "summary": "Create a source",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/NewSource" } } }
+        },
+        "responses": {
+          "201": {
+            "description": "The created source.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Source" } } }
+          }
+        }
+      }
+    },
+    "/api/queue": {
+      "get": {
+        "tags": ["Queue"],
+        "summary": "List idea-queue items, scored desc",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string", "enum": ["new", "seeded", "drafting", "drafted", "archived"] },
+            "description": "Optional status filter."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The idea queue.",
+            "content": {
+              "application/json": {
+                "schema": { "type": "array", "items": { "$ref": "#/components/schemas/IdeaQueueItem" } }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/queue/{id}/seed": {
+      "post": {
+        "tags": ["Queue"],
+        "summary": "Attach a seed and mark the item seeded",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": { "seed": { "type": "string" } },
+                "required": ["seed"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The updated queue item.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/IdeaQueueItem" } } }
+          }
+        }
+      }
+    },
+    "/api/drafts": {
+      "get": {
+        "tags": ["Drafts"],
+        "summary": "List drafts (newest first)",
+        "responses": {
+          "200": {
+            "description": "The draft list.",
+            "content": {
+              "application/json": {
+                "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Draft" } }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Drafts"],
+        "summary": "Create a draft from an idea",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "ideaId": { "type": "string" },
+                  "hookOptions": { "type": "array", "items": { "type": "string" } },
+                  "body": { "type": "string" },
+                  "close": { "type": "string" },
+                  "mediaSuggestion": { "type": "string" }
+                },
+                "required": ["ideaId"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The created draft.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Draft" } } }
+          }
+        }
+      }
+    },
+    "/api/drafts/{id}": {
+      "get": {
+        "tags": ["Drafts"],
+        "summary": "One draft",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": {
+          "200": {
+            "description": "The draft.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Draft" } } }
+          },
+          "404": { "description": "No such draft." }
+        }
+      },
+      "patch": {
+        "tags": ["Drafts"],
+        "summary": "Partial edit of a draft",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "hookOptions": { "type": "array", "items": { "type": "string" } },
+                  "body": { "type": "string" },
+                  "close": { "type": "string" },
+                  "mediaSuggestion": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The updated draft.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Draft" } } }
+          }
+        }
+      }
+    },
+    "/api/drafts/{id}/review": {
+      "post": {
+        "tags": ["Drafts"],
+        "summary": "Set the stored review status",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "reviewStatus": { "type": "string", "enum": ["pending", "passed", "failed", "edited"] }
+                },
+                "required": ["reviewStatus"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The updated draft.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Draft" } } }
+          }
+        }
+      }
+    },
+    "/api/drafts/{id}/publish": {
+      "post": {
+        "tags": ["Drafts"],
+        "summary": "Publish a draft into the post archive",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": { "permalink": { "type": "string" } }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The published post.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PublishedPost" } } }
+          }
+        }
+      }
+    },
+    "/api/sparks": {
+      "post": {
+        "tags": ["Sparks"],
+        "summary": "Capture a raw one-liner",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": { "text": { "type": "string" } },
+                "required": ["text"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The stored spark plus the seeded needs-your-take idea it created in the queue.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": { "id": { "type": "string" }, "ideaId": { "type": "string" } }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/posts": {
+      "get": {
+        "tags": ["Posts"],
+        "summary": "List published posts (newest first)",
+        "description": "Each post carries a `pillar`, resolved server-side by walking post -> draft -> idea (null when that chain is broken).",
+        "responses": {
+          "200": {
+            "description": "The published archive.",
+            "content": {
+              "application/json": {
+                "schema": { "type": "array", "items": { "$ref": "#/components/schemas/PublishedPost" } }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/scheduled": {
+      "get": {
+        "tags": ["Scheduled"],
+        "summary": "List planned-post slots (soonest first)",
+        "description": "The real scheduled_posts table, with pillar and title resolved via slot -> draft -> idea. Empty until something is scheduled.",
+        "responses": {
+          "200": {
+            "description": "The planned slots.",
+            "content": {
+              "application/json": {
+                "schema": { "type": "array", "items": { "$ref": "#/components/schemas/ScheduledPost" } }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tags": {
+      "get": {
+        "tags": ["Tags"],
+        "summary": "The tag vocabulary (alphabetical)",
+        "responses": {
+          "200": {
+            "description": "The tag list.",
+            "content": {
+              "application/json": {
+                "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Tag" } }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Tags"],
+        "summary": "Insert-if-absent by slug",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": { "name": { "type": "string" } },
+                "required": ["name"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The existing or newly created tag.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Tag" } } }
+          }
+        }
+      }
+    },
+    "/api/discovery/inbox": {
+      "get": {
+        "tags": ["Discovery"],
+        "summary": "The triage inbox with joined tags",
+        "parameters": [
+          { "name": "state", "in": "query", "required": false, "schema": { "type": "string", "enum": ["inbox", "promoted", "archived"] }, "description": "Filter by triage state." },
+          { "name": "q", "in": "query", "required": false, "schema": { "type": "string" }, "description": "Free-text search over title/summary." },
+          { "name": "tags", "in": "query", "required": false, "schema": { "type": "string" }, "description": "Comma-separated tag ids." },
+          { "name": "group", "in": "query", "required": false, "schema": { "type": "string" }, "description": "Group key." }
+        ],
+        "responses": {
+          "200": {
+            "description": "Inbox items with their tags.",
+            "content": {
+              "application/json": {
+                "schema": { "type": "array", "items": { "$ref": "#/components/schemas/InboxItem" } }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/discovery/{id}/archive": {
+      "post": {
+        "tags": ["Discovery"],
+        "summary": "Move an item to archived",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": {
+          "200": {
+            "description": "The updated inbox item.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/InboxItem" } } }
+          }
+        }
+      }
+    },
+    "/api/discovery/{id}/unarchive": {
+      "post": {
+        "tags": ["Discovery"],
+        "summary": "Return an item to the inbox",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": {
+          "200": {
+            "description": "The updated inbox item.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/InboxItem" } } }
+          }
+        }
+      }
+    },
+    "/api/discovery/{id}/promote": {
+      "post": {
+        "tags": ["Discovery"],
+        "summary": "Promote a feed item to a seeded idea",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": { "comment": { "type": "string" } }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The created idea reference.",
+            "content": {
+              "application/json": {
+                "schema": { "type": "object", "properties": { "id": { "type": "string" } } }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/discovery/{id}/tags": {
+      "post": {
+        "tags": ["Discovery"],
+        "summary": "Attach a tag to a feed item",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": { "tagId": { "type": "string" } },
+                "required": ["tagId"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The attachment.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": { "feedItemId": { "type": "string" }, "tagId": { "type": "string" } }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/discovery/{id}/tags/{tagId}": {
+      "delete": {
+        "tags": ["Discovery"],
+        "summary": "Detach a tag from a feed item",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } },
+          { "name": "tagId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": { "204": { "description": "Detached." } }
+      }
+    },
+    "/api/database/tables": {
+      "get": {
+        "tags": ["Database"],
+        "summary": "Grouped table list with row counts",
+        "responses": {
+          "200": {
+            "description": "Tables plus their category order.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "tables": { "type": "array", "items": { "$ref": "#/components/schemas/DbTableInfo" } },
+                    "categoryOrder": { "type": "array", "items": { "type": "string" } }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/database/tables/{name}": {
+      "get": {
+        "tags": ["Database"],
+        "summary": "Columns plus a filtered page of rows",
+        "parameters": [
+          { "name": "name", "in": "path", "required": true, "schema": { "type": "string" } },
+          { "name": "limit", "in": "query", "required": false, "schema": { "type": "integer" } },
+          { "name": "offset", "in": "query", "required": false, "schema": { "type": "integer" } },
+          { "name": "sort", "in": "query", "required": false, "schema": { "type": "string" }, "description": "Column to sort by." },
+          { "name": "dir", "in": "query", "required": false, "schema": { "type": "string", "enum": ["asc", "desc"] } }
+        ],
+        "responses": {
+          "200": {
+            "description": "The page of rows. Column filters are passed as f.<column> query params.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/DbTableData" } } }
+          }
+        }
+      }
+    },
+    "/api/database/query": {
+      "post": {
+        "tags": ["Database"],
+        "summary": "Run one read-only SELECT/WITH statement",
+        "description": "Executes a single read-only statement. On a rejected or failing query the handler returns HTTP 200 with an `error` string in the body rather than a non-2xx status, so callers must inspect `error`.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": { "sql": { "type": "string" } },
+                "required": ["sql"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Result columns and rows, or a 200-with-error body when the statement is rejected.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/DbQueryResult" } } }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "PillarInfo": {
+        "type": "object",
+        "properties": { "key": { "type": "string" }, "label": { "type": "string" } },
+        "required": ["key", "label"]
+      },
+      "Profile": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "products": { "type": "array", "items": { "type": "string" } },
+          "pillars": { "type": "array", "items": { "$ref": "#/components/schemas/PillarInfo" } }
+        }
+      },
+      "Connection": {
+        "type": "object",
+        "description": "Platform connection status. No token, secret, or password field exists on this schema by design.",
+        "properties": {
+          "platform": { "type": "string", "enum": ["linkedin", "x", "newsletter"] },
+          "connected": { "type": "boolean" },
+          "displayName": { "type": ["string", "null"] },
+          "avatarUrl": { "type": ["string", "null"] },
+          "headline": { "type": ["string", "null"] },
+          "connectedAt": { "type": ["integer", "null"], "description": "Epoch milliseconds." },
+          "scopes": { "type": "array", "items": { "type": "string" } }
+        },
+        "required": ["platform", "connected", "scopes"]
+      },
+      "Source": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "kind": { "type": "string" },
+          "name": { "type": "string" },
+          "url": { "type": ["string", "null"] },
+          "enabled": { "type": "boolean" },
+          "pillar": { "type": ["string", "null"] },
+          "config": { "type": "object", "additionalProperties": true }
+        }
+      },
+      "NewSource": {
+        "type": "object",
+        "properties": {
+          "kind": { "type": "string" },
+          "name": { "type": "string" },
+          "url": { "type": "string" },
+          "pillar": { "type": ["string", "null"] },
+          "enabled": { "type": "boolean" },
+          "config": { "type": "object", "additionalProperties": true }
+        },
+        "required": ["kind", "name"]
+      },
+      "IdeaQueueItem": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "pillar": { "type": "string" },
+          "tag": { "type": "string", "enum": ["needs-your-take", "ready-to-draft"] },
+          "sourceRef": { "type": ["string", "null"] },
+          "proposedAngle": { "type": "string" },
+          "seed": { "type": ["string", "null"] },
+          "score": { "type": "number" },
+          "status": { "type": "string", "enum": ["new", "seeded", "drafting", "drafted", "archived"] },
+          "createdAt": { "type": "integer", "description": "Epoch milliseconds." }
+        }
+      },
+      "Draft": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "ideaId": { "type": "string" },
+          "hookOptions": { "type": "array", "items": { "type": "string" } },
+          "body": { "type": "string" },
+          "close": { "type": "string" },
+          "mediaSuggestion": { "type": "string" },
+          "reviewStatus": { "type": "string", "enum": ["pending", "passed", "failed", "edited"] },
+          "createdAt": { "type": "integer", "description": "Epoch milliseconds." }
+        }
+      },
+      "PublishedPost": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "draftId": { "type": "string" },
+          "permalink": { "type": ["string", "null"] },
+          "publishedAt": { "type": "integer", "description": "Epoch milliseconds." },
+          "pillar": { "type": ["string", "null"], "description": "Resolved via post -> draft -> idea." }
+        }
+      },
+      "ScheduledPost": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "draftId": { "type": "string" },
+          "plannedFor": { "type": ["integer", "null"], "description": "Epoch milliseconds." },
+          "status": { "type": "string" },
+          "pillar": { "type": ["string", "null"] },
+          "title": { "type": ["string", "null"], "description": "The draft's first hook, if any." }
+        }
+      },
+      "Tag": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "slug": { "type": "string" },
+          "color": { "type": "string" }
+        }
+      },
+      "InboxItem": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "sourceId": { "type": "string" },
+          "externalId": { "type": "string" },
+          "title": { "type": "string" },
+          "url": { "type": ["string", "null"] },
+          "summary": { "type": ["string", "null"] },
+          "publishedAt": { "type": ["integer", "null"] },
+          "fetchedAt": { "type": "integer" },
+          "triageState": { "type": "string", "enum": ["inbox", "promoted", "archived"] },
+          "archivedAt": { "type": ["integer", "null"] },
+          "promotedIdeaId": { "type": ["string", "null"] },
+          "score": { "type": ["number", "null"] },
+          "tags": { "type": "array", "items": { "$ref": "#/components/schemas/Tag" } }
+        }
+      },
+      "DbTableInfo": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "label": { "type": "string" },
+          "category": { "type": "string" },
+          "description": { "type": "string" },
+          "rowCount": { "type": "integer" }
+        }
+      },
+      "DbColumn": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "type": { "type": "string" },
+          "notnull": { "type": "boolean" },
+          "pk": { "type": "boolean" }
+        }
+      },
+      "DbTableData": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "label": { "type": "string" },
+          "category": { "type": "string" },
+          "description": { "type": "string" },
+          "columns": { "type": "array", "items": { "$ref": "#/components/schemas/DbColumn" } },
+          "rowCount": { "type": "integer" },
+          "filteredCount": { "type": "integer" },
+          "rows": { "type": "array", "items": { "type": "object", "additionalProperties": true } },
+          "limit": { "type": "integer" },
+          "offset": { "type": "integer" }
+        }
+      },
+      "DbQueryResult": {
+        "type": "object",
+        "properties": {
+          "columns": { "type": "array", "items": { "type": "string" } },
+          "rows": { "type": "array", "items": { "type": "object", "additionalProperties": true } },
+          "truncated": { "type": "boolean" },
+          "error": { "type": "string", "description": "Present when the statement was rejected or failed (returned with HTTP 200)." }
+        }
+      }
+    }
+  }
+}

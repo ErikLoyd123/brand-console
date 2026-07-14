@@ -1,0 +1,1 @@
+ALTER TABLE `published_posts` DROP COLUMN `metrics`;

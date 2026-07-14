@@ -1,0 +1,80 @@
+# Cadence plugin config for the marketing / personal-brand project.
+# Overrides only what differs from plugin defaults.
+
+config_version: 3          # schema version; drives migration detection
+
+paths:
+  designs: docs/cadence/designs
+  plans:   docs/cadence/plans
+  future:  docs/cadence/future
+  config:  .cadence
+
+naming:
+  date_format: "YYYY-MM-DD"
+  slug_case: kebab
+
+status:
+  design: [draft, in-review, approved, completed, superseded, on-hold]
+  plan:   [draft, in-progress, implemented, completed, superseded, on-hold]
+
+frontmatter:
+  required: [title, created, updated, status, tags]
+
+plan:
+  tdd: false               # content/skill work, not test-driven code
+  commit_cadence: per-task
+
+execute:
+  branch_check: true
+  auto_resolve_drift: false
+  parallel: true
+  max_parallel: 4
+  worktree_dir: .cadence/worktrees
+  worktree_confirm: true
+  integrate: rebase-ff
+  resume_on_dirty_tree: false
+
+authoring:
+  max_parallel: 6
+  design_mode: ask
+
+audits:
+  default:
+    - checkbox-completeness
+    - oos-justification
+    - deferred-comment-scan
+    - code-behind-checkbox
+    - design-intent-alignment
+    - build-validator
+    - merge-integrity
+  warnings:
+    - file-map-honesty
+    - design-plan-consistency
+    - validation-doc-presence
+  optional: []
+  build_validator:
+    command: "npx tsc --noEmit"
+    expect_zero_exit: true
+
+advisors:
+  enabled: false
+  roster: []
+
+plain_english:
+  section_callout: true
+  always_write_00a: true
+  length_target: "400-700"
+
+oos:
+  require_rationale: true
+  require_wikilink: true
+
+validate:
+  reset_checkboxes_on_rerun: true
+  browser_driver: auto
+  browser_command: "npx playwright test"
+  browser_env_preamble: null
+
+find_bugs:
+  default_baseline: main
+  exclude: [node_modules, dist, build, __pycache__, target, .next, vendor]

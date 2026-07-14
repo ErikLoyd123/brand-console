@@ -1,0 +1,132 @@
+// src/profile/brand.ts
+// Brand guidelines loader. Each profile may carry a gitignored brand/ folder:
+//
+//   profiles/<slug>/brand/brand.yaml   — colors, fonts, logo, style notes
+//   profiles/<slug>/brand/refs/        — example images the owner wants matched
+//                                        (palette, mood, annotation style)
+//
+// The imagery pipeline (src/images/*) reads this before composing a graphic or
+// annotating a screenshot, so everything it produces lands in the profile's look
+// rather than a hardcoded one. Absent file or fields fall back to a neutral
+// default palette — a profile without brand guidelines still gets clean images.
+// Like identity.yaml this is per-user data: never committed, resolved per call
+// through the active profile.
+
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { parse } from 'yaml';
+import { profileDirBySlug, resolveActiveProfileDir } from './loader';
+
+export interface BrandColors {
+  // The signature color — annotation strokes, accent bars, highlights.
+  primary: string;
+  // A supporting color for secondary accents.
+  accent: string;
+  // Card background.
+  background: string;
+  // Main text on the background.
+  foreground: string;
+  // De-emphasized text (attributions, labels).
+  muted: string;
+}
+
+export interface BrandFonts {
+  // CSS font-family strings (rendered by sharp's SVG engine via system fonts).
+  heading: string;
+  body: string;
+}
+
+export interface BrandGuidelines {
+  colors: BrandColors;
+  fonts: BrandFonts;
+  // Path to a logo file inside brand/, or null when the profile has none.
+  logoPath: string | null;
+  // Freeform prose the imagery procedure reads for judgment calls the yaml
+  // can't encode ("always light backgrounds", "no stock-photo people", ...).
+  styleNotes: string;
+  // Absolute paths of reference images under brand/refs/ — examples of the
+  // look the owner wants matched.
+  refPaths: string[];
+}
+
+// Neutral placeholder look, deliberately unbranded. A real profile overrides it
+// in brand.yaml; profile.example ships a fictional one.
+export const DEFAULT_BRAND: BrandGuidelines = {
+  colors: {
+    primary: '#2f6f9c',
+    accent: '#e8a33d',
+    background: '#f7f8fa',
+    foreground: '#1c2733',
+    muted: '#6b7684',
+  },
+  fonts: {
+    heading: "'Helvetica Neue', Helvetica, Arial, sans-serif",
+    body: "'Helvetica Neue', Helvetica, Arial, sans-serif",
+  },
+  logoPath: null,
+  styleNotes: '',
+  refPaths: [],
+};
+
+const IMAGE_EXTS = new Set(['.png', '.jpg', '.jpeg', '.webp', '.gif', '.svg']);
+
+export function brandDir(slug?: string): string {
+  return resolve(slug ? profileDirBySlug(slug) : resolveActiveProfileDir(), 'brand');
+}
+
+function asString(value: unknown, fallback: string): string {
+  return typeof value === 'string' && value.trim() !== '' ? value : fallback;
+}
+
+function listRefs(dir: string): string[] {
+  const refsDir = resolve(dir, 'refs');
+  if (!existsSync(refsDir) || !statSync(refsDir).isDirectory()) return [];
+  return readdirSync(refsDir)
+    .filter((name) => IMAGE_EXTS.has(name.slice(name.lastIndexOf('.')).toLowerCase()))
+    .sort()
+    .map((name) => resolve(refsDir, name));
+}
+
+// Tolerant load: missing folder, missing yaml, or partial yaml all resolve to a
+// complete BrandGuidelines with defaults filled in — the imagery pipeline never
+// has to branch on "brand configured?".
+export function loadBrand(slug?: string): BrandGuidelines {
+  let dir: string;
+  try {
+    dir = brandDir(slug);
+  } catch {
+    return { ...DEFAULT_BRAND };
+  }
+
+  const yamlPath = resolve(dir, 'brand.yaml');
+  let raw: Record<string, unknown> = {};
+  if (existsSync(yamlPath)) {
+    try {
+      raw = (parse(readFileSync(yamlPath, 'utf8')) as Record<string, unknown>) ?? {};
+    } catch {
+      raw = {};
+    }
+  }
+
+  const colors = (raw.colors ?? {}) as Record<string, unknown>;
+  const fonts = (raw.fonts ?? {}) as Record<string, unknown>;
+  const logo = asString(raw.logo, '');
+  const logoAbs = logo ? resolve(dir, logo) : '';
+
+  return {
+    colors: {
+      primary: asString(colors.primary, DEFAULT_BRAND.colors.primary),
+      accent: asString(colors.accent, DEFAULT_BRAND.colors.accent),
+      background: asString(colors.background, DEFAULT_BRAND.colors.background),
+      foreground: asString(colors.foreground, DEFAULT_BRAND.colors.foreground),
+      muted: asString(colors.muted, DEFAULT_BRAND.colors.muted),
+    },
+    fonts: {
+      heading: asString(fonts.heading, DEFAULT_BRAND.fonts.heading),
+      body: asString(fonts.body, DEFAULT_BRAND.fonts.body),
+    },
+    logoPath: logoAbs && existsSync(logoAbs) ? logoAbs : null,
+    styleNotes: asString(raw.style_notes, ''),
+    refPaths: listRefs(dir),
+  };
+}

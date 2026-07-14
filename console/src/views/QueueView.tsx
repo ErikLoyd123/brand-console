@@ -4,6 +4,7 @@ import {
   type Connection,
   type ContentPlatform,
   type IdeaQueueItem,
+  type ImageAttachment,
   type ReviewFinding,
   type ReviewStatus,
   type Silo,
@@ -16,6 +17,7 @@ import { TagBadge } from '../components/TagBadge'
 import { SiloBadge } from '../components/SiloBadge'
 import { SilosInfoLink } from '../components/SilosInfoLink'
 import { PublishLinkedInModal } from '../components/PublishLinkedInModal'
+import { ImageStrip } from '../components/ImageStrip'
 import { PostPreview } from '../components/PostPreview'
 import { ChecksPanel } from '../components/ChecksPanel'
 import { getConsoleSilos } from '../lib/silos'
@@ -84,6 +86,7 @@ function ContentBlock({
   linkedinConn,
   publishEnabled,
   profileName,
+  images,
   onChanged,
   onRevise,
   onReview,
@@ -92,6 +95,9 @@ function ContentBlock({
   linkedinConn: Connection | null
   publishEnabled: boolean
   profileName?: string
+  // The card's attached images (fetched by the ImageStrip below), offered as
+  // ready-made picks in the LinkedIn publish modal.
+  images: ImageAttachment[]
   onChanged: () => void
   onRevise: () => void
   onReview: () => void
@@ -416,6 +422,7 @@ function ContentBlock({
       {linkedinModalOpen && linkedinConn && draft && (
         <PublishLinkedInModal
           draft={draft}
+          attachedImages={images}
           connection={linkedinConn}
           onClose={() => setLinkedinModalOpen(false)}
           onPublished={() => {
@@ -462,6 +469,10 @@ function QueueRow({
   // that already has a seed) is draftable now.
   const needsTakeFirst = item.tag === 'needs-your-take' && !hasSeed
   const ref = useRef<HTMLElement>(null)
+
+  // The card's attached images, lifted out of the ImageStrip so the publish modal
+  // can offer them as picks without a second fetch.
+  const [cardImages, setCardImages] = useState<ImageAttachment[]>([])
 
   // Developed points — the beats of the argument. Editable by hand here; the develop
   // skill writes the same field. One point per line in the editor.
@@ -789,10 +800,12 @@ function QueueRow({
             linkedinConn={linkedinConn}
             publishEnabled={publishEnabled}
             profileName={profileName}
+            images={cardImages}
             onChanged={onDone}
             onRevise={onDraft}
             onReview={onReview}
           />
+          <ImageStrip ideaId={item.id} onChanged={setCardImages} />
           {!(item.platform === 'web' ? item.article?.body?.trim() : item.draft) && (
             <div className="flex items-center gap-3">
               <Button size="sm" onClick={onDraft}>

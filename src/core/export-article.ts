@@ -7,11 +7,12 @@
 // overwrites the same <slug>.md and refreshes the date — idempotent on the slug. Export does not
 // publish. See design 2026-07-13-multi-profile-longform-lane/04-articles-artifact-and-pipeline.
 
-import { mkdirSync, writeFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { copyFileSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { basename, resolve } from 'node:path';
 import { eq } from 'drizzle-orm';
 import { db } from '../db/client';
 import { articles } from '../db/schema';
+import { imageAbsPath, listImagesForIdea } from '../images/store';
 import { REPO_ROOT } from '../profile/loader';
 
 export type ExportArticleResult =
@@ -37,6 +38,26 @@ export function exportArticle(articleId: string): ExportArticleResult {
   if (slug === '') return { ok: false, error: 'no-slug' };
 
   const now = Date.now();
+  const dir = resolve(REPO_ROOT, 'data', 'exports', article.profileId);
+  mkdirSync(dir, { recursive: true });
+
+  // Bundle the idea's attached images beside the markdown (images/<slug>/…) and list
+  // them in the frontmatter with their alt text, so the shipped folder is complete —
+  // whatever site consumes the export gets the visuals and their descriptions with it.
+  const attached = listImagesForIdea(article.ideaId);
+  const bundled: { src: string; alt: string }[] = [];
+  if (attached.length > 0) {
+    const imgDir = resolve(dir, 'images', slug);
+    mkdirSync(imgDir, { recursive: true });
+    for (const img of attached) {
+      const abs = imageAbsPath(img.path);
+      if (!existsSync(abs)) continue; // a missing file shouldn't block the export
+      const name = basename(img.path);
+      copyFileSync(abs, resolve(imgDir, name));
+      bundled.push({ src: `images/${slug}/${name}`, alt: img.alt });
+    }
+  }
+
   const frontmatter = [
     '---',
     `title: ${yamlValue(article.title)}`,
@@ -44,6 +65,12 @@ export function exportArticle(articleId: string): ExportArticleResult {
     `target_keyword: ${yamlValue(article.targetKeyword)}`,
     `slug: ${slug}`,
     `date: ${isoDate(now)}`,
+    ...(bundled.length > 0
+      ? [
+          'images:',
+          ...bundled.flatMap((img) => [`  - src: ${yamlValue(img.src)}`, `    alt: ${yamlValue(img.alt)}`]),
+        ]
+      : []),
     '---',
   ].join('\n');
 
@@ -62,8 +89,6 @@ export function exportArticle(articleId: string): ExportArticleResult {
 
   const contents = `${frontmatter}\n\n${bodyParts.join('\n\n')}\n`;
 
-  const dir = resolve(REPO_ROOT, 'data', 'exports', article.profileId);
-  mkdirSync(dir, { recursive: true });
   const path = resolve(dir, `${slug}.md`);
   writeFileSync(path, contents, 'utf8');
 

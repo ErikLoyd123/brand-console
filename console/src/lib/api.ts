@@ -431,9 +431,42 @@ export interface ArticlePatch {
   stage?: ArticleStage
 }
 
+// An image attached to a queue idea (the images table). Produced by the imagery
+// skill (composed graphic / annotated screenshot / Unsplash pick) or uploaded here;
+// the file itself lives under gitignored data/images/ and is served by
+// GET /api/images/:id/file. `source` + `params` are the provenance the card shows.
+export type ImageSource = 'composed' | 'screenshot' | 'unsplash' | 'upload'
+export interface ImageAttachment {
+  id: string
+  ideaId: string
+  source: ImageSource
+  path: string
+  alt: string
+  width: number
+  height: number
+  params: Record<string, unknown>
+  createdAt: number
+}
+
+// Preview URL for an attached image — same-origin, proxied like every API call.
+export function imageFileUrl(id: string): string {
+  return `/api/images/${id}/file`
+}
+
 export const api = {
   // Queue: server returns items sorted by score desc.
   getQueue: () => http<IdeaQueueItem[]>('/queue'),
+
+  // Images attached to a queue idea (see ImageAttachment above).
+  getImages: (ideaId: string) => http<ImageAttachment[]>(`/images?ideaId=${encodeURIComponent(ideaId)}`),
+  uploadImage: (ideaId: string, dataBase64: string, mimeType: string, alt: string) =>
+    http<ImageAttachment>('/images/upload', {
+      method: 'POST',
+      body: JSON.stringify({ ideaId, dataBase64, mimeType, alt }),
+    }),
+  updateImageAlt: (id: string, alt: string) =>
+    http<ImageAttachment>(`/images/${id}`, { method: 'PATCH', body: JSON.stringify({ alt }) }),
+  deleteImage: (id: string) => http<void>(`/images/${id}`, { method: 'DELETE' }),
   // Seeding an item records the user's take (may be empty) and advances it toward drafting.
   seedQueueItem: (id: string, seed: string) =>
     http<IdeaQueueItem>(`/queue/${id}/seed`, {
@@ -486,11 +519,15 @@ export const api = {
   // Publishes a draft to LinkedIn for real (POST /api/publish/linkedin). Throws on
   // 503 (not configured) / 409 (not connected) / 401 (expired) / 404 / 502 (LinkedIn
   // rejected it) — caller renders the thrown message. Media precedence server-side
-  // is image > linkUrl > text.
+  // is image > linkUrl > text. The image is either inline bytes (dataBase64+mimeType)
+  // or an attached card image by imageId (the server reads the file itself).
   publishLinkedin: (
     draftId: string,
     visibility: 'PUBLIC' | 'CONNECTIONS',
-    opts?: { linkUrl?: string; image?: { dataBase64: string; mimeType: string; alt?: string } },
+    opts?: {
+      linkUrl?: string
+      image?: { dataBase64?: string; mimeType?: string; alt?: string; imageId?: string }
+    },
   ) =>
     http<PublishedPost>('/publish/linkedin', {
       method: 'POST',

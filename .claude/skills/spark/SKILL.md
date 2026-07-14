@@ -258,6 +258,10 @@ reads it there, edits by hand or revises with AI, and clicks Publish when it's g
 Every piece — whoever wrote it — lands `pending` and is judged by `content-reviewer` against
 its silo's rules. `spark` never reviews or publishes.
 
+After the piece lands, offer once: an image for the card — a composed brand graphic, an
+annotated screenshot, or an Unsplash pick. If the owner wants one, follow
+`.claude/skills/imagery-procedure.md` for the same idea; if not, move on without pushing.
+
 ## Rules
 
 - Obey the doctrine (`.claude/skills/content-doctrine.md`): never invent an opinion, never

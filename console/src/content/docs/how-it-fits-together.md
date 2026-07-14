@@ -49,12 +49,20 @@ files; some now have console editors too.
   LinkedIn and Reddit** (each platform ships its own tones and neutral starter themes).
   These are product structure; they change only in code, and the same menus ship to
   everyone.
+- **Your brand look** — `profiles/<slug>/brand/`: a `brand.yaml` (colors, fonts, optional
+  logo, style notes) plus a `refs/` folder of example images whose look you want matched.
+  The **imagery** skill reads it before producing anything, so composed graphics and
+  screenshot annotations land in *your* palette, not a stock one. Optional — without it a
+  neutral default applies. Edited by hand; `profile.example/brand/` shows the documented
+  shape.
 - **The skills and agents** — the `.claude/skills/` and `.claude/agents/` definitions.
   There is **one skill per console page** — `spark`, `discovery`, `queue`,
-  `feeds`, `pillars`, `register`, `voice` — plus `setup`, the content
+  `feeds`, `pillars`, `register`, `voice` — plus `setup`, `imagery` (images for a queue
+  idea), the content
   reviewer, and the shared references skills pull from (`voice-card`, `content-doctrine`,
   `onboarding-gate`, and the procedure files the page skills dispatch to:
-  `develop`/`draft`/`revise` for posts and `article-draft` for long-form web pieces).
+  `develop`/`draft`/`revise` for posts, `article-draft` for long-form web pieces, and
+  `imagery` for images).
   The console turns the page skills into buttons and can run them, but it
   does not edit them.
 
@@ -90,6 +98,15 @@ are stored in the local database.
   web lane's publish. Publishing moves the idea to the Published screen. The trash button
   **deletes the idea and everything downstream** (with a confirm); it's refused once anything
   shipped, since the Published archive references it.
+- **Images on a card** — each queue card has an **Images** strip: what's attached, where
+  each image came from (AI graphic / screenshot / Unsplash with photographer credit /
+  upload), and a hand-upload affordance (alt text required). The **imagery** skill produces
+  them — a brand-styled composed graphic, an annotated screenshot of a live page (boxes,
+  arrows, click marks, privacy blurs, scroll composites), or an Unsplash pick (needs
+  `UNSPLASH_ACCESS_KEY` in `.env`) — rows live in the database, files under `data/images/`.
+  **Publish ships them**: the LinkedIn modal offers the card's images as one-click picks,
+  and a web export bundles them beside the markdown (listed in the frontmatter with alt
+  text). Reddit stays copy-paste.
 - **Scheduling & calendar** — the **Calendar** screen plans when a piece goes out.
 - **Published** — the **Published** screen is the archive of everything shipped, across all
   three lanes, sliceable by platform: posts link back to the live post, web rows show the
@@ -181,7 +198,9 @@ the console is where you then run the pipeline day to day.**
 | Discovery inbox / saved | — | ✅ triage · archive / save-for-later / promote (type a take) or **Work up with AI** | ✅ (`feed_items`) | Promote needs a one-line take; the `discovery` skill draws out your take + points and promotes (mirror of `spark`) |
 | Queue (ideas + full content) | — | ✅ the review phase: seed, points, content editor, AI write/revise, Publish | ✅ | Console-owned; every idea carries its full written piece (post fields, or a web article's markdown body) on the card |
 | Article SEO fields | — | ✅ edit (on the web idea's queue card) | ✅ | Target keyword / search intent captured at intake; meta / slug filled at write time; all feed the export frontmatter |
-| Web publish (= export) | — | ✅ Publish on the queue card | ✅ | Writes `data/exports/<profile>/<slug>.md` (gitignored) and moves the piece to Published; the file is the shipped artifact |
+| Web publish (= export) | — | ✅ Publish on the queue card | ✅ | Writes `data/exports/<profile>/<slug>.md` (gitignored) and moves the piece to Published; the file is the shipped artifact — attached images are bundled beside it |
+| Images on a card | — | ✅ Images strip (view / upload / delete) + LinkedIn publish pick | ✅ (`images`) | Produced by the `imagery` skill (composed graphic / annotated screenshot / Unsplash) or uploaded; files in `data/images/`; alt text required |
+| Brand look (imagery) | ✅ (`profiles/<slug>/brand/`) | — | — | `brand.yaml` colors/fonts/logo/style notes + `refs/` example images; read by `imagery`; optional (neutral default) |
 | Profiles / active profile | ✅ (`profiles/<slug>/`, via `setup`) | ✅ switcher | ✅ setting | Disk holds each profile; the sidebar switcher sets the active one and re-scopes the console |
 | Scheduled / published | — | ✅ | ✅ | Console-owned |
 | LinkedIn connection | — | ✅ Connections | ✅ token | OAuth in the console |

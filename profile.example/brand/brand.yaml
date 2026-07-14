@@ -1,0 +1,40 @@
+# Brand guidelines for this profile's imagery — read by the imagery procedure
+# (src/profile/brand.ts) every time it composes a graphic, annotates a screenshot,
+# or judges an Unsplash pick. Like everything in a profile folder this is per-user
+# data: real profiles live in gitignored profiles/<slug>/; this example ships the
+# fictional Jordan Rivera persona.
+#
+# Every field is optional — anything missing falls back to a neutral default.
+
+colors:
+  # The signature color: annotation boxes/arrows, accent bars, stat values.
+  primary: "#6f4e37"     # roasted coffee brown
+  # Secondary accent: small bars and flourishes.
+  accent: "#c9a227"      # golden crema
+  # Card background.
+  background: "#faf6f0"  # warm off-white
+  # Main text on cards.
+  foreground: "#2b211a"
+  # De-emphasized text: attributions, context lines.
+  muted: "#8a7a6d"
+
+fonts:
+  # CSS font-family strings, rendered with the system's fonts.
+  heading: "'Helvetica Neue', Helvetica, Arial, sans-serif"
+  body: "Georgia, 'Times New Roman', serif"
+
+# Optional logo file, path relative to this brand/ folder. Composited bottom-right
+# on composed cards when present. Leave empty for no logo.
+# logo: logo.png
+
+# Freeform notes the imagery procedure reads for the judgment calls the fields
+# above can't encode: mood, what to avoid, photography taste.
+style_notes: |
+  Warm and analog. Composed cards lean on the brown/crema palette, generous
+  whitespace, no gradients. Photos should look like a real roastery — texture,
+  hands, machines — never sterile stock-office shots. Screenshots of RoastLog
+  get the primary-brown annotation boxes.
+
+# Reference images go in refs/ next to this file (png/jpg/webp). Drop in examples
+# of the look you want matched — a site screenshot, a card you liked, a photo
+# with the right mood. The imagery procedure reads them before producing anything.

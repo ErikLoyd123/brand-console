@@ -200,6 +200,11 @@ it there, edits by hand or revises with AI, and clicks Publish when it's good to
 `content-reviewer` judges every piece by its silo's rules. `discovery` never reviews or
 publishes.
 
+After the piece lands, offer once: an image for the card — a composed brand graphic, an
+annotated screenshot (the source article's subject rendered live, never a reproduction of
+its own imagery), or an Unsplash pick. If the owner wants one, follow
+`.claude/skills/imagery-procedure.md` for the same idea; if not, move on without pushing.
+
 ## Rules
 
 - Obey the doctrine (`.claude/skills/content-doctrine.md`): never invent an opinion, never

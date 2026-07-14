@@ -17,6 +17,7 @@ never publishes (the card's Publish button is your action, gated in the console)
 | write / draft / "write the full post/article" | post idea → `.claude/skills/draft-procedure.md` · web idea → `.claude/skills/article-draft-procedure.md` | Write the full piece from your take + points and save it onto the idea's card |
 | revise / sharpen / "rewrite the intro" | `.claude/skills/revise-procedure.md` (its web variant for a web idea) | Refine the written piece in your voice, write it back |
 | review / "run the gate" / "is this good to publish" | `.claude/agents/content-reviewer.md` — follow it exactly as a procedure | Judge the written piece against the voice card (and, for web, the SEO checks), write the verdict, report pass or the fix list |
+| image / visual / "add an image" / "screenshot this" | `.claude/skills/imagery-procedure.md` | Put an image on the idea's card — composed brand graphic, annotated screenshot, or Unsplash pick — in the profile's brand look |
 
 **Lane detection:** read the item first. `platform = 'web'` (equivalently, a piece-kind
 `silo` — how-to / explainer / comparison / thought-piece / whitepaper) is the long-form lane:

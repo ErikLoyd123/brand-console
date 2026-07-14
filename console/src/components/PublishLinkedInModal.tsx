@@ -1,5 +1,5 @@
 import { useState, type ChangeEvent } from 'react'
-import { api, type Connection, type Draft } from '../lib/api'
+import { api, imageFileUrl, type Connection, type Draft, type ImageAttachment } from '../lib/api'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { cn } from '../lib/cn'
@@ -33,11 +33,15 @@ function readFileAsBase64(file: File): Promise<{ dataBase64: string; mimeType: s
 export function PublishLinkedInModal({
   draft,
   connection,
+  attachedImages = [],
   onClose,
   onPublished,
 }: {
   draft: Draft
   connection: Connection
+  // Images already on the idea's card (imagery skill / uploads) — offered as
+  // one-click picks; the server reads the file itself by imageId.
+  attachedImages?: ImageAttachment[]
   onClose: () => void
   onPublished: () => void
 }) {
@@ -53,6 +57,11 @@ export function PublishLinkedInModal({
   const [imageData, setImageData] = useState<{ dataBase64: string; mimeType: string } | null>(null)
   const [imageAlt, setImageAlt] = useState('')
   const [mediaError, setMediaError] = useState<string | null>(null)
+  // A pick from the card's attached images. Mutually exclusive with a file pick:
+  // selecting one clears the other.
+  const [selectedImageId, setSelectedImageId] = useState<string | null>(
+    attachedImages.length > 0 ? attachedImages[0].id : null,
+  )
 
   async function onImageSelected(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -69,6 +78,7 @@ export function PublishLinkedInModal({
       const data = await readFileAsBase64(file)
       setImageData(data)
       setImageFileName(file.name)
+      setSelectedImageId(null)
     } catch (err) {
       setMediaError(err instanceof Error ? err.message : String(err))
     }
@@ -77,7 +87,7 @@ export function PublishLinkedInModal({
   const canPublish =
     confirmText === 'PUBLISH' &&
     !busy &&
-    (mediaMode !== 'image' || imageData !== null)
+    (mediaMode !== 'image' || imageData !== null || selectedImageId !== null)
 
   async function publish() {
     setBusy(true)
@@ -86,9 +96,11 @@ export function PublishLinkedInModal({
       const opts =
         mediaMode === 'link' && linkUrl.trim()
           ? { linkUrl: linkUrl.trim() }
-          : mediaMode === 'image' && imageData
-            ? { image: { dataBase64: imageData.dataBase64, mimeType: imageData.mimeType, alt: imageAlt.trim() || undefined } }
-            : undefined
+          : mediaMode === 'image' && selectedImageId
+            ? { image: { imageId: selectedImageId } }
+            : mediaMode === 'image' && imageData
+              ? { image: { dataBase64: imageData.dataBase64, mimeType: imageData.mimeType, alt: imageAlt.trim() || undefined } }
+              : undefined
       await api.publishLinkedin(draft.id, visibility, opts)
       onPublished()
     } catch (e) {
@@ -190,6 +202,34 @@ export function PublishLinkedInModal({
 
           {mediaMode === 'image' && (
             <div className="flex flex-col gap-2 pt-1">
+              {attachedImages.length > 0 && (
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-xs text-text-subtle">
+                    From this card (alt text rides along) — or pick a file below instead.
+                  </span>
+                  <div className="flex flex-wrap gap-2">
+                    {attachedImages.map((img) => (
+                      <button
+                        key={img.id}
+                        type="button"
+                        disabled={busy}
+                        onClick={() => {
+                          setSelectedImageId(img.id)
+                          setImageData(null)
+                          setImageFileName(null)
+                        }}
+                        title={img.alt}
+                        className={cn(
+                          'overflow-hidden rounded-md border-2 transition-colors',
+                          selectedImageId === img.id ? 'border-primary' : 'border-transparent opacity-80 hover:opacity-100',
+                        )}
+                      >
+                        <img src={imageFileUrl(img.id)} alt={img.alt} className="h-14 w-24 object-cover" />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
               <div className="flex items-center gap-2">
                 <ImageIcon className="size-4 shrink-0 text-text-subtle" />
                 <input

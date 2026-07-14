@@ -179,6 +179,47 @@ export const publishedPosts = sqliteTable('published_posts', {
   linkedinUrn: text('linkedin_urn'),
 });
 
+// An image attached to a queue idea — produced by the imagery procedure (composed
+// graphic, annotated screenshot, Unsplash pick) or uploaded by hand. The file itself
+// lives under gitignored data/images/<profileId>/ (the `path` column is relative to
+// data/images/); this row is the provenance the console surfaces: what it is (alt),
+// where it came from (source + params), and which idea it rides with. Publish reads
+// it: LinkedIn uploads the file via the assets flow, web export bundles it beside
+// the markdown.
+export const images = sqliteTable(
+  'images',
+  {
+    id: text('id').primaryKey().$defaultFn(() => nanoid()),
+    profileId: text('profile_id')
+      .notNull()
+      .references(() => profiles.id)
+      .default('default'),
+    ideaId: text('idea_id')
+      .notNull()
+      .references(() => ideaQueueItems.id),
+    // How the image was produced: 'composed' | 'screenshot' | 'unsplash' | 'upload'.
+    source: text('source').notNull(),
+    // File path relative to data/images/ (e.g. "<profileId>/<imageId>.png").
+    path: text('path').notNull(),
+    // Alt text — required for quality: LinkedIn media description, markdown alt, SEO.
+    alt: text('alt').notNull().default(''),
+    width: integer('width').notNull().default(0),
+    height: integer('height').notNull().default(0),
+    // Source-specific provenance, shaped per `source`: compose template + inputs;
+    // screenshot URL + viewport + annotations; unsplash photo id + author (attribution
+    // requirement); upload original filename.
+    params: text('params', { mode: 'json' })
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .$defaultFn(() => ({})),
+    createdAt: integer('created_at').notNull().$defaultFn(() => Date.now()),
+  },
+  (t) => ({
+    ideaIdIdx: index('images_idea_id_idx').on(t.ideaId),
+    profileIdIdx: index('images_profile_id_idx').on(t.profileId),
+  }),
+);
+
 export const sparks = sqliteTable('sparks', {
   id: text('id').primaryKey().$defaultFn(() => nanoid()),
   profileId: text('profile_id')

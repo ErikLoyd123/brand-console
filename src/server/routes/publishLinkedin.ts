@@ -1,8 +1,10 @@
 import { Router, type Response as ExpressResponse } from 'express';
+import { existsSync, readFileSync } from 'node:fs';
 import { and, eq } from 'drizzle-orm';
 import { db } from '../../db/client';
 import { drafts, ideaQueueItems, linkedinTokens, publishedPosts } from '../../db/schema';
 import { getActiveProfileId } from '../../profile/loader';
+import { getImage, imageAbsPath } from '../../images/store';
 import { linkedinConfigured } from '../env';
 
 const router = Router();
@@ -49,8 +51,10 @@ function loadValidToken(res: ExpressResponse, pid: string): LinkedinTokenRow | n
 //
 // Optional body fields add media support on top of the plain-text post:
 // `linkUrl` shares an article link, `image` uploads a binary image through
-// LinkedIn's 3-step asset flow. Precedence when more than one is present:
-// image > linkUrl > text.
+// LinkedIn's 3-step asset flow — either inline bytes (`dataBase64`) or, for an
+// image already attached to the idea's card, its `imageId` (the server reads
+// the file from data/images/ itself, alt text defaulting to the stored row's).
+// Precedence when more than one is present: image > linkUrl > text.
 router.post('/linkedin', async (req, res) => {
   const pid = getActiveProfileId();
   const token = loadValidToken(res, pid);
@@ -60,7 +64,7 @@ router.post('/linkedin', async (req, res) => {
     draftId?: string;
     visibility?: 'PUBLIC' | 'CONNECTIONS';
     linkUrl?: string;
-    image?: { dataBase64?: string; mimeType?: string; alt?: string };
+    image?: { dataBase64?: string; mimeType?: string; alt?: string; imageId?: string };
   };
 
   const draft = db
@@ -78,9 +82,23 @@ router.post('/linkedin', async (req, res) => {
 
   let specificContent: Record<string, unknown>;
 
+  let imageBinary: Buffer | null = null;
+  let imageAlt: string | undefined;
   if (image) {
-    if (typeof image.dataBase64 !== 'string' || image.dataBase64.length === 0) {
-      return res.status(400).json({ error: 'image.dataBase64 is required' });
+    if (image.imageId) {
+      const row = getImage(image.imageId);
+      if (!row) return res.status(404).json({ error: 'attached image not found' });
+      const abs = imageAbsPath(row.path);
+      if (!existsSync(abs)) {
+        return res.status(410).json({ error: 'attached image file is missing on disk' });
+      }
+      imageBinary = readFileSync(abs);
+      imageAlt = image.alt ?? row.alt;
+    } else if (typeof image.dataBase64 === 'string' && image.dataBase64.length > 0) {
+      imageBinary = Buffer.from(image.dataBase64, 'base64');
+      imageAlt = image.alt;
+    } else {
+      return res.status(400).json({ error: 'image needs an imageId or dataBase64' });
     }
 
     // Step 1: register the upload to get a one-time upload URL + asset URN.
@@ -137,7 +155,7 @@ router.post('/linkedin', async (req, res) => {
       uploadRes = await fetch(uploadUrl, {
         method: 'PUT',
         headers: { Authorization: `Bearer ${token.accessToken}` },
-        body: Buffer.from(image.dataBase64, 'base64'),
+        body: new Uint8Array(imageBinary!),
       });
     } catch (err) {
       return res.status(502).json({ error: 'LinkedIn rejected the image upload: request failed' });
@@ -157,7 +175,7 @@ router.post('/linkedin', async (req, res) => {
           {
             status: 'READY',
             media: asset,
-            ...(image.alt ? { description: { text: image.alt } } : {}),
+            ...(imageAlt ? { description: { text: imageAlt } } : {}),
           },
         ],
       },

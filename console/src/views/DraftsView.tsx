@@ -10,7 +10,7 @@ import { ChecksPanel } from '../components/ChecksPanel'
 import { foldTruncation } from '../lib/linkedin'
 import { useCapabilityToggle } from '../lib/capabilities'
 import { cn } from '../lib/cn'
-import { PenLine, Copy, Check, Send, X, AlertCircle, Loader2, Link2, Image as ImageIcon, Sparkles } from 'lucide-react'
+import { PenLine, Copy, Check, Send, Trash2, X, AlertCircle, Loader2, Link2, Image as ImageIcon, Sparkles } from 'lucide-react'
 
 // Ambient hints for the revise walk's working state (see SkillSurface.workingHints).
 const REVISE_HINTS = [
@@ -284,7 +284,15 @@ function PublishLinkedInModal({
   )
 }
 
-function Editor({ draft, onChanged }: { draft: Draft; onChanged: () => void }) {
+function Editor({
+  draft,
+  onChanged,
+  onDeleted,
+}: {
+  draft: Draft
+  onChanged: () => void
+  onDeleted: () => void
+}) {
   const [hooks, setHooks] = useState(draft.hookOptions.join('\n'))
   const [body, setBody] = useState(draft.body)
   const [close, setClose] = useState(draft.close)
@@ -292,6 +300,9 @@ function Editor({ draft, onChanged }: { draft: Draft; onChanged: () => void }) {
   const [permalink, setPermalink] = useState('')
   const [busy, setBusy] = useState(false)
   const [note, setNote] = useState<string | null>(null)
+  // Two-click delete confirm (the Feeds/Articles pattern): first click arms, second deletes.
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
   // "Revise with AI": clicking sets the revise directive (this draft's id) and bumps
   // reviseKey to remount the SkillSurface, opening a revise session on it. Reset
   // when the selected draft changes so a stale directive can't target the wrong draft.
@@ -328,8 +339,26 @@ function Editor({ draft, onChanged }: { draft: Draft; onChanged: () => void }) {
     setClose(draft.close)
     setMedia(draft.mediaSuggestion)
     setNote(null)
+    setConfirmingDelete(false)
+    setDeleteError(null)
     setReviseInput(undefined)
   }, [draft])
+
+  async function deleteDraft() {
+    setBusy(true)
+    setDeleteError(null)
+    try {
+      await api.deleteDraft(draft.id)
+      onDeleted()
+    } catch (e) {
+      // The one expected refusal: a published draft (the archive references it).
+      const msg = e instanceof Error ? e.message : String(e)
+      setDeleteError(/published/i.test(msg) ? 'This draft was published — it stays as the Published archive record.' : msg)
+      setConfirmingDelete(false)
+    } finally {
+      setBusy(false)
+    }
+  }
 
   function startRevise() {
     setReviseInput(
@@ -526,7 +555,31 @@ function Editor({ draft, onChanged }: { draft: Draft; onChanged: () => void }) {
               <Check className="size-4" /> {note}
             </span>
           )}
+          <div className="ml-auto flex items-center gap-2">
+            {confirmingDelete ? (
+              <>
+                <span className="text-xs text-text-muted">
+                  Deletes this draft (its idea returns to the queue). Sure?
+                </span>
+                <Button size="sm" variant="destructive" disabled={busy} onClick={deleteDraft}>
+                  <Trash2 className="size-3.5" /> Yes, delete
+                </Button>
+                <Button size="sm" variant="ghost" disabled={busy} onClick={() => setConfirmingDelete(false)}>
+                  Cancel
+                </Button>
+              </>
+            ) : (
+              <Button size="sm" variant="ghost" disabled={busy} onClick={() => setConfirmingDelete(true)}>
+                <Trash2 className="size-3.5" /> Delete
+              </Button>
+            )}
+          </div>
         </div>
+        {deleteError && (
+          <p className="flex items-center gap-1.5 text-xs text-error-fg">
+            <AlertCircle className="size-3.5" /> {deleteError}
+          </p>
+        )}
       </div>
 
       <div className="flex flex-col gap-6 lg:sticky lg:top-20 lg:self-start">
@@ -592,6 +645,14 @@ export function DraftsView() {
     if (selectedId) api.getDraft(selectedId).then(setCurrent)
   }
 
+  // After a delete the draft is gone: drop the selection (the drafts effect picks the next
+  // one, if any) and reload the list.
+  function handleDeleted() {
+    setSelectedId(null)
+    setCurrent(null)
+    reload()
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
@@ -644,7 +705,7 @@ export function DraftsView() {
             })}
           </div>
           {current ? (
-            <Editor draft={current} onChanged={refresh} />
+            <Editor draft={current} onChanged={refresh} onDeleted={handleDeleted} />
           ) : (
             <EmptyState title="Select a draft" hint="Pick one from the list to start editing." />
           )}

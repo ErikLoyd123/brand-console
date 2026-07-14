@@ -568,6 +568,16 @@ export const api = {
   // from; the raw spark capture stays in the sparks log. `ideaDeleted` reports which.
   deleteArticle: (id: string) =>
     http<{ ok: boolean; ideaDeleted: boolean }>(`/articles/${id}`, { method: 'DELETE' }),
+  // Delete a draft (409 if it was published — the archive references it). Its calendar
+  // plan goes with it; the idea stays and flips back to seeded when this was its only draft.
+  deleteDraft: (id: string) =>
+    http<{ ok: boolean; ideaReseeded: boolean }>(`/drafts/${id}`, { method: 'DELETE' }),
+  // Delete a queue idea and everything downstream: its drafts (and their calendar plans)
+  // and, for a web idea, its article row. 409 if any of its drafts was published.
+  deleteQueueItem: (id: string) =>
+    http<{ ok: boolean; draftsDeleted: number; articleDeleted: boolean }>(`/queue/${id}`, {
+      method: 'DELETE',
+    }),
 
   // Update a published post's permalink after the fact (PATCH /api/posts/:id).
   updatePost: (id: string, patch: { permalink?: string | null }) =>

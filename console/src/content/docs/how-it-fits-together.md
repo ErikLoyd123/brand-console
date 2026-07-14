@@ -70,7 +70,9 @@ are stored in the local database.
   (the `drafts` skill sharpens them in your voice and writes them back), see the live
   voice-check findings, then **publish to LinkedIn** (a real API post behind a type-`PUBLISH` gate)
   or **Copy to publish** — which copies the finished text out for you to paste anywhere. Reddit
-  is copy-paste only: draft it here, copy it, and post it on Reddit by hand.
+  is copy-paste only: draft it here, copy it, and post it on Reddit by hand. **Delete** (in the
+  action bar, with a confirm) removes a draft and returns its idea to the queue as seeded; a
+  draft that was published can't be deleted — it's the Published archive's record.
 - **Articles (long-form)** — the **Articles** editor is the long-form workbench: an ordered
   **outline** of sections (each a heading, a one-line intent, and a body), the **SEO fields**
   (target keyword, search intent, meta description, slug, length target), a **stage** you can
@@ -94,7 +96,10 @@ are stored in the local database.
   on the card has the same `queue` skill write the post (using your take + points as the spine)
   and lands the result on the Drafts screen. The `queue` skill can also revise a draft — the same
   revise the Drafts page offers, since both share one revise procedure. A **spark** skips the
-  inbox and lands here directly: it's already yours.
+  inbox and lands here directly: it's already yours. The trash button on a card **deletes the
+  idea and everything downstream** (its drafts and, for a web piece, its article — with a
+  confirm); it's refused if one of its drafts was published, since the Published archive
+  references that draft.
 - **Scheduling & calendar** — the **Calendar** screen plans when a draft goes out.
 - **Published** — the **Published** screen is the archive of what shipped, with a link
   back to each post.

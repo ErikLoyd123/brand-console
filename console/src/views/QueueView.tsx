@@ -11,7 +11,7 @@ import { getConsoleSilos } from '../lib/silos'
 import { cn } from '../lib/cn'
 import { PageHeader, ScoreChip, EmptyState } from '../components/kit'
 import { SkillSurface } from '../components/SkillSurface'
-import { ListChecks, Plus, Check, X, Sparkles } from 'lucide-react'
+import { ListChecks, Plus, Check, Trash2, X, Sparkles } from 'lucide-react'
 
 // Ambient hints for the develop walk's working state (see SkillSurface.workingHints).
 const DEVELOP_HINTS = [
@@ -137,6 +137,30 @@ function QueueRow({
     }
   }
 
+  // Delete the whole idea — and everything downstream (its drafts, their calendar plans,
+  // and a web idea's article row). Two-click confirm; refused by the server when a draft
+  // of it was published (the Published archive references that draft).
+  const [confirmingDeleteItem, setConfirmingDeleteItem] = useState(false)
+  const [deleteItemError, setDeleteItemError] = useState<string | null>(null)
+  async function deleteItem() {
+    setBusy(true)
+    setDeleteItemError(null)
+    try {
+      await api.deleteQueueItem(item.id)
+      onDone()
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e)
+      setDeleteItemError(
+        /published/i.test(msg)
+          ? 'A draft of this idea was published — it stays as the Published archive record.'
+          : msg,
+      )
+      setConfirmingDeleteItem(false)
+    } finally {
+      setBusy(false)
+    }
+  }
+
   return (
     <article
       ref={ref}
@@ -154,8 +178,35 @@ function QueueRow({
           </div>
           <p className="font-serif text-lg leading-snug text-text-strong">{item.proposedAngle}</p>
         </div>
-        <ScoreChip score={item.score} />
+        <div className="flex items-center gap-2">
+          <ScoreChip score={item.score} />
+          <button
+            type="button"
+            onClick={() => setConfirmingDeleteItem(true)}
+            className="rounded-md p-1 text-text-subtle transition-colors hover:bg-row-hover hover:text-error-fg"
+            aria-label="Delete idea"
+            title="Delete this idea (and its drafts / article)"
+          >
+            <Trash2 className="size-3.5" />
+          </button>
+        </div>
       </div>
+
+      {confirmingDeleteItem && (
+        <div className="flex flex-wrap items-center gap-2 rounded-lg bg-surface-nested px-4 py-3">
+          <span className="text-xs text-text-muted">
+            Deletes this idea and everything downstream — its drafts and, for a web piece, its
+            article. Sure?
+          </span>
+          <Button size="sm" variant="destructive" disabled={busy} onClick={deleteItem}>
+            <Trash2 className="size-3.5" /> Yes, delete
+          </Button>
+          <Button size="sm" variant="ghost" disabled={busy} onClick={() => setConfirmingDeleteItem(false)}>
+            Cancel
+          </Button>
+        </div>
+      )}
+      {deleteItemError && <p className="text-xs text-error-fg">{deleteItemError}</p>}
 
       {/* Developed points — the beats of the argument. This is what raises a queue item
           above a bare angle; edit by hand, or let the develop skill draw them out. */}

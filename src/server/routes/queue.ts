@@ -1,7 +1,7 @@
 import { Router } from 'express';
-import { and, desc, eq } from 'drizzle-orm';
+import { and, desc, eq, inArray } from 'drizzle-orm';
 import { db } from '../../db/client';
-import { ideaQueueItems } from '../../db/schema';
+import { articles, drafts, ideaQueueItems, publishedPosts, scheduledPosts } from '../../db/schema';
 import { getActiveProfileId } from '../../profile/loader';
 
 const router = Router();
@@ -48,6 +48,59 @@ router.post('/:id/points', (req, res) => {
     .all();
   if (updated.length === 0) return res.status(404).json({ error: 'not found' });
   res.json(updated[0]);
+});
+
+// DELETE /api/queue/:id — remove an idea and everything downstream of it: its drafts
+// (and their calendar plans) and, for a web idea, its article row. Refused (409) when any
+// of its drafts was published — shipped history lives on the Published screen and should
+// not silently disappear; the raw spark capture, when there was one, stays in the sparks
+// log either way. Returns what went with it so the console can say exactly what happened.
+router.delete('/:id', (req, res) => {
+  const pid = getActiveProfileId();
+  const idea = db
+    .select()
+    .from(ideaQueueItems)
+    .where(and(eq(ideaQueueItems.id, req.params.id), eq(ideaQueueItems.profileId, pid)))
+    .get();
+  if (!idea) return res.status(404).json({ error: 'not found' });
+
+  const draftIds = db
+    .select({ id: drafts.id })
+    .from(drafts)
+    .where(eq(drafts.ideaId, idea.id))
+    .all()
+    .map((r) => r.id);
+  if (draftIds.length > 0) {
+    const published = db
+      .select({ id: publishedPosts.id })
+      .from(publishedPosts)
+      .where(inArray(publishedPosts.draftId, draftIds))
+      .get();
+    if (published) {
+      return res
+        .status(409)
+        .json({ error: 'a draft of this idea was published — it is part of the Published archive' });
+    }
+  }
+
+  let articleDeleted = false;
+  db.transaction((tx) => {
+    if (draftIds.length > 0) {
+      tx.delete(scheduledPosts).where(inArray(scheduledPosts.draftId, draftIds)).run();
+      tx.delete(drafts).where(inArray(drafts.id, draftIds)).run();
+    }
+    const article = tx
+      .select({ id: articles.id })
+      .from(articles)
+      .where(eq(articles.ideaId, idea.id))
+      .get();
+    if (article) {
+      tx.delete(articles).where(eq(articles.id, article.id)).run();
+      articleDeleted = true;
+    }
+    tx.delete(ideaQueueItems).where(eq(ideaQueueItems.id, idea.id)).run();
+  });
+  res.json({ ok: true, draftsDeleted: draftIds.length, articleDeleted });
 });
 
 export default router;

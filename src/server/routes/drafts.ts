@@ -1,7 +1,7 @@
 import { Router } from 'express';
-import { desc, eq } from 'drizzle-orm';
+import { and, desc, eq } from 'drizzle-orm';
 import { db } from '../../db/client';
-import { drafts, ideaQueueItems, publishedPosts } from '../../db/schema';
+import { drafts, ideaQueueItems, publishedPosts, scheduledPosts } from '../../db/schema';
 import { getActiveProfileId } from '../../profile/loader';
 
 const router = Router();
@@ -95,6 +95,49 @@ router.patch('/:id', (req, res) => {
     .all();
   if (updated.length === 0) return res.status(404).json({ error: 'not found' });
   res.json(updated[0]);
+});
+
+// DELETE /api/drafts/:id — remove a draft. A published draft is refused (409): the
+// Published screen's archive rows reference it, and shipped history should not silently
+// disappear. Any calendar plan for it is just a plan, so it goes with the draft. The
+// idea the draft came from stays in the queue; when this was its only draft, its status
+// flips back to `seeded` so it reads as draftable again rather than pointing at nothing.
+router.delete('/:id', (req, res) => {
+  const pid = getActiveProfileId();
+  const draft = db
+    .select()
+    .from(drafts)
+    .where(and(eq(drafts.id, req.params.id), eq(drafts.profileId, pid)))
+    .get();
+  if (!draft) return res.status(404).json({ error: 'not found' });
+  const published = db
+    .select({ id: publishedPosts.id })
+    .from(publishedPosts)
+    .where(eq(publishedPosts.draftId, draft.id))
+    .get();
+  if (published) {
+    return res
+      .status(409)
+      .json({ error: 'this draft was published — it is part of the Published archive' });
+  }
+  let ideaReseeded = false;
+  db.transaction((tx) => {
+    tx.delete(scheduledPosts).where(eq(scheduledPosts.draftId, draft.id)).run();
+    tx.delete(drafts).where(eq(drafts.id, draft.id)).run();
+    const remaining = tx
+      .select({ id: drafts.id })
+      .from(drafts)
+      .where(eq(drafts.ideaId, draft.ideaId))
+      .get();
+    if (!remaining) {
+      tx.update(ideaQueueItems)
+        .set({ status: 'seeded' })
+        .where(and(eq(ideaQueueItems.id, draft.ideaId), eq(ideaQueueItems.status, 'drafted')))
+        .run();
+      ideaReseeded = true;
+    }
+  });
+  res.json({ ok: true, ideaReseeded });
 });
 
 router.post('/:id/publish', (req, res) => {

@@ -1,6 +1,6 @@
 ---
 name: discovery
-description: Work up a discovered article into a queued take. Reads a Discovery inbox item and its source, infers the intent (silo) and confirms it, interviews you to draw out your take and the 2-4 points, then promotes it into the queue with those beats attached. The discovery-lane mirror of spark. Never invents an opinion.
+description: Work up a discovered article into a queued take. Reads a Discovery inbox item and its source, infers the intent (silo) and confirms it, interviews you to draw out your take and the 2-4 points, then promotes it into the queue with those beats attached — and offers to carry straight on into the draft (or, for a web piece, the outline). The discovery-lane mirror of spark. Never invents an opinion.
 type: skill
 ---
 
@@ -165,18 +165,40 @@ is globally unique, so downstream reads the platform as `web` from the silo. For
 there is no article row and this step is skipped. When it applies, report the article id alongside the
 idea id.
 
-## 8. Report
+## 8. Keep going — offer to draft it now
+
+The promoted idea (and, for web, the article row) is saved and safe whatever happens next. The
+owner just gave you their take and beats — do not make them re-run the pipeline to see it
+written. Ask **one light closing question** — "It's promoted to the queue. Want me to draft it
+now, or leave it there?" — with drafting as the recommended option.
+
+If the owner says draft:
+
+- **LinkedIn** — follow the shared draft procedure (`.claude/skills/draft-procedure.md`) with
+  the just-created idea id. The take and beats are already on the row, so it drafts straight
+  from what this interview produced. Report the draft id and that it awaits review.
+- **web** — follow the shared outline procedure (`.claude/skills/outline-procedure.md`) with
+  the just-created article id to draw the sections with the owner; when the outline lands,
+  confirm there and continue into the section bodies via
+  `.claude/skills/section-draft-procedure.md`. Stopping after the outline is a fine answer.
+
+If the owner declines, stop as before. Either way, everything the interview drew out was
+persisted **before** any drafting started.
+
+## 9. Report
 
 Report plainly what landed: the idea it became, your take in one line, and the beats saved
 (quoted), so you see exactly what the queue now carries. **Report the created idea id in
 backticks, labeled — `promoted to idea \`<ideaId>\``** — so the console's result card can deep-link
-to it in the Queue. This is the surface's result card: one clear human sentence plus the beats.
+to it in the Queue (name the article or draft too when Step 8 went further, so the card lands on
+the right screen). This is the surface's result card: one clear human sentence plus the beats.
 
 ## Hand off
 
-Report the idea id and stop. The rest of the pipeline is unchanged: `queue` can add or refine
-beats on the queued item, `queue` turns the developed take into prose silo-aware, and
-`content-reviewer` judges it by that silo's rules. `discovery` files one developed take and stops.
+Report what exists when the run ends — the idea id always; the article id for web; the draft id
+when Step 8 drafted. The rest of the pipeline is unchanged: `queue` can add or refine beats on a
+queued item and turns a developed take into prose silo-aware, and `content-reviewer` judges
+every draft by its silo's rules. `discovery` never reviews or publishes.
 
 ## Rules
 
@@ -191,5 +213,6 @@ beats on the queued item, `queue` turns the developed take into prose silo-aware
   `src/ingest/promote-item.ts` (the seeded idea + the promoted flag) and, for a `web` piece kind,
   `src/articles/create-article.ts` (the linked article row); never the voice card, pillars,
   register, feeds, or code, and never a different item.
-- Never draft, review, or publish — `queue` turns the queued take into a post; `discovery` only
-  gives the queue a real take to start from.
+- Never review or publish. Drafting happens only via the shared procedures, only after the
+  promoted idea is saved, and only when the owner says yes in Step 8 — declining leaves the
+  classic promote-and-stop behavior untouched.

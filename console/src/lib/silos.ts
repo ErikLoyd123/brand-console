@@ -7,9 +7,14 @@ import {
   HandHelping,
   BookOpen,
   MessageCircleQuestion,
+  ListOrdered,
+  Lightbulb,
+  Scale,
+  Feather,
+  FileText,
   type LucideIcon,
 } from 'lucide-react'
-import type { Silo, PlatformKey } from './api'
+import type { Silo, ContentPlatform } from './api'
 
 // Presentation for the silo axis (a post's intent). The roster is platform-keyed —
 // symmetric with src/core/silos.ts's SILO_ROSTERS — so unlike pillars/tags these hues
@@ -103,9 +108,56 @@ const REDDIT_SILOS: SiloMeta[] = [
   CURATE,
 ]
 
-const SILO_ROSTERS: { platform: PlatformKey; silos: SiloMeta[] }[] = [
+// Web's intents are the long-form piece kinds (mirrors src/core/silos.ts). Hints echo
+// the server roster's guidance; hues stay off the tag palette and off the hues the two
+// social rosters already claimed.
+const WEB_SILOS: SiloMeta[] = [
+  {
+    key: 'how-to',
+    label: 'How-to',
+    hint: 'Walk the reader through one task in ordered steps. The web teach-analog: the only web intent that may be product-adjacent.',
+    icon: ListOrdered,
+    bg: '#e0f2fe',
+    fg: '#0369a1',
+  },
+  {
+    key: 'explainer',
+    label: 'Explainer',
+    hint: 'Make one concept clear from the ground up — define it, show why it matters.',
+    icon: Lightbulb,
+    bg: '#fae8ff',
+    fg: '#a21caf',
+  },
+  {
+    key: 'comparison',
+    label: 'Comparison',
+    hint: 'Weigh options against stated criteria, plainly and fairly, so the reader can choose.',
+    icon: Scale,
+    bg: '#e2e8f0',
+    fg: '#475569',
+  },
+  {
+    key: 'thought-piece',
+    label: 'Thought piece',
+    hint: 'Stake a considered position and defend it with reasoning, not hype.',
+    icon: Feather,
+    bg: '#fee2e2',
+    fg: '#b91c1c',
+  },
+  {
+    key: 'whitepaper',
+    label: 'Whitepaper',
+    hint: 'A thorough, evidence-backed case on a substantial topic, with sections and a summary.',
+    icon: FileText,
+    bg: '#f5f5f4',
+    fg: '#57534e',
+  },
+]
+
+const SILO_ROSTERS: { platform: ContentPlatform; silos: SiloMeta[] }[] = [
   { platform: 'linkedin', silos: LINKEDIN_SILOS },
   { platform: 'reddit', silos: REDDIT_SILOS },
+  { platform: 'web', silos: WEB_SILOS },
 ]
 
 /**
@@ -113,12 +165,12 @@ const SILO_ROSTERS: { platform: PlatformKey; silos: SiloMeta[] }[] = [
  * getSilos(platform) in src/core/silos.ts; `platform` defaults to LinkedIn so every
  * existing call site keeps behaving exactly as before.
  */
-export function getConsoleSilos(platform: PlatformKey = 'linkedin'): SiloMeta[] {
+export function getConsoleSilos(platform: ContentPlatform = 'linkedin'): SiloMeta[] {
   const roster = SILO_ROSTERS.find((r) => r.platform === platform)
   return roster ? roster.silos : LINKEDIN_SILOS
 }
 
-// Flattened over every key across both rosters (unique except the shared `curate`,
+// Flattened over every key across all rosters (unique except the shared `curate`,
 // which points at the same object either way) so siloMeta()/SiloBadge keep working
 // platform-agnostically without needing to know which roster a key came from.
 export const SILO_BY_KEY: Record<Silo, SiloMeta> = Object.fromEntries(

@@ -123,7 +123,14 @@ recognize.
   `npx tsx src/ingest/migrate-feeds.ts` imports it into the DB once.)
 - **Sparks** — drop a spark from the **Spark** screen: the plain "Save spark" button stores it
   raw (via `src/ingest/capture.ts`), or the AI path runs `spark` to shape it first. Either way it
-  lands in the same queue.
+  lands in the same queue. A **platform picker** on the form (LinkedIn / Reddit / Web, defaulting
+  to your register default) tells the AI path up front where the spark is headed: a social
+  platform shapes a post and, once the seed is saved, offers to draft it on the spot; **Web**
+  runs the long-form pipeline end to end — seed, article row, outline, and section drafts on the
+  Articles screen — without re-asking. Picking Web also reveals a **piece-kind dropdown**
+  (how-to, explainer, comparison, thought piece, whitepaper — the web intents) if you already
+  know the shape; leave it on "Let spark propose" and the interview suggests one. (A plain save
+  ignores both; a raw spark is destination-free.)
 - **Register (platform + tone)** — the *menu* of tones/themes is in code (read-only) and
   now spans **both LinkedIn and Reddit**, but the **Register** screen edits your *selection*
   (which platforms are active/default, which tones you lean on, and custom tones/themes) and

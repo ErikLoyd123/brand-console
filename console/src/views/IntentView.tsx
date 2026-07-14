@@ -9,10 +9,10 @@ import { Check, Minus } from 'lucide-react'
 // The intent axis (silo) as a first-class, browsable reference. Unlike Pillars and Tags,
 // the silo roster is FIXED in code (src/core/silos.ts) — it drives how draft shapes a
 // post and how content-reviewer grades it — so this view explains and counts the intents
-// rather than editing them. The roster is platform-keyed: LinkedIn and Reddit each get
-// their own group, `curate` shared by both. You still SET an item's silo in Discovery and
-// filter by it in Queue. See how-it-fits-together.md and design
-// 2026-07-03-reddit-publishing-channel/01-content-axes.
+// rather than editing them. The roster is platform-keyed: LinkedIn, Reddit, and Web
+// (long-form piece kinds) each get their own group, `curate` shared by the two social
+// platforms. You still SET an item's silo in Discovery and filter by it in Queue. See
+// how-it-fits-together.md and design 2026-07-03-reddit-publishing-channel/01-content-axes.
 
 // The per-silo rule summary shown as chips. Mirrors draft's per-silo shaping and the
 // content-reviewer's silo rules; kept short and factual. `ask` (the boolean field) tracks
@@ -73,6 +73,36 @@ const RULES: Record<Silo, SiloRules> = {
     questionHook: false,
     lengthFloor: false,
     note: 'A generous pointer to someone else’s work, credited explicitly. The owner is a node passing something good along.',
+  },
+  'how-to': {
+    ask: true,
+    questionHook: false,
+    lengthFloor: true,
+    note: 'Walks the reader through one task in ordered steps until they can do it themselves. The web teach-analog: the only web intent that may be product-adjacent.',
+  },
+  explainer: {
+    ask: false,
+    questionHook: false,
+    lengthFloor: true,
+    note: 'Makes one concept clear from the ground up — define it, show why it matters, leave the reader able to reason about it.',
+  },
+  comparison: {
+    ask: false,
+    questionHook: false,
+    lengthFloor: true,
+    note: 'Weighs two or more options against stated criteria, plainly and fairly, so the reader can choose for themselves.',
+  },
+  'thought-piece': {
+    ask: false,
+    questionHook: false,
+    lengthFloor: true,
+    note: 'Stakes a considered position on where the field is heading and defends it with reasoning, not hype.',
+  },
+  whitepaper: {
+    ask: false,
+    questionHook: false,
+    lengthFloor: true,
+    note: 'Makes a thorough, evidence-backed case on a substantial topic, structured with sections and a short summary.',
   },
 }
 
@@ -150,13 +180,14 @@ export function IntentView() {
   const countBySilo = (silo: Silo) => items.filter((i) => i.silo === silo).length
   const linkedinSilos = getConsoleSilos('linkedin')
   const redditSilos = getConsoleSilos('reddit')
+  const webSilos = getConsoleSilos('web')
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
         eyebrow="Insights"
         title="Intent"
-        description="Why a post exists — its silo. A fixed roster per platform — four for LinkedIn, five for Reddit, sharing curate — running alongside your pillars (what a post is about). The silo decides a post's shape, its hook rule, and whether it can carry an ask."
+        description="Why a piece exists — its silo. A fixed roster per platform — four for LinkedIn, five for Reddit (sharing curate), five piece kinds for Web long-form — running alongside your pillars (what a piece is about). The silo decides a piece's shape, its hook rule, and whether it can carry an ask."
         actions={<SilosInfoLink />}
       />
 
@@ -164,6 +195,11 @@ export function IntentView() {
         <div className="flex flex-col gap-6">
           <div className="grid gap-4 md:grid-cols-2">
             {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="h-44 skeleton rounded-lg" />
+            ))}
+          </div>
+          <div className="grid gap-4 md:grid-cols-2">
+            {Array.from({ length: 5 }).map((_, i) => (
               <div key={i} className="h-44 skeleton rounded-lg" />
             ))}
           </div>
@@ -191,9 +227,16 @@ export function IntentView() {
             silos={redditSilos}
             countBySilo={countBySilo}
           />
+          <PlatformGroup
+            title="Web (long-form) intents"
+            hint="fixed roster · the piece kinds — set by spark or when a piece starts"
+            silos={webSilos}
+            countBySilo={countBySilo}
+          />
           <p className="text-sm text-text-subtle">
             The intents are a fixed product roster, not an editable list — they drive how every draft is
-            shaped and reviewed. You choose a post's intent when you promote it in Discovery, and filter by it in Queue.
+            shaped and reviewed. You choose a post's intent when you promote it in Discovery (or pick a
+            piece kind on the Spark screen for a web piece), and filter by it in Queue.
           </p>
         </>
       )}

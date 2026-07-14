@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { api, type InboxItem, type Source, type Tag, type Silo, type PlatformKey } from '../lib/api'
+import { api, type InboxItem, type Source, type Tag, type Silo, type ContentPlatform } from '../lib/api'
 import { getConsoleSilos } from '../lib/silos'
 import { SiloPicker } from '../components/SiloPicker'
 import { SilosInfoLink } from '../components/SilosInfoLink'
@@ -50,7 +50,7 @@ function InboxCard({
   const [take, setTake] = useState('')
   // Feed items carry no platform field yet, so every one is a LinkedIn candidate until
   // discovery gains a platform axis of its own.
-  const platform: PlatformKey = 'linkedin'
+  const platform: ContentPlatform = 'linkedin'
   const roster = getConsoleSilos(platform)
   // Feed promotes default to Teach; the writer can retarget the intent before it lands.
   const [silo, setSilo] = useState<Silo>('teach')

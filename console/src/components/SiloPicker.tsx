@@ -1,4 +1,4 @@
-import type { PlatformKey, Silo } from '../lib/api'
+import type { ContentPlatform, Silo } from '../lib/api'
 import { getConsoleSilos } from '../lib/silos'
 import { cn } from '../lib/cn'
 
@@ -15,7 +15,7 @@ export function SiloPicker({
 }: {
   value: Silo
   onChange: (silo: Silo) => void
-  platform?: PlatformKey
+  platform?: ContentPlatform
 }) {
   return (
     <div

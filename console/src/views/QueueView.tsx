@@ -30,11 +30,15 @@ const DRAFT_HINTS = [
 ]
 
 // The filter bar spans every platform's roster, not just one — a Reddit-sourced idea
-// must be filterable here too. Flatten both rosters and de-dupe the shared `curate`
-// entry (same object in both, so a simple key-seen check is enough).
+// or a web piece-kind idea must be filterable here too. Flatten the rosters and de-dupe
+// the shared `curate` entry (same object in both, so a simple key-seen check is enough).
 const ALL_SILOS = (() => {
   const seen = new Set<string>()
-  return [...getConsoleSilos('linkedin'), ...getConsoleSilos('reddit')].filter((m) => {
+  return [
+    ...getConsoleSilos('linkedin'),
+    ...getConsoleSilos('reddit'),
+    ...getConsoleSilos('web'),
+  ].filter((m) => {
     if (seen.has(m.key)) return false
     seen.add(m.key)
     return true

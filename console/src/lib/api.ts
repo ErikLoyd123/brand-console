@@ -14,12 +14,18 @@ export type QueueStatus = 'new' | 'seeded' | 'drafting' | 'drafted' | 'archived'
 export type ReviewStatus = 'pending' | 'passed' | 'failed' | 'edited'
 // A post's intent (its job), orthogonal to its pillar (its topic). Platform-keyed
 // roster, server-side source of truth in src/core/silos.ts. LinkedIn: conversation,
-// teach, win, curate. Reddit: discuss, help, share, ask, curate. `curate` is shared by
-// both platforms; every other key belongs to exactly one.
+// teach, win, curate. Reddit: discuss, help, share, ask, curate. Web (long-form): the
+// five piece kinds. `curate` is shared by LinkedIn and Reddit; every other key belongs
+// to exactly one platform.
 export type Silo =
   | 'conversation' | 'teach' | 'win' // LinkedIn-only
   | 'discuss' | 'help' | 'share' | 'ask' // Reddit-only
-  | 'curate' // shared
+  | 'curate' // shared (LinkedIn + Reddit)
+  | 'how-to' | 'explainer' | 'comparison' | 'thought-piece' | 'whitepaper' // web-only
+
+// A content platform — the register axis's key set (src/core/registers.ts). Distinct
+// from PlatformKey below, which is the Connections screen's account roster.
+export type ContentPlatform = 'linkedin' | 'reddit' | 'web'
 
 // IDs are opaque nanoid strings across every table (phase 01 canonical).
 export interface IdeaQueueItem {

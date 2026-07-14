@@ -524,23 +524,23 @@ function AskChoiceTurn({
           Use {picked.length} selected
         </Button>
       )}
-      {turn.allowFreeText && (
-        <div className="flex items-start gap-2">
-          <Textarea
-            value={freeText}
-            onChange={(e) => setFreeText(e.target.value)}
-            placeholder="Or type your own…"
-            className="min-h-0"
-            onKeyDown={(e) => {
-              if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && freeText.trim())
-                onFreeText(freeText)
-            }}
-          />
-          <Button variant="ghost" disabled={!freeText.trim()} onClick={() => onFreeText(freeText)}>
-            Use this
-          </Button>
-        </div>
-      )}
+      {/* Always offered, whatever the frame says: the user must never be boxed
+          into the skill's options — an off-menu answer is a first-class reply. */}
+      <div className="flex items-start gap-2">
+        <Textarea
+          value={freeText}
+          onChange={(e) => setFreeText(e.target.value)}
+          placeholder="Or type your own…"
+          className="min-h-0"
+          onKeyDown={(e) => {
+            if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && freeText.trim())
+              onFreeText(freeText)
+          }}
+        />
+        <Button variant="ghost" disabled={!freeText.trim()} onClick={() => onFreeText(freeText)}>
+          Use this
+        </Button>
+      </div>
     </div>
   )
 }
@@ -584,6 +584,14 @@ function ResultCard({
   onReset: () => void
   actions?: { linkLabel?: string; resetLabel?: string }
 }) {
+  // A run can finish on a different screen than its usual one (spark ends in Drafts or
+  // Articles when the owner carries on into a draft), so an unconfigured label follows
+  // the link's actual destination rather than assuming the queue.
+  const derivedLabel = result.link?.startsWith('#/drafts')
+    ? 'Open in Drafts'
+    : result.link?.startsWith('#/articles')
+      ? 'Open in Articles'
+      : 'Open in Queue'
   return (
     <div className="flex flex-col items-center gap-4 rounded-lg bg-surface p-6 text-center shadow-sm">
       <div className="flex size-11 items-center justify-center rounded-full bg-success-bg text-success-fg">
@@ -593,7 +601,7 @@ function ResultCard({
       <div className="flex items-center gap-2">
         {result.link && (
           <Button asChild variant="outline">
-            <a href={result.link}>{actions?.linkLabel ?? 'Open in Queue'}</a>
+            <a href={result.link}>{actions?.linkLabel ?? derivedLabel}</a>
           </Button>
         )}
         <Button variant="ghost" onClick={onReset}>

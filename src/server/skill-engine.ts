@@ -134,6 +134,7 @@ function driveSession(ws: WebSocket, skillName: string, initialInput: string | u
   const teardown = (reason?: Error) => {
     if (torndown) return;
     torndown = true;
+    disarmRunTimer();
     clearInterval(thoughtFlush);
     for (const p of pending.values()) {
       clearTimeout(p.timer);
@@ -154,7 +155,10 @@ function driveSession(ws: WebSocket, skillName: string, initialInput: string | u
     'ask_user',
     'Ask the profile owner a question and wait for their answer. Provide `options` for a ' +
       'multiple-choice question (each with a label and a one-line description), or omit ' +
-      'options for a free-text question. Returns the answer as text.',
+      'options for a free-text question. Every choice question also shows the user a ' +
+      'free-text box, so the answer may be one of your option labels or the user\'s own ' +
+      'words — treat an off-menu answer as a valid response, not an error. Returns the ' +
+      'answer as text.',
     {
       prompt: z.string().describe('The question shown to the user.'),
       options: z
@@ -168,7 +172,6 @@ function driveSession(ws: WebSocket, skillName: string, initialInput: string | u
         .optional()
         .describe('Present => a choice question. Absent/empty => free text.'),
       multiSelect: z.boolean().optional(),
-      allowFreeText: z.boolean().optional(),
     },
     async (args) => {
       const answer = await new Promise<string>((resolvePromise, rejectPromise) => {
@@ -176,6 +179,8 @@ function driveSession(ws: WebSocket, skillName: string, initialInput: string | u
           rejectPromise(new Error('session torn down'));
           return;
         }
+        // The turn is now the user's: stop their think-time counting against the run.
+        disarmRunTimer();
         const id = nanoid();
         const timer = setTimeout(() => {
           pending.delete(id);
@@ -206,12 +211,15 @@ function driveSession(ws: WebSocket, skillName: string, initialInput: string | u
             prompt: args.prompt,
             options: opts,
             multiSelect: args.multiSelect,
-            allowFreeText: args.allowFreeText,
+            // Always on: the user must never be boxed into the offered options.
+            allowFreeText: true,
           });
         } else {
           send({ type: 'ask_text', conversationId, id, prompt: args.prompt });
         }
       });
+      // Answer in hand — the model holds the turn again; restart its budget fresh.
+      if (!torndown) armRunTimer();
       return { content: [{ type: 'text' as const, text: answer }] };
     },
   );
@@ -249,17 +257,27 @@ function driveSession(ws: WebSocket, skillName: string, initialInput: string | u
   ws.on('close', () => teardown());
   ws.on('error', () => teardown());
 
-  const runTimer = setTimeout(() => {
-    if (torndown) return;
-    send({
-      type: 'error',
-      conversationId,
-      message: 'Session exceeded its time limit.',
-      kind: 'died_midrun',
-    });
-    teardown();
-    ws.close();
-  }, RUN_TIMEOUT_MS);
+  // Overall run guard, counted only while the model holds the turn. It pauses
+  // whenever a question is waiting on the user — think-time is theirs and must not
+  // burn the budget (a several-question interview used to blow the whole limit and
+  // die mid-run); the unanswered-question case has its own ANSWER_TIMEOUT_MS guard.
+  let runTimer: NodeJS.Timeout | undefined;
+  const disarmRunTimer = () => clearTimeout(runTimer);
+  const armRunTimer = () => {
+    disarmRunTimer();
+    runTimer = setTimeout(() => {
+      if (torndown) return;
+      send({
+        type: 'error',
+        conversationId,
+        message: 'Session exceeded its time limit.',
+        kind: 'died_midrun',
+      });
+      teardown();
+      ws.close();
+    }, RUN_TIMEOUT_MS);
+  };
+  armRunTimer();
 
   // Kick off the headless run. The skill markdown rides in the appended system
   // prompt (verbatim); initialInput is the first user turn.
@@ -348,7 +366,7 @@ function driveSession(ws: WebSocket, skillName: string, initialInput: string | u
       }
 
       if (torndown) return;
-      clearTimeout(runTimer);
+      disarmRunTimer();
       send({
         type: 'result',
         conversationId,
@@ -359,7 +377,7 @@ function driveSession(ws: WebSocket, skillName: string, initialInput: string | u
       teardown();
       ws.close();
     } catch (err) {
-      clearTimeout(runTimer);
+      disarmRunTimer();
       if (torndown) return;
       const reason = err instanceof Error ? err.message : String(err);
       send({ type: 'error', conversationId, message: reason, kind: 'died_midrun' });
@@ -388,6 +406,7 @@ function statusForTool(name: string, input: unknown): string | null {
     if (/draft-store/i.test(cmd)) return 'Writing the draft';
     if (/write-register|write-identity/i.test(cmd)) return 'Saving your register';
     if (/write-voice-card/i.test(cmd)) return 'Saving your voice card';
+    if (/create-article/i.test(cmd)) return 'Creating the article';
     if (/capture\.ts|ingest\/capture/i.test(cmd)) return 'Saving to the queue';
     if (/completeness|checkCompleteness|identity|\bprofile\b/i.test(cmd)) return 'Checking your setup';
     return 'Working through it';
@@ -424,8 +443,12 @@ function statusFromAssistant(message: unknown): { label?: string; suppress?: boo
 // tenant is one explicit line, not a parsing heuristic.
 function resultLink(skillName: string, finalText: string): string | undefined {
   // spark files a spark into the queue; discovery promotes a discovered item into it. Both
-  // land a new idea, so both deep-link to the created item (else the queue).
+  // land a new idea, so both deep-link to the created item (else the queue). But spark can
+  // now carry on past the seed: when its final report names an article (web long-form) or a
+  // draft, the work product lives on that screen, so land there instead of the queue.
   if (skillName === 'spark' || skillName === 'discovery') {
+    if (/\barticle\b/i.test(finalText)) return '#/articles';
+    if (/\bdraft\b/i.test(finalText)) return '#/drafts';
     const ideaId = extractIdeaId(finalText);
     return ideaId ? `#/queue?item=${ideaId}` : '#/queue';
   }

@@ -1,6 +1,6 @@
 ---
 name: spark
-description: Shape a raw spark into a queued post. Reads the spark, infers its intent (silo) from the target platform's roster and confirms with you, interviews you at the depth that kind needs, offers a few tone-colored angles to pick from, and drops the one you choose into the queue as a seeded item. Never invents an opinion.
+description: Shape a raw spark into a queued post. Reads the spark, infers its intent (silo) from the target platform's roster and confirms with you, interviews you at the depth that kind needs, offers a few tone-colored angles to pick from, and drops the one you choose into the queue as a seeded item — then offers to carry straight on into the draft (or, for a web piece, the outline) so the shaping work flows directly into writing. Never invents an opinion.
 type: skill
 ---
 
@@ -10,9 +10,11 @@ Turn a half-formed thought into a sharp, queued post before anything gets drafte
 is the deliberate front-end for **every** silo, on either platform: it reads a spark, works
 out what *kind* of post it wants to be, and interviews you at the depth that kind actually
 needs — deep for a conversation (LinkedIn's `conversation`, Reddit's `discuss`), light for a
-teach/help, win/share, or curate. `spark` finds and shapes the thought;
-`queue` drafts it. This skill never drafts, reviews, or publishes, and it never
-invents an opinion.
+teach/help, win/share, or curate. `spark` finds and shapes the thought — and once the
+seed is safely saved, it offers to carry straight on into drafting, following the same
+shared procedures the `queue` and `articles` skills use, so the interview's work flows
+directly into a draft instead of parking in the queue to be picked up again. It never
+reviews or publishes, and it never invents an opinion.
 
 The Spark screen's plain "Save spark" button is the zero-shaping fast path (it stores the
 spark verbatim and drops a seeded needs-your-take idea, via the same `src/ingest/capture.ts`
@@ -62,7 +64,24 @@ doctrine binds every step below; this file does not restate it.
 
 `spark` runs these steps in order. Steps 1-2 are setup and doctrine; steps 3-4 resolve the
 two axes that calibrate everything; steps 5-7 are the interview, the angle menu, and the
-write, all bent to what 3-4 resolved. It converges on exactly one thought.
+write, all bent to what 3-4 resolved; step 9 offers to carry the saved seed straight into
+a draft. It converges on exactly one thought.
+
+**The destination directives.** The Spark screen sends directive lines ahead of the spark
+text. They are the owner's explicit calls — honor them, don't re-ask:
+
+- `[platform: linkedin|reddit|web]` (always sent) resolves Step 4's platform outright.
+  `web` routes to the long-form pipeline; `linkedin`/`reddit` behave as Step 4 describes
+  for that platform. Skip platform inference entirely; still resolve and lightly confirm
+  the tone.
+- `[kind: how-to|explainer|comparison|thought-piece|whitepaper]` (optional, web only)
+  pre-picks the silo. When present, skip Step 3's proposal — the piece kind is decided —
+  and go straight to the interview at that kind's depth. When absent on a web run, propose
+  among the five piece kinds as Step 3 describes.
+
+With no directives (a terminal invocation, an older client), infer as Steps 3-4 describe.
+Directive lines are UI plumbing, not content: strip them before reading the spark, and
+never include them in the raw spark text persisted in Step 7.
 
 ### 1. Onboarding gate
 
@@ -206,14 +225,47 @@ npx tsx src/articles/create-article.ts "<ideaId>" '{
 
 `create-article` is idempotent per `ideaId` (a re-run never double-creates) and prints the new
 article id in backticks (`article ` + "`<id>`"). Report both the idea id and the article id. The
-article lands at stage `outlining`; the `articles` skill's outline procedure is the next step. For any
+article lands at stage `outlining`; step 9 offers to keep going into the outline right now. For any
 other platform (LinkedIn, Reddit) there is no article row and this step is skipped.
+
+### 9. Keep going — offer to draft it now
+
+The seed (and, for web, the article row) is saved and safe whatever happens next.
+
+**When the run began with `[platform: web]`, skip the ask and keep going** — the owner
+already declared the destination with the platform picker; asking again is the friction the
+picker exists to remove. Carry straight into the web branch below.
+
+Otherwise ask **one light closing question** — "It's saved to the queue. Want me to draft it
+now, or leave it there?" — with drafting as the recommended option. The owner just spent an
+interview shaping this thought; do not make them re-run the pipeline to see it written.
+
+If the owner says draft (or the platform picker already said `web`):
+
+- **LinkedIn / Reddit** — follow the shared draft procedure
+  (`.claude/skills/draft-procedure.md`) with the just-created idea id. It runs its own
+  voice-card gate; the item's seed, silo, platform, and tone are already on the row from
+  Step 7, so it drafts straight from what this interview produced. Report the draft id and
+  that it awaits review.
+- **web** — follow the shared outline procedure (`.claude/skills/outline-procedure.md`) with
+  the just-created article id to draw the sections with the owner. When the outline lands,
+  continue into drafting the section bodies via the section-draft procedure
+  (`.claude/skills/section-draft-procedure.md`) — the outline review is the natural
+  checkpoint, so confirm there ("outline's set — draft the sections now?") with drafting as
+  the recommended path. A long-form piece is real work; stopping after the outline is a fine
+  answer, but the goal of a `[platform: web]` run is a drafted article, not a stub.
+
+If the owner declines, stop as before. Either way, everything the interview drew out was
+persisted **before** any drafting started, so an abandoned or failed draft never loses the
+shaped seed.
 
 ## Hand off
 
-Report the idea id and stop. The rest of the pipeline is unchanged: `queue` drafts the
-seeded item silo-aware (reading the detected silo off the row, not always `conversation`) and
-`content-reviewer` judges it by that silo's rules. `spark` hands off a seed and stops.
+Report what exists when the run ends — the idea id always; the article id for web; the draft
+id when Step 9 drafted. The rest of the pipeline is unchanged: a seeded item left in the
+queue is drafted later by `queue` silo-aware (reading the detected silo off the row, not
+always `conversation`), and every draft — whoever wrote it — lands `pending` and is judged by
+`content-reviewer` against that silo's rules. `spark` never reviews or publishes.
 
 ## Rules
 
@@ -225,4 +277,6 @@ seeded item silo-aware (reading the detected silo off the row, not always `conve
 - Any specific real detail the owner has not provided (a number, which tool, what actually
   happened, a customer) is a `[FILL: ...]` marker in the seed, surfaced — never a guess.
 - One converged thought per invocation. A second post means a second spark.
-- `spark` does not draft, review, or publish. It writes one seed and hands off.
+- `spark` never reviews or publishes. It drafts only via the shared procedures, only after
+  the seed is saved, and only when the owner says yes in Step 9 — declining leaves the
+  classic seed-and-stop behavior untouched.

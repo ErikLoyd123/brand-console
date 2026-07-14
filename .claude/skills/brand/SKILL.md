@@ -44,6 +44,23 @@ owner opened with a specific ask, skip the menu and do that.
 
 ## 3. Building the pieces
 
+- **Import from an existing brand source** — when the owner points at where their brand
+  already lives (another repo, a brand-book folder, a design-system doc, a site
+  codebase), go get it rather than making them ferry files:
+  - **Read the docs they name** (brand book, design system, tone guide) and copy the
+    useful ones into `brand/` as brand documents.
+  - **Trace tokens to values.** Design-system docs often name tokens ("primary is
+    blue-500") and deliberately omit hex — the values live in the code (a
+    `globals.css`/tokens file the doc usually cites). Follow the pointer, quote the
+    real hex into `brand.yaml`, and note the source in a comment.
+  - **Map tokens to the five slots with judgment**, and say what you chose: which ramp
+    step becomes `primary`, whether the heading ink should be a stronger step than the
+    app's body text (big card titles usually want it), which warm tone is the accent.
+  - **Copy the logo set** into `brand/logos/` (all variants — primary/mono/reversed/
+    icon/stacked; keep SVG sources in a subfolder) and set the light-ground variant as
+    the card default.
+  - Confirm the mapping with the owner before writing, and flag that copies are
+    snapshots — if the source brand evolves, re-import.
 - **Palette from a live site** — capture it and read the colors off the render:
 
   ```bash

@@ -87,7 +87,10 @@ rm .image-payload.json
 
 Templates and their inputs: `quote` (text, attribution) · `stat` (value, label, context) ·
 `headline` (kicker, title, subtitle). Default canvas 1600x900; pass width/height to
-override. Colors/fonts/logo come from the brand guidelines automatically.
+override. Colors/fonts/logo come from the brand guidelines automatically. When the brand
+carries several logo variants (`logoPaths`, under `brand/logos/`), pick per occasion with
+the `"logo"` payload key — a brand-relative path (e.g. the reversed variant on a dark
+card, the icon in a tight square) or `"none"`; omitted means brand.yaml's default.
 
 ### Annotated screenshot — the look-then-annotate loop
 

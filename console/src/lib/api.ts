@@ -472,10 +472,18 @@ export interface BrandState {
   exists: boolean
   colors: { primary: string; accent: string; background: string; foreground: string; muted: string }
   fonts: { heading: string; body: string }
+  // The card default (brand/-relative path, one of `logos`), or null for no logo.
   logo: string | null
+  // Every logo variant on disk under brand/logos/ (brand/-relative paths).
+  logos: string[]
   styleNotes: string
   refs: string[]
   docs: string[]
+}
+
+// Bytes of any image inside the brand folder (logo thumbnails etc.).
+export function brandAssetUrl(relPath: string): string {
+  return `/api/brand/asset?path=${encodeURIComponent(relPath)}`
 }
 
 export const api = {
@@ -501,11 +509,17 @@ export const api = {
     styleNotes?: string
   }) => http<{ ok: boolean }>('/brand', { method: 'PUT', body: JSON.stringify(patch) }),
   uploadBrandLogo: (filename: string, dataBase64: string) =>
-    http<{ ok: boolean; logo: string }>('/brand/logo', {
+    http<{ ok: boolean; name: string }>('/brand/logos', {
       method: 'POST',
       body: JSON.stringify({ filename, dataBase64 }),
     }),
-  deleteBrandLogo: () => http<void>('/brand/logo', { method: 'DELETE' }),
+  deleteBrandLogoFile: (relPath: string) =>
+    http<void>(`/brand/logos?path=${encodeURIComponent(relPath)}`, { method: 'DELETE' }),
+  setDefaultBrandLogo: (relPath: string | null) =>
+    http<{ ok: boolean; logo: string | null }>('/brand/default-logo', {
+      method: 'PUT',
+      body: JSON.stringify({ path: relPath }),
+    }),
   uploadBrandRef: (filename: string, dataBase64: string) =>
     http<{ ok: boolean; name: string }>('/brand/refs', {
       method: 'POST',

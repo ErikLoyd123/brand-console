@@ -11,6 +11,10 @@
 //   "inputs": { ...ComposeInputs for that template },
 //   "alt": "<alt text — required>",
 //   "width"?: 1600, "height"?: 900,
+//   // logo override: "none" for no logo, or a brand/-relative path to a
+//   // specific variant (e.g. "logos/logo_reversed.png" on a dark card).
+//   // Omitted → brand.yaml's default logo.
+//   "logo"?: "none" | "logos/<file>",
 //   // preview mode: write the render to this file and print its dimensions
 //   // WITHOUT storing — used by the brand skill to show a test card in the
 //   // profile's look. ideaId/alt are not needed; brand comes from the active
@@ -21,11 +25,12 @@
 // Brand colors/fonts/logo come from the idea's profile brand guidelines
 // (profiles/<slug>/brand/, defaults when absent). Prints the stored image row as JSON.
 
-import { readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { resolve, sep } from 'node:path';
 import { eq } from 'drizzle-orm';
 import { db } from '../db/client';
 import { profiles } from '../db/schema';
-import { loadBrand } from '../profile/brand';
+import { brandDir, loadBrand } from '../profile/brand';
 import { composeImage, type ComposeInputs, type ComposeTemplate } from './compose';
 import { requireIdea, storeImage } from './store';
 
@@ -42,6 +47,7 @@ interface Payload {
   alt?: string;
   width?: number;
   height?: number;
+  logo?: string;
   out?: string;
 }
 
@@ -64,6 +70,22 @@ async function main() {
     : undefined;
   // Preview mode has no idea to anchor to: the active profile's brand applies.
   const brand = loadBrand(profile?.slug);
+
+  // Per-card logo pick: "none" drops the logo, a brand/-relative path swaps in
+  // a specific variant (reversed on dark grounds, icon in tight squares).
+  if (payload.logo) {
+    if (payload.logo === 'none') {
+      brand.logoPath = null;
+    } else {
+      const dir = brandDir(profile?.slug);
+      const abs = resolve(dir, payload.logo);
+      if (abs !== dir && !abs.startsWith(dir + sep)) {
+        throw new Error('"logo" must stay inside the brand/ folder');
+      }
+      if (!existsSync(abs)) throw new Error(`no logo file at ${payload.logo}`);
+      brand.logoPath = abs;
+    }
+  }
 
   const composed = await composeImage({
     template: payload.template,

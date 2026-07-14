@@ -2,6 +2,10 @@
 // Brand guidelines loader. Each profile may carry a gitignored brand/ folder:
 //
 //   profiles/<slug>/brand/brand.yaml   — colors, fonts, logo, style notes
+//   profiles/<slug>/brand/logos/       — the logo set (variants for different
+//                                        occasions: primary, reversed, icon…);
+//                                        brand.yaml's `logo:` picks the default
+//                                        composited onto composed cards
 //   profiles/<slug>/brand/refs/        — example images the owner wants matched
 //                                        (palette, mood, annotation style)
 //   profiles/<slug>/brand/*.md|*.html  — brand documents (a company brand book,
@@ -43,8 +47,13 @@ export interface BrandFonts {
 export interface BrandGuidelines {
   colors: BrandColors;
   fonts: BrandFonts;
-  // Path to a logo file inside brand/, or null when the profile has none.
+  // The default logo composited onto composed cards (brand.yaml `logo:`,
+  // resolved to an absolute path), or null for no logo.
   logoPath: string | null;
+  // Every logo variant on disk (absolute paths, recursive scan of brand/logos/).
+  // Consumers pick per occasion — reversed on dark grounds, icon in tight
+  // squares — via the compose CLI's `logo` override.
+  logoPaths: string[];
   // Freeform prose the imagery procedure reads for judgment calls the yaml
   // can't encode ("always light backgrounds", "no stock-photo people", ...).
   styleNotes: string;
@@ -72,6 +81,7 @@ export const DEFAULT_BRAND: BrandGuidelines = {
     body: "'Helvetica Neue', Helvetica, Arial, sans-serif",
   },
   logoPath: null,
+  logoPaths: [],
   styleNotes: '',
   refPaths: [],
   docPaths: [],
@@ -95,6 +105,18 @@ function listRefs(dir: string): string[] {
     .filter((name) => IMAGE_EXTS.has(name.slice(name.lastIndexOf('.')).toLowerCase()))
     .sort()
     .map((name) => resolve(refsDir, name));
+}
+
+// Every image under brand/logos/, subfolders included (svg sources often live
+// in logos/svg/).
+function listLogos(dir: string): string[] {
+  const logosDir = resolve(dir, 'logos');
+  if (!existsSync(logosDir) || !statSync(logosDir).isDirectory()) return [];
+  return readdirSync(logosDir, { recursive: true })
+    .map(String)
+    .filter((name) => IMAGE_EXTS.has(name.slice(name.lastIndexOf('.')).toLowerCase()))
+    .sort()
+    .map((name) => resolve(logosDir, name));
 }
 
 // Brand documents: .md / .html files sitting directly in brand/ (refs/ holds
@@ -146,6 +168,7 @@ export function loadBrand(slug?: string): BrandGuidelines {
       body: asString(fonts.body, DEFAULT_BRAND.fonts.body),
     },
     logoPath: logoAbs && existsSync(logoAbs) ? logoAbs : null,
+    logoPaths: listLogos(dir),
     styleNotes: asString(raw.style_notes, ''),
     refPaths: listRefs(dir),
     docPaths: listDocs(dir),

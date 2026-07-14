@@ -15,7 +15,7 @@ import {
   unlinkSync,
   writeFileSync,
 } from 'node:fs';
-import { basename, resolve } from 'node:path';
+import { basename, relative, resolve, sep } from 'node:path';
 import { stringify } from 'yaml';
 import { brandDir, loadBrand, type BrandGuidelines } from '../../profile/brand';
 import { composeImage } from '../../images/compose';
@@ -51,6 +51,15 @@ function safeName(raw: string): string | null {
   return name;
 }
 
+// Resolve a client-supplied relative path (e.g. "logos/svg/logo_icon.svg")
+// strictly inside the brand folder — null when it escapes.
+function resolveInBrand(rel: string): string | null {
+  const dir = brandDir();
+  const abs = resolve(dir, rel);
+  if (abs !== dir && !abs.startsWith(dir + sep)) return null;
+  return abs;
+}
+
 // GET /api/brand — the full state the page renders: resolved guidelines plus the
 // on-disk file lists (names only; bytes come from the file routes below).
 router.get('/', (_req, res) => {
@@ -62,7 +71,9 @@ router.get('/', (_req, res) => {
       exists: existsSync(resolve(dir, 'brand.yaml')),
       colors: brand.colors,
       fonts: brand.fonts,
-      logo: brand.logoPath ? basename(brand.logoPath) : null,
+      // Both brand/-relative paths, so `logo` matches its entry in `logos`.
+      logo: brand.logoPath ? relative(dir, brand.logoPath) : null,
+      logos: brand.logoPaths.map((p) => relative(dir, p)),
       styleNotes: brand.styleNotes,
       refs: brand.refPaths.map((p) => basename(p)),
       docs: brand.docPaths.map((p) => basename(p)),
@@ -114,7 +125,7 @@ router.put('/', (req, res) => {
         return res.status(400).json({ error: `"${value}" is not a hex color` });
       }
     }
-    writeBrandYaml(merged, current.logoPath ? basename(current.logoPath) : null);
+    writeBrandYaml(merged, current.logoPath ? relative(brandDir(), current.logoPath) : null);
     res.json({ ok: true });
   } catch (e) {
     res.status(409).json({ error: (e as Error).message });
@@ -145,13 +156,25 @@ router.get('/preview.png', async (_req, res) => {
   }
 });
 
-// POST /api/brand/logo — save the logo file into brand/ and point brand.yaml at
-// it. Body: { filename, dataBase64 }.
-router.post('/logo', (req, res) => {
+// GET /api/brand/asset?path=<brand-relative> — bytes of any image inside the
+// brand folder (logo thumbnails, whatever the page needs). Strictly contained.
+router.get('/asset', (req, res) => {
+  const rel = req.query.path as string | undefined;
+  if (!rel) return res.status(400).json({ error: 'path query param is required' });
+  const abs = resolveInBrand(rel);
+  if (!abs || !IMAGE_EXTS.has(extOf(abs))) return res.status(400).json({ error: 'bad path' });
+  if (!existsSync(abs) || !statSync(abs).isFile()) return res.status(404).json({ error: 'not found' });
+  res.setHeader('Content-Type', CONTENT_TYPES[extOf(abs).slice(1)] ?? 'application/octet-stream');
+  res.sendFile(abs);
+});
+
+// POST /api/brand/logos — add a logo variant to brand/logos/. Body:
+// { filename, dataBase64 }. The first logo ever added becomes the card default.
+router.post('/logos', (req, res) => {
   const { filename, dataBase64 } = req.body as { filename?: string; dataBase64?: string };
   const name = filename ? safeName(filename) : null;
   if (!name || !IMAGE_EXTS.has(extOf(name))) {
-    return res.status(400).json({ error: 'logo needs an image filename (png/jpg/webp/gif/svg)' });
+    return res.status(400).json({ error: 'logos take image files (png/jpg/webp/gif/svg)' });
   }
   if (typeof dataBase64 !== 'string' || dataBase64 === '') {
     return res.status(400).json({ error: 'dataBase64 is required' });
@@ -162,40 +185,56 @@ router.post('/logo', (req, res) => {
   }
   try {
     const current = loadBrand();
-    const dir = brandDir();
-    mkdirSync(dir, { recursive: true });
-    // A replaced logo's old file is removed so brand/ doesn't collect strays.
-    if (current.logoPath && basename(current.logoPath) !== name && existsSync(current.logoPath)) {
-      unlinkSync(current.logoPath);
-    }
-    writeFileSync(resolve(dir, name), buffer);
-    writeBrandYaml(current, name);
-    res.status(201).json({ ok: true, logo: name });
+    const logosDir = resolve(brandDir(), 'logos');
+    mkdirSync(logosDir, { recursive: true });
+    writeFileSync(resolve(logosDir, name), buffer);
+    const rel = `logos/${name}`;
+    if (!current.logoPath) writeBrandYaml(current, rel);
+    res.status(201).json({ ok: true, name: rel });
   } catch (e) {
     res.status(409).json({ error: (e as Error).message });
   }
 });
 
-// DELETE /api/brand/logo — remove the file and clear the yaml field.
-router.delete('/logo', (_req, res) => {
+// DELETE /api/brand/logos?path=<brand-relative> — remove one variant's file;
+// if it was the card default, the default clears (cards go logo-less until a
+// new pick).
+router.delete('/logos', (req, res) => {
+  const rel = req.query.path as string | undefined;
+  if (!rel || !(rel === 'logos' || rel.startsWith('logos/'))) {
+    return res.status(400).json({ error: 'path must point inside logos/' });
+  }
+  const abs = resolveInBrand(rel);
+  if (!abs) return res.status(400).json({ error: 'bad path' });
+  if (!existsSync(abs)) return res.status(404).json({ error: 'logo not found' });
   try {
     const current = loadBrand();
-    if (current.logoPath && existsSync(current.logoPath)) unlinkSync(current.logoPath);
-    writeBrandYaml(current, null);
+    unlinkSync(abs);
+    if (current.logoPath === abs) writeBrandYaml(current, null);
     res.status(204).end();
   } catch (e) {
     res.status(409).json({ error: (e as Error).message });
   }
 });
 
-// GET /api/brand/logo/file — the logo bytes for the page's preview.
-router.get('/logo/file', (_req, res) => {
-  const brand = loadBrand();
-  if (!brand.logoPath || !existsSync(brand.logoPath)) {
-    return res.status(404).json({ error: 'no logo set' });
+// PUT /api/brand/default-logo — pick which variant composed cards carry.
+// Body: { path: "<brand-relative>" } or { path: null } for no logo.
+router.put('/default-logo', (req, res) => {
+  const { path: rel } = req.body as { path?: string | null };
+  try {
+    const current = loadBrand();
+    if (rel === null || rel === undefined || rel === '') {
+      writeBrandYaml(current, null);
+      return res.json({ ok: true, logo: null });
+    }
+    const abs = resolveInBrand(rel);
+    if (!abs || !IMAGE_EXTS.has(extOf(abs))) return res.status(400).json({ error: 'bad path' });
+    if (!existsSync(abs)) return res.status(404).json({ error: 'no such logo file' });
+    writeBrandYaml(current, rel);
+    res.json({ ok: true, logo: rel });
+  } catch (e) {
+    res.status(409).json({ error: (e as Error).message });
   }
-  res.setHeader('Content-Type', CONTENT_TYPES[extOf(brand.logoPath).slice(1)] ?? 'application/octet-stream');
-  res.sendFile(brand.logoPath);
 });
 
 // POST /api/brand/refs — upload a reference image. Body: { filename, dataBase64 }.

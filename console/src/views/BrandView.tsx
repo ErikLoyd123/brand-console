@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type ChangeEvent } from 'react'
-import { api, type BrandState } from '../lib/api'
+import { api, brandAssetUrl, type BrandState } from '../lib/api'
 import { Button } from '../components/ui/button'
 import { Input, Textarea } from '../components/ui/input'
 import { PageHeader, SectionHeading } from '../components/kit'
@@ -27,6 +27,14 @@ const COLOR_SLOTS: { key: keyof BrandState['colors']; label: string; hint: strin
   { key: 'foreground', label: 'Foreground', hint: 'Main text on cards' },
   { key: 'muted', label: 'Muted', hint: 'De-emphasized text — attributions, labels' },
 ]
+
+// One tile in the logo grid; the card default gets the selected treatment.
+function cnLogoCard(isDefault: boolean): string {
+  return [
+    'flex flex-col gap-1 rounded-lg p-2',
+    isDefault ? 'bg-selected-bg ring-1 ring-primary/40' : 'bg-surface-nested',
+  ].join(' ')
+}
 
 function readFileAsBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -111,11 +119,23 @@ export function BrandView() {
   }
 
   async function onLogoSelected(e: ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
+    const files = Array.from(e.target.files ?? [])
     e.target.value = ''
-    if (!file) return
-    const dataBase64 = await readFileAsBase64(file)
-    await run(() => api.uploadBrandLogo(file.name, dataBase64), 'Logo set')
+    if (files.length === 0) return
+    setBusy(true)
+    setError(null)
+    try {
+      for (const file of files) {
+        const dataBase64 = await readFileAsBase64(file)
+        await api.uploadBrandLogo(file.name, dataBase64)
+      }
+      flash(files.length === 1 ? 'Logo added' : `${files.length} logos added`)
+      reload()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err))
+    } finally {
+      setBusy(false)
+    }
   }
 
   async function onRefSelected(e: ChangeEvent<HTMLInputElement>) {
@@ -327,34 +347,103 @@ export function BrandView() {
 
       <section className="flex flex-col gap-3">
         <SectionHeading
-          title="Logo"
-          hint="Optional. Composited bottom-right on composed cards. Stored in the brand/ folder; brand.yaml points at it."
+          title="Logos"
+          hint="Your logo set — as many variants as you use (primary, reversed for dark grounds, icon, stacked…). Stored in brand/logos/. One is the card default, composited bottom-right on composed cards; the imagery skill can pick any variant per image."
         />
-        <div className="flex flex-wrap items-center gap-4 rounded-lg bg-surface p-5 shadow-sm">
-          {brand?.logo ? (
-            <>
-              <img
-                src={`/api/brand/logo/file?v=${previewKey}`}
-                alt="Current logo"
-                className="h-12 max-w-48 rounded bg-surface-nested object-contain p-1"
-              />
-              <span className="font-mono text-xs text-text-muted">{brand.logo}</span>
-              <Button
-                size="sm"
-                variant="ghost"
-                disabled={busy}
-                onClick={() => run(() => api.deleteBrandLogo(), 'Logo removed')}
-              >
-                <Trash2 className="size-3.5" /> Remove
-              </Button>
-            </>
+        <div className="flex flex-col gap-3 rounded-lg bg-surface p-5 shadow-sm">
+          {brand && brand.logos.length > 0 ? (
+            <div className="flex flex-wrap gap-3">
+              {brand.logos.map((rel) => {
+                const isDefault = brand.logo === rel
+                const name = rel.replace(/^logos\//, '')
+                return (
+                  <div
+                    key={rel}
+                    className={cnLogoCard(isDefault)}
+                  >
+                    <img
+                      src={`${brandAssetUrl(rel)}&v=${previewKey}`}
+                      alt={name}
+                      className="h-12 w-40 rounded bg-surface-nested object-contain p-1"
+                    />
+                    <span className="max-w-40 truncate font-mono text-[10px] text-text-subtle" title={rel}>
+                      {name}
+                    </span>
+                    <div className="flex items-center gap-2">
+                      {isDefault ? (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-medium text-primary-ink">
+                          <Check className="size-3" /> Card default
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => run(() => api.setDefaultBrandLogo(rel), 'Card default updated')}
+                          className="text-[11px] text-text-subtle underline-offset-2 hover:text-text hover:underline"
+                        >
+                          Use on cards
+                        </button>
+                      )}
+                      {confirmingDelete === `logo:${rel}` ? (
+                        <span className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            disabled={busy}
+                            onClick={() =>
+                              run(() => api.deleteBrandLogoFile(rel), 'Logo removed').then(() =>
+                                setConfirmingDelete(null),
+                              )
+                            }
+                            className="text-[11px] font-medium text-error-fg underline-offset-2 hover:underline"
+                          >
+                            Delete?
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setConfirmingDelete(null)}
+                            className="text-text-subtle hover:text-text"
+                            aria-label="Cancel delete"
+                          >
+                            <X className="size-3" />
+                          </button>
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => setConfirmingDelete(`logo:${rel}`)}
+                          className="rounded p-0.5 text-text-subtle transition-colors hover:text-error-fg"
+                          aria-label={`Delete ${name}`}
+                        >
+                          <Trash2 className="size-3" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
           ) : (
-            <span className="text-sm text-text-muted">No logo set.</span>
+            <span className="text-sm text-text-muted">
+              No logos yet — upload your set (all the variants you use).
+            </span>
           )}
-          <label className="inline-flex cursor-pointer items-center gap-1.5 text-xs text-primary-ink underline-offset-2 hover:underline">
-            <Upload className="size-3.5" /> {brand?.logo ? 'Replace logo' : 'Upload logo'}
-            <input type="file" accept="image/*" className="hidden" onChange={onLogoSelected} />
-          </label>
+          <div className="flex flex-wrap items-center gap-4">
+            <label className="inline-flex cursor-pointer items-center gap-1.5 text-xs text-primary-ink underline-offset-2 hover:underline">
+              <Upload className="size-3.5" /> Upload logos
+              <input type="file" accept="image/*" multiple className="hidden" onChange={onLogoSelected} />
+            </label>
+            {brand?.logo && (
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => run(() => api.setDefaultBrandLogo(null), 'Cards will carry no logo')}
+                className="text-xs text-text-subtle underline-offset-2 hover:text-text hover:underline"
+              >
+                No logo on cards
+              </button>
+            )}
+          </div>
         </div>
       </section>
 

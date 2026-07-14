@@ -101,6 +101,13 @@ say so and provide the affordance: link to the tab that manages it (e.g. a "Mana
 "Set via the `setup` skill"). Editable-elsewhere data links to its editor; read-only data states
 its source. A raw list or value with no provenance is a bug, not a finished surface.
 
+## Git
+
+- **No AI attribution in commits.** Never add `Co-Authored-By: Claude …` (or any other
+  AI co-author/generated-with trailer) to commit messages or PR bodies in this repo.
+  Commits carry the human author's name alone — accountability for pushed code rests
+  with the person who ships it, and the contributor graph should show people.
+
 ## Boundaries (hard rules)
 
 - **Nothing committed may be user-specific.** Anything that flows into the repo —

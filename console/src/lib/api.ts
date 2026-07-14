@@ -327,6 +327,16 @@ async function http<T>(path: string, init?: RequestInit): Promise<T> {
   return (await res.json()) as T
 }
 
+// http() for plain-text responses (a brand document's raw contents).
+async function httpText(path: string): Promise<string> {
+  const res = await fetch(BASE + path)
+  if (!res.ok) {
+    const detail = await res.text().catch(() => '')
+    throw new Error(`GET ${path} failed: ${res.status} ${detail}`)
+  }
+  return res.text()
+}
+
 export interface Skill {
   name: string
   description: string
@@ -453,6 +463,21 @@ export function imageFileUrl(id: string): string {
   return `/api/images/${id}/file`
 }
 
+// The active profile's brand look (GET /api/brand) — the gitignored
+// profiles/<slug>/brand/ folder the imagery pipeline reads before producing any
+// image. Edited on the Brand page (or by the `brand` skill / by hand).
+export interface BrandState {
+  brandDir: string
+  // Whether brand.yaml exists yet — false means everything shown is the neutral default.
+  exists: boolean
+  colors: { primary: string; accent: string; background: string; foreground: string; muted: string }
+  fonts: { heading: string; body: string }
+  logo: string | null
+  styleNotes: string
+  refs: string[]
+  docs: string[]
+}
+
 export const api = {
   // Queue: server returns items sorted by score desc.
   getQueue: () => http<IdeaQueueItem[]>('/queue'),
@@ -467,6 +492,35 @@ export const api = {
   updateImageAlt: (id: string, alt: string) =>
     http<ImageAttachment>(`/images/${id}`, { method: 'PATCH', body: JSON.stringify({ alt }) }),
   deleteImage: (id: string) => http<void>(`/images/${id}`, { method: 'DELETE' }),
+
+  // The active profile's brand look (the Brand page; see BrandState above).
+  getBrand: () => http<BrandState>('/brand'),
+  saveBrand: (patch: {
+    colors?: Partial<BrandState['colors']>
+    fonts?: Partial<BrandState['fonts']>
+    styleNotes?: string
+  }) => http<{ ok: boolean }>('/brand', { method: 'PUT', body: JSON.stringify(patch) }),
+  uploadBrandLogo: (filename: string, dataBase64: string) =>
+    http<{ ok: boolean; logo: string }>('/brand/logo', {
+      method: 'POST',
+      body: JSON.stringify({ filename, dataBase64 }),
+    }),
+  deleteBrandLogo: () => http<void>('/brand/logo', { method: 'DELETE' }),
+  uploadBrandRef: (filename: string, dataBase64: string) =>
+    http<{ ok: boolean; name: string }>('/brand/refs', {
+      method: 'POST',
+      body: JSON.stringify({ filename, dataBase64 }),
+    }),
+  deleteBrandRef: (name: string) =>
+    http<void>(`/brand/refs/${encodeURIComponent(name)}`, { method: 'DELETE' }),
+  uploadBrandDoc: (filename: string, content: string) =>
+    http<{ ok: boolean; name: string }>('/brand/docs', {
+      method: 'POST',
+      body: JSON.stringify({ filename, content }),
+    }),
+  getBrandDoc: (name: string) => httpText(`/brand/docs/${encodeURIComponent(name)}`),
+  deleteBrandDoc: (name: string) =>
+    http<void>(`/brand/docs/${encodeURIComponent(name)}`, { method: 'DELETE' }),
   // Seeding an item records the user's take (may be empty) and advances it toward drafting.
   seedQueueItem: (id: string, seed: string) =>
     http<IdeaQueueItem>(`/queue/${id}/seed`, {

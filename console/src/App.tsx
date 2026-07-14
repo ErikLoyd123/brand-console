@@ -13,6 +13,7 @@ import {
   Zap,
   Database,
   BookOpen,
+  Palette,
   Plug2,
   Code,
   BookText,
@@ -35,6 +36,7 @@ import { DatabaseView } from './views/DatabaseView'
 import { ConnectionsView } from './views/ConnectionsView'
 import { ApiReferenceView } from './views/ApiReferenceView'
 import { VoiceView } from './views/VoiceView'
+import { BrandView } from './views/BrandView'
 import { DocsView } from './views/DocsView'
 import { TerminalDrawer } from './components/TerminalDrawer'
 
@@ -51,6 +53,7 @@ const NAV_KEYS = [
   'register',
   'tags',
   'voice',
+  'brand',
   'feeds',
   'spark',
   'connections',
@@ -199,6 +202,7 @@ export default function App() {
         label: 'Inputs',
         items: [
           { key: 'voice', label: 'Voice', icon: <BookOpen /> },
+          { key: 'brand', label: 'Brand', icon: <Palette /> },
           { key: 'feeds', label: 'Feeds', icon: <Rss /> },
           { key: 'spark', label: 'Spark', icon: <Zap /> },
         ],
@@ -255,6 +259,7 @@ export default function App() {
       {active === 'connections' && <ConnectionsView onNavigate={navigate} />}
       {active === 'apiref' && <ApiReferenceView />}
       {active === 'voice' && <VoiceView />}
+      {active === 'brand' && <BrandView />}
       {active === 'docs' && <DocsView />}
 
       <TerminalDrawer

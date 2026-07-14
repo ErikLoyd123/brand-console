@@ -107,6 +107,10 @@ its source. A raw list or value with no provenance is a bug, not a finished surf
   AI co-author/generated-with trailer) to commit messages or PR bodies in this repo.
   Commits carry the human author's name alone — accountability for pushed code rests
   with the person who ships it, and the contributor graph should show people.
+- **Everything lands by PR — no direct pushes to `main`.** The GitHub ruleset enforces
+  this for everyone, owner included (no bypass). Workflow: branch → commit → push the
+  branch → open a PR → merge when the `typecheck` CI check is green. Required
+  approvals are 0, so the author merges their own PR once CI passes.
 
 ## Boundaries (hard rules)
 

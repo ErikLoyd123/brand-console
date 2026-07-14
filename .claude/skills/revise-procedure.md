@@ -6,9 +6,9 @@ existing piece in the loaded profile's voice. It is referenced by the `queue` pa
 page skill routes here when the request is to revise/sharpen written content.
 
 Work a **draft** into shape with the owner — the hook options, the body, the close, the media
-suggestion — in the loaded profile's voice, and write the changes back. This is the AI surface
-on the Drafts screen: the draft already exists (a first pass from the draft procedure, or hand-typed),
-and this skill helps make it *good* — punch up a weak hook, tighten a baggy body, fix a close
+suggestion — in the loaded profile's voice, and write the changes back. This is the revise
+motion on the Queue card: the piece already exists (a first pass from a draft procedure, or
+hand-typed), and this skill helps make it *good* — punch up a weak hook, tighten a baggy body, fix a close
 that fizzles, restructure around the owner's points. It refines; it does not review (the voice
 gate is `content-reviewer`) and it does not publish.
 
@@ -17,8 +17,9 @@ carried in the idea's `seed` and `points` — and the voice is fixed by the voic
 sharpens the expression, not the position.
 
 **Invoke with:** "revise this draft", "punch up the hook", "the body buries the lede", "tighten
-this", "the close is weak", or from the Drafts page's **"Revise with AI"** button (which passes
-the draft id in the first message and says to use it — take that id directly, do not ask which).
+this", "the close is weak", or from a Queue card's **"Write with AI"** button when content
+already exists (it passes the item id in the first message and says to use it — take that id
+directly, do not ask which).
 
 ## Onboarding gate (run before revising)
 

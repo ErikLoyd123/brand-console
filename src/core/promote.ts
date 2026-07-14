@@ -10,6 +10,7 @@ import { eq } from 'drizzle-orm';
 import { db } from '../db/client';
 import { feedItems, ideaQueueItems, sources } from '../db/schema';
 import { getActiveProfileId } from '../profile/loader';
+import { getSilos } from './silos';
 
 export interface PromoteInput {
   /** The owner's one-to-two-sentence take, stored as the idea's seed. */
@@ -41,6 +42,11 @@ export function promoteFeedItem(feedItemId: string, input: PromoteInput = {}): P
   const points = Array.isArray(input.points)
     ? input.points.map((p) => String(p).trim()).filter((p) => p !== '')
     : [];
+  // A web piece-kind silo means the long-form lane: pin platform='web' on the idea so
+  // every downstream platform read (queue card, lane filters, the publish route) takes
+  // the web branch. Piece kinds are globally unique to web, so the silo is authoritative.
+  // Other feed promotes stay platform-null and read as LinkedIn, today's default.
+  const platform = (getSilos('web') as string[]).includes(silo) ? 'web' : null;
 
   const inserted = db
     .insert(ideaQueueItems)
@@ -52,6 +58,7 @@ export function promoteFeedItem(feedItemId: string, input: PromoteInput = {}): P
       status: 'seeded',
       seed: input.seed ?? '',
       points,
+      platform,
       sourceRef: item.url ?? null,
       proposedAngle: item.title,
       score: item.score ?? 0,

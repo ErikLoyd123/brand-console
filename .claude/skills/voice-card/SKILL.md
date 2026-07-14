@@ -1,6 +1,6 @@
 ---
 name: voice-card
-description: Loads the active profile's voice card. The single source of truth every drafter and reviewer reads first. MUST be loaded before drafting or reviewing any post. Loaded by the queue, drafts, articles, and spark skills, the drafting procedures, and content-reviewer.
+description: Loads the active profile's voice card. The single source of truth every drafter and reviewer reads first. MUST be loaded before drafting or reviewing any post. Loaded by the queue, spark, and discovery skills, the drafting procedures, and content-reviewer.
 type: skill
 ---
 

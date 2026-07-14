@@ -102,6 +102,13 @@ router.delete('/:id', (req, res) => {
     .where(and(eq(articles.id, req.params.id), eq(articles.profileId, profileId)))
     .get();
   if (!existing) return res.status(404).json({ error: 'not found' });
+  // Same published-guard as the queue/drafts deletes: an exported article IS the web
+  // lane's Published record, so it must not silently disappear.
+  if (existing.stage === 'exported') {
+    return res
+      .status(409)
+      .json({ error: 'this piece was published (exported) — it is part of the Published archive' });
+  }
   db.delete(articles).where(eq(articles.id, req.params.id)).run();
   const dependentDrafts = db
     .select({ id: drafts.id })

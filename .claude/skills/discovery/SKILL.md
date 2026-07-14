@@ -14,13 +14,14 @@ at the depth that kind needs, draws out your take and the beats of your argument
 the item straight into the queue with those beats attached.
 
 It sits one rung below `queue` on the ladder: **Discovery inbox → (discovery) → Queue with a
-real take + beats → Draft.** The plain **Promote** button on the Discovery card is the
-zero-shaping fast path (type a one-line take, land a bare seeded item, develop it later);
-`discovery` is the deliberate sibling for when a discovered piece is worth shaping now.
+real take + beats and the full piece written → your review → Published.** The plain
+**Promote** button on the Discovery card is the zero-shaping fast path (type a one-line take,
+land a bare seeded item, develop it later); `discovery` is the deliberate sibling for when a
+discovered piece is worth shaping now.
 
 `discovery` **never invents the opinion or the beats.** They come from you, grounded in the item,
-its source, and the voice card. You decide; the skill files. It never drafts, reviews, or
-publishes — `queue` turns the queued take into prose.
+its source, and the voice card. You decide; the skill files, then writes the full piece via the
+shared procedures. It never reviews or publishes — that is your call, on the Queue card.
 
 **Invoke with:** "work up this article", "work up item N", "help me shape my take on this",
 or from the Discovery page's per-card **"Work up with AI"** button (which passes the feed-item
@@ -159,8 +160,8 @@ npx tsx src/articles/create-article.ts "<ideaId>" '{
 ```
 
 `create-article` is idempotent per `ideaId` (a re-run never double-creates) and prints the new article
-id in backticks. `promoteFeedItem` does not store a platform column, but the `web` piece-kind silo key
-is globally unique, so downstream reads the platform as `web` from the silo. For a LinkedIn reaction
+id in backticks. `promoteFeedItem` pins `platform = 'web'` on the idea automatically when the silo is a
+web piece kind, so every downstream platform read takes the web branch. For a LinkedIn reaction
 there is no article row and this step is skipped. When it applies, report the article id alongside the
 idea id.
 

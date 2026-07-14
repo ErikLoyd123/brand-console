@@ -61,6 +61,14 @@ const REVIEW_HINTS = [
   'Judging it against the rules',
 ]
 
+// Ambient hints for the imagery run's working state.
+const IMAGE_HINTS = [
+  'Reading the piece',
+  'Loading your brand guidelines',
+  'Proposing image concepts',
+  'Producing the image',
+]
+
 // The filter bar spans every platform's roster, not just one — a Reddit-sourced idea
 // or a web piece-kind idea must be filterable here too. Flatten the rosters and de-dupe
 // the shared `curate` entry (same object in both, so a simple key-seen check is enough).
@@ -444,6 +452,7 @@ function QueueRow({
   onDevelop,
   onDraft,
   onReview,
+  onImage,
   highlight = false,
 }: {
   item: IdeaQueueItem
@@ -454,6 +463,7 @@ function QueueRow({
   onDevelop: () => void
   onDraft: () => void
   onReview: () => void
+  onImage: () => void
   highlight?: boolean
 }) {
   const [seed, setSeed] = useState(item.seed ?? '')
@@ -805,7 +815,7 @@ function QueueRow({
             onRevise={onDraft}
             onReview={onReview}
           />
-          <ImageStrip ideaId={item.id} onChanged={setCardImages} />
+          <ImageStrip ideaId={item.id} onChanged={setCardImages} onImageAI={onImage} />
           {!(item.platform === 'web' ? item.article?.body?.trim() : item.draft) && (
             <div className="flex items-center gap-3">
               <Button size="sm" onClick={onDraft}>
@@ -883,11 +893,11 @@ export function QueueView() {
   // directive (develop vs draft) and the local `mode` (which sets the working hints and result
   // link). Each trigger bumps surfaceKey to remount the surface fresh on that item; the bump is
   // what lets the same card re-trigger.
-  const [mode, setMode] = useState<'develop' | 'draft' | 'review'>('develop')
+  const [mode, setMode] = useState<'develop' | 'draft' | 'review' | 'image'>('develop')
   const [surfaceInput, setSurfaceInput] = useState<string | undefined>(undefined)
   const [surfaceKey, setSurfaceKey] = useState(0)
   const surfaceRef = useRef<HTMLDivElement>(null)
-  function runQueue(nextMode: 'develop' | 'draft' | 'review', input: string) {
+  function runQueue(nextMode: 'develop' | 'draft' | 'review' | 'image', input: string) {
     setMode(nextMode)
     setSurfaceInput(input)
     setSurfaceKey((k) => k + 1)
@@ -935,6 +945,19 @@ export function QueueView() {
             `"${item.proposedAngle}"). Do not ask which item — use this one. Load the voice ` +
             `card, then write it from my take and points and save it.` +
             itemContext(item),
+    )
+  }
+  function imageItem(item: IdeaQueueItem) {
+    const kind = item.platform === 'web' ? 'article' : 'post'
+    runQueue(
+      'image',
+      `Add an image to the queue item whose id is ${item.id} (angle: "${item.proposedAngle}"). ` +
+        `Do not ask which item — use this one. Follow the imagery procedure: read the ${kind} ` +
+        `and my brand guidelines first, open by proposing 1-3 image concepts in plain words ` +
+        `(composed graphic, annotated screenshot, or stock photo) and let me pick before ` +
+        `producing anything. For a web article, after attaching, also agree where it sits in ` +
+        `the body and insert the markdown reference there.` +
+        itemContext(item),
     )
   }
   function reviewItem(item: IdeaQueueItem) {
@@ -1000,7 +1023,13 @@ export function QueueView() {
           aiOnly
           initialInput={surfaceInput}
           workingHints={
-            mode === 'draft' ? DRAFT_HINTS : mode === 'review' ? REVIEW_HINTS : DEVELOP_HINTS
+            mode === 'draft'
+              ? DRAFT_HINTS
+              : mode === 'review'
+                ? REVIEW_HINTS
+                : mode === 'image'
+                  ? IMAGE_HINTS
+                  : DEVELOP_HINTS
           }
           resultActions={
             mode === 'develop'
@@ -1113,6 +1142,7 @@ export function QueueView() {
               onDevelop={() => developItem(item)}
               onDraft={() => draftItem(item)}
               onReview={() => reviewItem(item)}
+              onImage={() => imageItem(item)}
               highlight={item.id === highlightId}
             />
           ))}

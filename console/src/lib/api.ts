@@ -519,14 +519,16 @@ export const api = {
   // Publishes a draft to LinkedIn for real (POST /api/publish/linkedin). Throws on
   // 503 (not configured) / 409 (not connected) / 401 (expired) / 404 / 502 (LinkedIn
   // rejected it) — caller renders the thrown message. Media precedence server-side
-  // is image > linkUrl > text. The image is either inline bytes (dataBase64+mimeType)
-  // or an attached card image by imageId (the server reads the file itself).
+  // is images/image > linkUrl > text. Each image entry is either inline bytes
+  // (dataBase64+mimeType) or an attached card image by imageId (the server reads the
+  // file itself); two or more entries make a LinkedIn multi-photo post.
   publishLinkedin: (
     draftId: string,
     visibility: 'PUBLIC' | 'CONNECTIONS',
     opts?: {
       linkUrl?: string
       image?: { dataBase64?: string; mimeType?: string; alt?: string; imageId?: string }
+      images?: { dataBase64?: string; mimeType?: string; alt?: string; imageId?: string }[]
     },
   ) =>
     http<PublishedPost>('/publish/linkedin', {

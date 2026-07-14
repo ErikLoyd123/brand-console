@@ -46,6 +46,7 @@ export function exportArticle(articleId: string): ExportArticleResult {
   // whatever site consumes the export gets the visuals and their descriptions with it.
   const attached = listImagesForIdea(article.ideaId);
   const bundled: { src: string; alt: string }[] = [];
+  const srcByImageId = new Map<string, string>();
   if (attached.length > 0) {
     const imgDir = resolve(dir, 'images', slug);
     mkdirSync(imgDir, { recursive: true });
@@ -54,9 +55,25 @@ export function exportArticle(articleId: string): ExportArticleResult {
       if (!existsSync(abs)) continue; // a missing file shouldn't block the export
       const name = basename(img.path);
       copyFileSync(abs, resolve(imgDir, name));
-      bundled.push({ src: `images/${slug}/${name}`, alt: img.alt });
+      const src = `images/${slug}/${name}`;
+      bundled.push({ src, alt: img.alt });
+      srcByImageId.set(img.id, src);
     }
   }
+
+  // Inline placement: the body may reference attached images where they belong in the
+  // prose — `![alt](image:<imageId>)` (the canonical form the imagery procedure writes)
+  // or the console preview URL `![alt](/api/images/<imageId>/file)`. Rewrite both to
+  // the bundled relative path so the exported markdown is self-contained; a ref to an
+  // image that is no longer attached is left as-is (visible, not silently dropped).
+  const rewriteImageRefs = (text: string): string =>
+    text
+      .replace(/\(image:([\w-]+)\)/g, (m, id: string) =>
+        srcByImageId.has(id) ? `(${srcByImageId.get(id)})` : m,
+      )
+      .replace(/\(\/api\/images\/([\w-]+)\/file\)/g, (m, id: string) =>
+        srcByImageId.has(id) ? `(${srcByImageId.get(id)})` : m,
+      );
 
   const frontmatter = [
     '---',
@@ -79,11 +96,11 @@ export function exportArticle(articleId: string): ExportArticleResult {
   // those the way the old exporter did, so re-exporting an old piece still works.
   const bodyParts: string[] = [`# ${article.title}`];
   if (article.body.trim() !== '') {
-    bodyParts.push(article.body.trim());
+    bodyParts.push(rewriteImageRefs(article.body.trim()));
   } else {
     for (const section of article.sections) {
       bodyParts.push(`## ${section.heading}`);
-      bodyParts.push(section.body);
+      bodyParts.push(rewriteImageRefs(section.body));
     }
   }
 

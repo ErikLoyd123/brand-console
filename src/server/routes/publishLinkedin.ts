@@ -49,22 +49,94 @@ function loadValidToken(res: ExpressResponse, pid: string): LinkedinTokenRow | n
 // API using the connected account's stored token, then record the result as a
 // published_posts row (same shape the manual publish route in drafts.ts uses).
 //
+// One entry of the image publish path: either inline bytes (`dataBase64`) or,
+// for an image already attached to the idea's card, its `imageId` (the server
+// reads the file from data/images/ itself, alt defaulting to the stored row's).
+interface ImageInput {
+  dataBase64?: string;
+  mimeType?: string;
+  alt?: string;
+  imageId?: string;
+}
+
+// Runs LinkedIn's register-upload + PUT-binary steps for one image and returns
+// the asset URN, or a plain-string error the route turns into a 502.
+async function uploadImageAsset(
+  token: LinkedinTokenRow,
+  binary: Buffer,
+): Promise<{ asset: string } | { error: string }> {
+  let registerRes: Response;
+  try {
+    registerRes = await fetch(ASSETS_URL, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token.accessToken}`,
+        'X-Restli-Protocol-Version': '2.0.0',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        registerUploadRequest: {
+          recipes: ['urn:li:digitalmediaRecipe:feedshare-image'],
+          owner: `urn:li:person:${token.memberSub}`,
+          serviceRelationships: [
+            { relationshipType: 'OWNER', identifier: 'urn:li:userGeneratedContent' },
+          ],
+        },
+      }),
+    });
+  } catch {
+    return { error: 'LinkedIn rejected the image upload: request failed' };
+  }
+  if (!registerRes.ok) {
+    const bodyText = await registerRes.text();
+    return { error: `LinkedIn rejected the image upload: ${bodyText.slice(0, 300)}` };
+  }
+  const registerJson = (await registerRes.json()) as {
+    value?: {
+      uploadMechanism?: Record<string, { uploadUrl?: string } | undefined>;
+      asset?: string;
+    };
+  };
+  const uploadUrl =
+    registerJson.value?.uploadMechanism?.[
+      'com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest'
+    ]?.uploadUrl;
+  const asset = registerJson.value?.asset;
+  if (!uploadUrl || !asset) {
+    return { error: 'LinkedIn did not return an upload URL for the image.' };
+  }
+  let uploadRes: Response;
+  try {
+    uploadRes = await fetch(uploadUrl, {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${token.accessToken}` },
+      body: new Uint8Array(binary),
+    });
+  } catch {
+    return { error: 'LinkedIn rejected the image upload: request failed' };
+  }
+  if (!uploadRes.ok) {
+    return { error: `LinkedIn rejected the image upload: HTTP ${uploadRes.status}` };
+  }
+  return { asset };
+}
+
 // Optional body fields add media support on top of the plain-text post:
-// `linkUrl` shares an article link, `image` uploads a binary image through
-// LinkedIn's 3-step asset flow — either inline bytes (`dataBase64`) or, for an
-// image already attached to the idea's card, its `imageId` (the server reads
-// the file from data/images/ itself, alt text defaulting to the stored row's).
-// Precedence when more than one is present: image > linkUrl > text.
+// `linkUrl` shares an article link; `image` (one) or `images` (several — a
+// LinkedIn multi-photo post) upload through LinkedIn's 3-step asset flow, each
+// entry an ImageInput above. Precedence when more than one is present:
+// images/image > linkUrl > text.
 router.post('/linkedin', async (req, res) => {
   const pid = getActiveProfileId();
   const token = loadValidToken(res, pid);
   if (!token) return;
 
-  const { draftId, visibility, linkUrl, image } = req.body as {
+  const { draftId, visibility, linkUrl, image, images } = req.body as {
     draftId?: string;
     visibility?: 'PUBLIC' | 'CONNECTIONS';
     linkUrl?: string;
-    image?: { dataBase64?: string; mimeType?: string; alt?: string; imageId?: string };
+    image?: ImageInput;
+    images?: ImageInput[];
   };
 
   const draft = db
@@ -82,102 +154,45 @@ router.post('/linkedin', async (req, res) => {
 
   let specificContent: Record<string, unknown>;
 
-  let imageBinary: Buffer | null = null;
-  let imageAlt: string | undefined;
-  if (image) {
-    if (image.imageId) {
-      const row = getImage(image.imageId);
-      if (!row) return res.status(404).json({ error: 'attached image not found' });
-      const abs = imageAbsPath(row.path);
-      if (!existsSync(abs)) {
-        return res.status(410).json({ error: 'attached image file is missing on disk' });
+  const imageList = images && images.length > 0 ? images : image ? [image] : [];
+  if (imageList.length > 0) {
+    // Resolve every entry to bytes + alt before touching LinkedIn, so a bad
+    // reference fails the whole post instead of shipping a partial carousel.
+    const resolved: { binary: Buffer; alt?: string }[] = [];
+    for (const entry of imageList) {
+      if (entry.imageId) {
+        const row = getImage(entry.imageId);
+        if (!row) return res.status(404).json({ error: 'attached image not found' });
+        const abs = imageAbsPath(row.path);
+        if (!existsSync(abs)) {
+          return res.status(410).json({ error: 'attached image file is missing on disk' });
+        }
+        resolved.push({ binary: readFileSync(abs), alt: entry.alt ?? row.alt });
+      } else if (typeof entry.dataBase64 === 'string' && entry.dataBase64.length > 0) {
+        resolved.push({ binary: Buffer.from(entry.dataBase64, 'base64'), alt: entry.alt });
+      } else {
+        return res.status(400).json({ error: 'each image needs an imageId or dataBase64' });
       }
-      imageBinary = readFileSync(abs);
-      imageAlt = image.alt ?? row.alt;
-    } else if (typeof image.dataBase64 === 'string' && image.dataBase64.length > 0) {
-      imageBinary = Buffer.from(image.dataBase64, 'base64');
-      imageAlt = image.alt;
-    } else {
-      return res.status(400).json({ error: 'image needs an imageId or dataBase64' });
     }
 
-    // Step 1: register the upload to get a one-time upload URL + asset URN.
-    let registerRes: Response;
-    try {
-      registerRes = await fetch(ASSETS_URL, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token.accessToken}`,
-          'X-Restli-Protocol-Version': '2.0.0',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          registerUploadRequest: {
-            recipes: ['urn:li:digitalmediaRecipe:feedshare-image'],
-            owner: `urn:li:person:${token.memberSub}`,
-            serviceRelationships: [
-              { relationshipType: 'OWNER', identifier: 'urn:li:userGeneratedContent' },
-            ],
-          },
-        }),
+    // Upload each (register + PUT), then reference all assets in one media
+    // array — two or more render as a LinkedIn multi-photo post.
+    const media: Record<string, unknown>[] = [];
+    for (const { binary, alt } of resolved) {
+      const uploaded = await uploadImageAsset(token, binary);
+      if ('error' in uploaded) return res.status(502).json({ error: uploaded.error });
+      media.push({
+        status: 'READY',
+        media: uploaded.asset,
+        ...(alt ? { description: { text: alt } } : {}),
       });
-    } catch (err) {
-      return res.status(502).json({ error: 'LinkedIn rejected the image upload: request failed' });
     }
 
-    if (!registerRes.ok) {
-      const bodyText = await registerRes.text();
-      return res
-        .status(502)
-        .json({ error: `LinkedIn rejected the image upload: ${bodyText.slice(0, 300)}` });
-    }
-
-    const registerJson = (await registerRes.json()) as {
-      value?: {
-        uploadMechanism?: Record<string, { uploadUrl?: string } | undefined>;
-        asset?: string;
-      };
-    };
-    const uploadUrl =
-      registerJson.value?.uploadMechanism?.[
-        'com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest'
-      ]?.uploadUrl;
-    const asset = registerJson.value?.asset;
-    if (!uploadUrl || !asset) {
-      return res
-        .status(502)
-        .json({ error: 'LinkedIn did not return an upload URL for the image.' });
-    }
-
-    // Step 2: PUT the binary to the upload URL.
-    let uploadRes: Response;
-    try {
-      uploadRes = await fetch(uploadUrl, {
-        method: 'PUT',
-        headers: { Authorization: `Bearer ${token.accessToken}` },
-        body: new Uint8Array(imageBinary!),
-      });
-    } catch (err) {
-      return res.status(502).json({ error: 'LinkedIn rejected the image upload: request failed' });
-    }
-    if (!uploadRes.ok) {
-      return res
-        .status(502)
-        .json({ error: `LinkedIn rejected the image upload: HTTP ${uploadRes.status}` });
-    }
-
-    // Step 3: reference the uploaded asset in the ugcPosts call below.
     specificContent = {
       'com.linkedin.ugc.ShareContent': {
         shareCommentary: { text },
         shareMediaCategory: 'IMAGE',
-        media: [
-          {
-            status: 'READY',
-            media: asset,
-            ...(imageAlt ? { description: { text: imageAlt } } : {}),
-          },
-        ],
+        media,
       },
     };
   } else if (linkUrl) {

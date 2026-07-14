@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState, type ChangeEvent } from 'react'
 import { api, imageFileUrl, type ImageAttachment, type ImageSource } from '../lib/api'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
-import { Check, Image as ImageIcon, Trash2, X } from 'lucide-react'
+import { Check, Image as ImageIcon, Sparkles, Trash2, X } from 'lucide-react'
 
 // The images riding with one queue idea — shown on its card in the review phase.
 // Self-describing per the provenance rule: each thumbnail names how it was made
@@ -34,10 +34,13 @@ function readFileAsBase64(file: File): Promise<{ dataBase64: string; mimeType: s
 export function ImageStrip({
   ideaId,
   onChanged,
+  onImageAI,
 }: {
   ideaId: string
   // Parent hook for anything that lists images elsewhere (e.g. the publish modal).
   onChanged?: (images: ImageAttachment[]) => void
+  // Launches the AI imagery session for this idea (the card's Image with AI action).
+  onImageAI?: () => void
 }) {
   const [images, setImages] = useState<ImageAttachment[]>([])
   const [error, setError] = useState<string | null>(null)
@@ -128,17 +131,28 @@ export function ImageStrip({
         >
           Images{images.length > 0 ? ` · ${images.length}` : ''}
         </span>
-        <label className="inline-flex cursor-pointer items-center gap-1 text-xs text-text-subtle underline-offset-2 hover:text-text hover:underline">
-          <ImageIcon className="size-3" /> Upload
-          <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={onFileSelected} />
-        </label>
+        <div className="flex items-center gap-3">
+          {onImageAI && (
+            <button
+              type="button"
+              onClick={onImageAI}
+              className="inline-flex items-center gap-1 text-xs text-primary-ink underline-offset-2 hover:underline"
+            >
+              <Sparkles className="size-3" /> Image with AI
+            </button>
+          )}
+          <label className="inline-flex cursor-pointer items-center gap-1 text-xs text-text-subtle underline-offset-2 hover:text-text hover:underline">
+            <ImageIcon className="size-3" /> Upload
+            <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={onFileSelected} />
+          </label>
+        </div>
       </div>
 
       {images.length === 0 && !pendingFile && (
         <p className="text-xs text-text-muted">
-          No images yet. Ask the <span className="font-medium">imagery</span> skill (in the
-          terminal or a queue session) for a branded graphic, an annotated screenshot, or an
-          Unsplash pick — or upload one here. Publish ships whatever is attached.
+          No images yet. <span className="font-medium">Image with AI</span> makes one for this
+          piece — a graphic in your brand's look, an annotated screenshot of a live page, or a
+          stock photo — or upload your own. Publish ships whatever is attached.
         </p>
       )}
 

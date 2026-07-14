@@ -148,12 +148,38 @@ pick, then attach with `{ "ideaId": "…", "photoId": "…", "alt": "…" }` thr
 CLI. Attribution (photographer, page URL) is recorded on the row automatically — for a
 web article, credit the photographer in the caption or nearby text.
 
-## 4. Report and stop
+## 4. Place it in the piece
 
-Report what was attached (source, dimensions, alt text) and that it now shows on the
-idea's **Queue card**, where the owner can review or delete it; Publish ships it with the
-piece (LinkedIn uploads it, web export bundles it beside the markdown, Reddit stays
-copy-paste). Publish is the owner's click, never this procedure's.
+Where an image *goes* depends on the lane:
+
+- **LinkedIn post** — there is no inline placement: LinkedIn attaches images below the
+  post text. The Publish modal offers every card image as a pick, and picking several
+  makes a multi-photo post. Nothing to write into the draft.
+- **Reddit post** — copy-paste channel: the owner downloads the image from the card's
+  strip and attaches it on Reddit themselves. Nothing to write into the draft.
+- **Web article** — images live **inline in the markdown body**. After storing, agree
+  with the owner where each one sits (propose a spot — usually right after the section
+  it illustrates, or above the first heading as a hero), then insert a reference at that
+  spot and save the body through the article CLI:
+
+  ```markdown
+  ![<the image's alt text>](image:<imageId>)
+  ```
+
+  Write the body back with `npx tsx src/articles/update-article.ts <payload.json>`
+  (`{ "id": "<articleId>", "body": "<body with the ref inserted>" }`). The
+  `image:<imageId>` form is canonical — export rewrites it to the bundled file's
+  relative path (`images/<slug>/<file>`). Several images means several refs, each where
+  it belongs. An attached image with no ref still exports (bundled + listed in the
+  frontmatter) — that is the right shape for a hero the consuming site places itself;
+  say which images are inline and which are frontmatter-only when reporting.
+
+## 5. Report and stop
+
+Report what was attached (source, dimensions, alt text), where it was placed (inline
+spot for a web article; "offered at Publish" for LinkedIn; "download from the strip" for
+Reddit), and that it shows on the idea's **Queue card**, where the owner can review or
+delete it. Publish ships it with the piece — the owner's click, never this procedure's.
 
 ## Rules
 

@@ -100,13 +100,17 @@ are stored in the local database.
   shipped, since the Published archive references it.
 - **Images on a card** — each queue card has an **Images** strip: what's attached, where
   each image came from (AI graphic / screenshot / Unsplash with photographer credit /
-  upload), and a hand-upload affordance (alt text required). The **imagery** skill produces
-  them — a brand-styled composed graphic, an annotated screenshot of a live page (boxes,
-  arrows, click marks, privacy blurs, scroll composites), or an Unsplash pick (needs
-  `UNSPLASH_ACCESS_KEY` in `.env`) — rows live in the database, files under `data/images/`.
-  **Publish ships them**: the LinkedIn modal offers the card's images as one-click picks,
-  and a web export bundles them beside the markdown (listed in the frontmatter with alt
-  text). Reddit stays copy-paste.
+  upload), an **Image with AI** button, and a hand-upload affordance (alt text required).
+  Image with AI proposes concepts for the piece and produces one — a brand-styled composed
+  graphic, an annotated screenshot of a live page (boxes, arrows, click marks, privacy
+  blurs, scroll composites), or a stock photo (needs `UNSPLASH_ACCESS_KEY` in `.env`) —
+  rows live in the database, files under `data/images/`. **Where images go:** a LinkedIn
+  image sits below the post text — the publish modal offers the card's images as picks,
+  and picking several makes a multi-photo post; a web article places images **inline in
+  the markdown** as `![alt](image:<id>)` references (the AI inserts them where you agree,
+  or add one by hand), which export rewrites to the bundled files beside the `.md` —
+  unreferenced images still bundle and are listed in the frontmatter for the site to use
+  (e.g. as a hero); Reddit is copy-paste — download from the strip and attach it there.
 - **Scheduling & calendar** — the **Calendar** screen plans when a piece goes out.
 - **Published** — the **Published** screen is the archive of everything shipped, across all
   three lanes, sliceable by platform: posts link back to the live post, web rows show the

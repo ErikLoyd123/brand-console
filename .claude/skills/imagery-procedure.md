@@ -35,8 +35,8 @@ owner dropped in `brand/`: a company brand book, tone guide, or messaging doc; r
 in full). Everything you produce must sit inside this look and tone: the palette, the
 fonts, the style notes, the mood of the refs, the rules in the docs. (For the *writing*,
 the voice card stays the authority — brand docs inform imagery and visual judgment here.)
-When the folder is missing, the neutral default applies — say so, and mention that
-`brand/` is where the owner sets their own (see `profile.example/brand/` for the
+When the folder is missing, the neutral default applies — say so, and mention that the
+`brand` skill sets it up (or by hand in `brand/`; see `profile.example/brand/` for the
 documented shape).
 
 ```bash

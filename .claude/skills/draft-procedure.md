@@ -100,14 +100,19 @@ Produce four fields, all in the loaded profile's voice, all voice-card compliant
 
 - `hookOptions`: 3 to 5 first lines, each under 10 words, each a genuine hook (no
   clickbait, no em dashes). A **question** opening hook is banned for `teach`, `win`, and
-  `curate`, but **allowed for `conversation`** (a conversation post opens a loop).
+  `curate` on LinkedIn and `help`, `share`, `ask`, and `curate` on Reddit, but **allowed
+  for `conversation` and `discuss`** (their job is to open a loop). On Reddit the hooks
+  double as **title candidates**: the first hook becomes the self-post title (hard cap 300
+  characters; the console shows the count), written plain — say what the post is, no bait.
 - `body`: shaped per silo (below). For any `needs-your-take` item the seed is the spine;
-  never invent an opinion.
+  never invent an opinion. On Reddit the body and close publish as the **markdown
+  self-post body** under the title; plain markdown (paragraphs, a list if it earns it) is
+  fine there.
 - `close`: shaped per silo (below).
 - `mediaSuggestion`: one short suggestion (for example "screenshot of the thing you're
   describing" or "none").
 
-**Per-silo shaping:**
+**Per-silo shaping — LinkedIn** (plus the shared `curate`):
 
 - **teach** (today's behavior, unchanged). Body 1300 to 1900 characters; show, do not
   tell; lead with the useful, specific thing. Close is a soft, honest wrap. This is the
@@ -125,24 +130,51 @@ Produce four fields, all in the loaded profile's voice, all voice-card compliant
 - **win.** A short, warm story. The hero is someone else, or, for a self-story, the owner
   is the one held accountable (never the aggressive hero). The 1300-1900 floor does not
   bind; brief is the target. No ask.
-- **curate.** A generous pointer to someone else's tool, idea, or post; credit the source
-  explicitly. Low-effort framing on purpose (the owner is a node passing something good
-  along). Short; no length floor. No ask, no product tie-in; the only link is the credited
-  source.
+- **curate** (shared by LinkedIn and Reddit). A generous pointer to someone else's tool,
+  idea, or post; credit the source explicitly. Low-effort framing on purpose (the owner is
+  a node passing something good along) — but never a **bare link-drop**: at least a line
+  of the owner's own framing around the link (Reddit treats bare links as spam, and the
+  mechanical check flags it on both platforms). Short; no length floor. No ask, no product
+  tie-in; the only link is the credited source.
+
+**Per-silo shaping — Reddit** (the register from Step 2b is a subreddit-plain voice; every
+shape below reads as a community member talking, never marketing):
+
+- **discuss** — the conversation-analog. Opens a genuine discussion instead of closing
+  one: the body is the owner's real question or half-resolved thought, framed to invite
+  disagreement. No packaged takeaway required; shorter and tighter is good, no length
+  floor. The close invites replies plainly (never "thoughts? comment below" bait). A
+  question opening is allowed — it is the silo's job. **No product ask, ever.**
+- **help** — the teach-analog. Lead with the concrete answer to the concrete problem;
+  show, don't tell. Substantial like a `teach` body (the 1300-1900 character floor is the
+  guide) — a thin answer reads as karma-farming. This is the **only Reddit silo that may
+  be product-adjacent**, gated by the same `cta_policy` rules as `teach`, and Reddit's
+  norms bind harder: at most one soft, honest line, with the owner's affiliation stated
+  plainly ("I work on X"). If the policy forbids it or no product genuinely applies, no
+  ask. No question opening.
+- **share** — the win-analog with the brag stripped out. A first-person experience or
+  result told plainly; no hero framing, no humble-brag, no lesson-packaging required.
+  Brief is the target; no length floor. No ask, no question opening.
+- **ask** — solicits the community's input. A sentence or two of honest context, then the
+  question the owner actually wants answered, stated exactly. The post **ends on the
+  question** — the close is the question (or a one-line thanks after it), and carries no
+  ask beyond it. Short; no length floor. No question *opening* (the question is the
+  destination, not the hook).
 
 Self-check before saving: scan every field for em dashes and for AI-tells from the voice
 card. Run the mechanical checks with the correct adjacency for the silo, from the repo
-root (put the full draft text in `DRAFT`; only a `teach` post that genuinely touches a
-product is adjacent):
+root (put the full draft text in `DRAFT`; only a `teach` or `help` post that genuinely
+touches a product is adjacent):
 
 ```bash
 DRAFT="$(cat path/to/draft.txt)" SILO=<silo> ADJACENT=<0|1> npx tsx -e "(async () => { const { loadIdentity } = await import('./src/profile/loader.ts'); const identity = loadIdentity(); const m = await import('./src/review/voice-checks.ts'); console.log(JSON.stringify(m.runVoiceChecks(process.env.DRAFT ?? '', { isProductAdjacent: process.env.ADJACENT === '1', silo: process.env.SILO, protectedRelationships: identity.protected_relationships ?? [], products: identity.products ?? [] }), null, 2)); })()"
 ```
 
-For `conversation`, `win`, and `curate` the module forces adjacency to `false`, so any
-stray ask fails here before it ships. Confirm `teach` body length is in range (the other
-silos have no lower-length failure). Fix anything that fails. Re-read it aloud in the
-loaded voice: bar-explaining-to-a-friend, not press release.
+For every silo except the teach-shaped one of each platform (`teach` on LinkedIn, `help`
+on Reddit) the module forces adjacency to `false`, so any stray ask fails here before it
+ships. Confirm `teach`/`help` body length is in range (the other silos have no
+lower-length failure). Fix anything that fails. Re-read it aloud in the loaded voice:
+bar-explaining-to-a-friend, not press release.
 
 ## Step 4, save via draft-store
 
@@ -167,7 +199,8 @@ The CLI prints `{"draftId":N,"ideaId":M,"status":"drafted"}`. Saving sets the dr
 ## Step 5, hand off
 
 Report the new draft id **and the draft's silo, plus whether it is product-adjacent**
-(only possibly true for `teach`; always false for the other three), **and the resolved
+(only possibly true for the teach-shaped silo — `teach` on LinkedIn, `help` on Reddit —
+and always false for every other silo), **and the resolved
 register (platform + tone)** from Step 2b. `content-reviewer` needs the silo to grade the
 post by the right rules and the tone as soft context. The idea row's `silo` is authoritative either way. The
 draft still has to pass `content-reviewer` and then the profile owner's edit-and-approve.
@@ -179,6 +212,6 @@ Nothing here publishes.
 - NEVER invent an opinion for a needs-your-take item that has no seed. Surface it and stop.
 - NEVER fabricate a specific real fact. If a draft needs a specific the profile owner has not provided (a number, which tool, what actually happened, a customer detail), leave a `[FILL: ...]` marker in place and surface it to the profile owner. Style can be generated; facts cannot.
 - NEVER use an em dash. NEVER use an AI-tell from the blocklist.
-- Shape by silo: only `teach` may carry an ask and holds the 1300-1900 body floor; `conversation` may open with a question and runs shorter; `win` and `curate` carry no ask and no length floor. 3 to 5 hooks, each under 10 words, for every silo.
+- Shape by silo, on either platform: only the teach-shaped silo may carry an ask and holds the 1300-1900 body floor (`teach` on LinkedIn, `help` on Reddit); only the conversation-shaped silo may open with a question (`conversation`, `discuss`); every other silo carries no ask and no length floor. 3 to 5 hooks, each under 10 words, for every silo; on Reddit the first hook is the self-post title (300-char hard cap).
 - The register (platform + tone) is **soft coloring, never a hard rule**: it shifts the language's register and hints at length, but the silo, the voice card, and the doctrine govern. Tone never gates a draft and never enters the mechanical checks. If tone and silo conflict, silo wins.
 - The output is a draft, never a published post.

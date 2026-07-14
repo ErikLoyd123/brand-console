@@ -4,6 +4,10 @@
 //   profiles/<slug>/brand/brand.yaml   — colors, fonts, logo, style notes
 //   profiles/<slug>/brand/refs/        — example images the owner wants matched
 //                                        (palette, mood, annotation style)
+//   profiles/<slug>/brand/*.md|*.html  — brand documents (a company brand book,
+//                                        tone guide, messaging doc). Entirely
+//                                        optional; skills that produce anything
+//                                        brand-facing read whatever is here.
 //
 // The imagery pipeline (src/images/*) reads this before composing a graphic or
 // annotating a screenshot, so everything it produces lands in the profile's look
@@ -47,6 +51,10 @@ export interface BrandGuidelines {
   // Absolute paths of reference images under brand/refs/ — examples of the
   // look the owner wants matched.
   refPaths: string[];
+  // Absolute paths of brand documents (.md / .html) dropped directly in brand/ —
+  // a company brand book, tone guide, or messaging doc. Optional; consuming
+  // skills read them in full for tone and style judgment the yaml can't encode.
+  docPaths: string[];
 }
 
 // Neutral placeholder look, deliberately unbranded. A real profile overrides it
@@ -66,9 +74,11 @@ export const DEFAULT_BRAND: BrandGuidelines = {
   logoPath: null,
   styleNotes: '',
   refPaths: [],
+  docPaths: [],
 };
 
 const IMAGE_EXTS = new Set(['.png', '.jpg', '.jpeg', '.webp', '.gif', '.svg']);
+const DOC_EXTS = new Set(['.md', '.html', '.htm']);
 
 export function brandDir(slug?: string): string {
   return resolve(slug ? profileDirBySlug(slug) : resolveActiveProfileDir(), 'brand');
@@ -85,6 +95,16 @@ function listRefs(dir: string): string[] {
     .filter((name) => IMAGE_EXTS.has(name.slice(name.lastIndexOf('.')).toLowerCase()))
     .sort()
     .map((name) => resolve(refsDir, name));
+}
+
+// Brand documents: .md / .html files sitting directly in brand/ (refs/ holds
+// images only, so this never picks up a refs README).
+function listDocs(dir: string): string[] {
+  if (!existsSync(dir) || !statSync(dir).isDirectory()) return [];
+  return readdirSync(dir)
+    .filter((name) => DOC_EXTS.has(name.slice(name.lastIndexOf('.')).toLowerCase()))
+    .sort()
+    .map((name) => resolve(dir, name));
 }
 
 // Tolerant load: missing folder, missing yaml, or partial yaml all resolve to a
@@ -128,5 +148,6 @@ export function loadBrand(slug?: string): BrandGuidelines {
     logoPath: logoAbs && existsSync(logoAbs) ? logoAbs : null,
     styleNotes: asString(raw.style_notes, ''),
     refPaths: listRefs(dir),
+    docPaths: listDocs(dir),
   };
 }

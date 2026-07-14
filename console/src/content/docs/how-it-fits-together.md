@@ -50,11 +50,14 @@ files; some now have console editors too.
   These are product structure; they change only in code, and the same menus ship to
   everyone.
 - **Your brand look** — `profiles/<slug>/brand/`: a `brand.yaml` (colors, fonts, optional
-  logo, style notes) plus a `refs/` folder of example images whose look you want matched.
-  The **imagery** skill reads it before producing anything, so composed graphics and
-  screenshot annotations land in *your* palette, not a stock one. Optional — without it a
-  neutral default applies. Edited by hand; `profile.example/brand/` shows the documented
-  shape.
+  logo, style notes), a `refs/` folder of example images whose look you want matched, and
+  optionally **brand documents** — any `.md` or `.html` file dropped in `brand/` (a company
+  brand book, tone guide, or messaging doc; most useful for a brand profile that already
+  has formal guidelines). The **imagery** skill reads all of it before producing anything,
+  so composed graphics and screenshot annotations land in *your* palette and follow *your*
+  rules, not stock ones — while the voice card stays the authority for the writing itself.
+  Optional — without it a neutral default applies. Edited by hand; `profile.example/brand/`
+  shows the documented shape.
 - **The skills and agents** — the `.claude/skills/` and `.claude/agents/` definitions.
   There is **one skill per console page** — `spark`, `discovery`, `queue`,
   `feeds`, `pillars`, `register`, `voice` — plus `setup`, `imagery` (images for a queue
@@ -204,7 +207,7 @@ the console is where you then run the pipeline day to day.**
 | Article SEO fields | — | ✅ edit (on the web idea's queue card) | ✅ | Target keyword / search intent captured at intake; meta / slug filled at write time; all feed the export frontmatter |
 | Web publish (= export) | — | ✅ Publish on the queue card | ✅ | Writes `data/exports/<profile>/<slug>.md` (gitignored) and moves the piece to Published; the file is the shipped artifact — attached images are bundled beside it |
 | Images on a card | — | ✅ Images strip (view / upload / delete) + LinkedIn publish pick | ✅ (`images`) | Produced by the `imagery` skill (composed graphic / annotated screenshot / Unsplash) or uploaded; files in `data/images/`; alt text required |
-| Brand look (imagery) | ✅ (`profiles/<slug>/brand/`) | — | — | `brand.yaml` colors/fonts/logo/style notes + `refs/` example images; read by `imagery`; optional (neutral default) |
+| Brand look (imagery) | ✅ (`profiles/<slug>/brand/`) | — | — | `brand.yaml` colors/fonts/logo/style notes + `refs/` example images + optional `.md`/`.html` brand docs (brand book, tone guide); read by `imagery`; optional (neutral default) |
 | Profiles / active profile | ✅ (`profiles/<slug>/`, via `setup`) | ✅ switcher | ✅ setting | Disk holds each profile; the sidebar switcher sets the active one and re-scopes the console |
 | Scheduled / published | — | ✅ | ✅ | Console-owned |
 | LinkedIn connection | — | ✅ Connections | ✅ token | OAuth in the console |

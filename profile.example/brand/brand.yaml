@@ -38,3 +38,9 @@ style_notes: |
 # Reference images go in refs/ next to this file (png/jpg/webp). Drop in examples
 # of the look you want matched — a site screenshot, a card you liked, a photo
 # with the right mood. The imagery procedure reads them before producing anything.
+
+# Brand documents: drop any .md or .html file directly in this brand/ folder —
+# a company brand book, tone-of-voice guide, or messaging doc (see guidelines.md
+# here for the shape). Optional; skills read them in full for the judgment calls
+# this yaml can't encode. Most useful for a brand profile with existing formal
+# guidelines.

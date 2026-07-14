@@ -28,12 +28,16 @@ the same query via tsx) so you extend, not duplicate.
 
 ## 1. Load the brand guidelines
 
-Read the active profile's `brand/` folder — `brand.yaml` for the explicit rules and
+Read the active profile's `brand/` folder — `brand.yaml` for the explicit rules,
 **every image in `brand/refs/`** (view them with the Read tool; they are the "make it feel
-like this" examples). Everything you produce must sit inside this look: the palette, the
-fonts, the style notes, the mood of the refs. When the folder is missing, the neutral
-default palette applies — say so, and mention that `brand/brand.yaml` is where the owner
-sets their own (see `profile.example/brand/` for the documented shape).
+like this" examples), and **every brand document** (`docPaths` — any `.md`/`.html` the
+owner dropped in `brand/`: a company brand book, tone guide, or messaging doc; read them
+in full). Everything you produce must sit inside this look and tone: the palette, the
+fonts, the style notes, the mood of the refs, the rules in the docs. (For the *writing*,
+the voice card stays the authority — brand docs inform imagery and visual judgment here.)
+When the folder is missing, the neutral default applies — say so, and mention that
+`brand/` is where the owner sets their own (see `profile.example/brand/` for the
+documented shape).
 
 ```bash
 npx tsx -e "import('./src/profile/brand.js').then(m => console.log(JSON.stringify(m.loadBrand(), null, 2)))"

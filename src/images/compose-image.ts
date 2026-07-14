@@ -11,10 +11,10 @@
 //   "inputs": { ...ComposeInputs for that template },
 //   "alt": "<alt text — required>",
 //   "width"?: 1600, "height"?: 900,
-//   // logo override: "none" for no logo, or a brand/-relative path to a
-//   // specific variant (e.g. "logos/logo_reversed.png" on a dark card).
-//   // Omitted → brand.yaml's default logo.
-//   "logo"?: "none" | "logos/<file>",
+//   // Logo is OPT-IN — content images carry no logo unless asked. "default"
+//   // composites brand.yaml's default; a brand/-relative path picks a variant
+//   // (e.g. "logos/logo_reversed.png" on a dark card). Omitted → no logo.
+//   "logo"?: "default" | "logos/<file>",
 //   // preview mode: write the render to this file and print its dimensions
 //   // WITHOUT storing — used by the brand skill to show a test card in the
 //   // profile's look. ideaId/alt are not needed; brand comes from the active
@@ -71,20 +71,19 @@ async function main() {
   // Preview mode has no idea to anchor to: the active profile's brand applies.
   const brand = loadBrand(profile?.slug);
 
-  // Per-card logo pick: "none" drops the logo, a brand/-relative path swaps in
-  // a specific variant (reversed on dark grounds, icon in tight squares).
-  if (payload.logo) {
-    if (payload.logo === 'none') {
-      brand.logoPath = null;
-    } else {
-      const dir = brandDir(profile?.slug);
-      const abs = resolve(dir, payload.logo);
-      if (abs !== dir && !abs.startsWith(dir + sep)) {
-        throw new Error('"logo" must stay inside the brand/ folder');
-      }
-      if (!existsSync(abs)) throw new Error(`no logo file at ${payload.logo}`);
-      brand.logoPath = abs;
+  // Logo is opt-in: a content image carries no logo unless the payload asks —
+  // "default" for brand.yaml's pick, a brand/-relative path for a variant
+  // (reversed on dark grounds, icon in tight squares). "none" tolerated too.
+  if (!payload.logo || payload.logo === 'none') {
+    brand.logoPath = null;
+  } else if (payload.logo !== 'default') {
+    const dir = brandDir(profile?.slug);
+    const abs = resolve(dir, payload.logo);
+    if (abs !== dir && !abs.startsWith(dir + sep)) {
+      throw new Error('"logo" must stay inside the brand/ folder');
     }
+    if (!existsSync(abs)) throw new Error(`no logo file at ${payload.logo}`);
+    brand.logoPath = abs;
   }
 
   const composed = await composeImage({

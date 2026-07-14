@@ -93,7 +93,7 @@ give the path so the owner can open it):
 
 ```bash
 cat > .brand-card.json <<'JSON'
-{ "template": "headline", "inputs": { "kicker": "Preview", "title": "This is your brand look", "subtitle": "Colors, fonts, and spacing from brand.yaml" }, "out": "/tmp/brand-card.png" }
+{ "template": "headline", "inputs": { "kicker": "Preview", "title": "This is your brand look", "subtitle": "Colors, fonts, and spacing from brand.yaml" }, "logo": "default", "out": "/tmp/brand-card.png" }
 JSON
 npx tsx src/images/compose-image.ts .brand-card.json && rm .brand-card.json
 ```

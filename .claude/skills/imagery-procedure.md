@@ -45,14 +45,27 @@ npx tsx -e "import('./src/profile/brand.js').then(m => console.log(JSON.stringif
 
 ## 2. Propose, let the owner pick
 
-From the piece and the platform, propose 1-3 image concepts, each naming its source:
+**The image's job is to depict what the piece says** — its mechanism, its comparison, its
+flow, its tension — not to restate its words in big type. A card that just typesets a
+number or a title is the failure mode, not a deliverable. Brand is the *language* the
+image speaks (palette, type, spacing rules), never the *subject*: no logos on content
+images unless the owner asks, and never a brand-look card standing in for an idea.
 
-- **Composed graphic** (`quote` / `stat` / `headline` card) — when the piece has one line,
-  number, or claim worth staging. Deterministic, brand-exact.
+From the piece and the platform, propose 1-3 image concepts. For each, say in one plain
+sentence **what the viewer would see and what it explains** ("a diagram of the instance
+seeing a local disk while the volume lives across a storage network"). Sources:
+
+- **Bespoke graphic (the default for composed images)** — a one-off diagram, comparison,
+  flow, or annotated concept, authored as HTML/CSS in the brand's language and rendered
+  at 2x. This is the workhorse: an explainer gets its mechanism drawn, a comparison gets
+  its options side by side, a framework gets its decision path.
 - **Annotated screenshot** — when the piece points at something real on a live page
   (a product surface, a dashboard, a docs page): capture + highlight box / click ripple /
   arrow, privacy-blur anything personal. The scroll-composite variant stitches several
   scroll stops into one tall image for "here's the whole flow" moments.
+- **Quick template card** (`quote` / `stat` / `headline`) — only when a single line or
+  number genuinely IS the story (a pull-quote for a LinkedIn post). Never the lead
+  concept for an article.
 - **Unsplash photo** — when the piece wants atmosphere, not information. Requires
   `UNSPLASH_ACCESS_KEY` in `.env` (say so if unconfigured, and continue with the other
   sources).
@@ -70,27 +83,59 @@ All producers are payload-file CLIs (multi-line text never fights shell escaping
 prints the stored image row as JSON. **Alt text is mandatory everywhere** — write what the
 image shows, plainly, as part of producing it.
 
-### Composed graphic
+### Bespoke graphic — author, look, iterate (the default composed path)
+
+Design a one-off HTML/CSS document that **draws the piece's idea**: boxes and arrows for
+a mechanism, side-by-side panels for a comparison, a stepped path for a framework. Author
+it like a designer working in the brand's system — the palette and fonts from step 1 as
+CSS values, structure in the neutral tones, the primary color reserved for the thing the
+viewer should look at, style-notes rules obeyed (for this profile that means things like
+borderless surfaces and no decorative color). Inline everything; no external fetches.
+
+1. **Author** the markup into a file (never inline JSON — HTML fights JSON escaping):
+
+```bash
+cat > .image-graphic.html <<'HTML'
+<!-- the bespoke document -->
+HTML
+cat > .image-payload.json <<'JSON'
+{ "htmlFile": ".image-graphic.html", "width": 1200, "out": "/tmp/graphic-preview.png" }
+JSON
+npx tsx src/images/render-image.ts .image-payload.json
+```
+
+Width is CSS px (render is 2x); omit `height` to auto-fit the content — a graphic never
+ships with a dead band of empty canvas.
+
+2. **Look at the preview with the Read tool — mandatory, every time.** Judge it as a
+   designer would and fix what fails, re-render, look again. It is not done until:
+   - it **depicts** the idea — someone who hasn't read the piece learns something true
+     from the image alone;
+   - text fits: no overflow, no orphaned single words, no type crammed to an edge;
+   - the composition is balanced — no large empty regions, no elements colliding;
+   - color is functional: neutrals carry structure, the primary marks the focal point,
+     nothing tinted "for decoration";
+   - it would sit naturally next to the brand refs from step 1.
+
+3. **Attach** once it passes — same payload with `ideaId` + `alt`, `out` removed:
 
 ```bash
 cat > .image-payload.json <<'JSON'
-{
-  "ideaId": "<ideaId>",
-  "template": "quote",
-  "inputs": { "text": "<the line>", "attribution": "<who, optional>" },
-  "alt": "<what the card says/shows>"
-}
+{ "ideaId": "<ideaId>", "alt": "<what the graphic shows>", "htmlFile": ".image-graphic.html", "width": 1200 }
 JSON
-npx tsx src/images/compose-image.ts .image-payload.json
-rm .image-payload.json
+npx tsx src/images/render-image.ts .image-payload.json
+rm .image-payload.json .image-graphic.html
 ```
 
-Templates and their inputs: `quote` (text, attribution) · `stat` (value, label, context) ·
-`headline` (kicker, title, subtitle). Default canvas 1600x900; pass width/height to
-override. Colors/fonts/logo come from the brand guidelines automatically. When the brand
-carries several logo variants (`logoPaths`, under `brand/logos/`), pick per occasion with
-the `"logo"` payload key — a brand-relative path (e.g. the reversed variant on a dark
-card, the icon in a tight square) or `"none"`; omitted means brand.yaml's default.
+### Quick template card (pull-quote moments only)
+
+`compose-image.ts` renders three fixed cards: `quote` (text, attribution) · `stat`
+(value, label, context) · `headline` (kicker, title, subtitle) — payload
+`{ "ideaId", "template", "inputs", "alt" }`, default canvas 1600x900. Reach for one only
+when a single line or number is genuinely the story; an article's lead image is never a
+template card. **No logo unless the owner asks**: omitted means none; `"logo": "default"`
+composites brand.yaml's pick; a brand-relative path (e.g. `logos/logo_reversed.png` on a
+dark card) picks a variant.
 
 ### Annotated screenshot — the look-then-annotate loop
 
@@ -190,10 +235,13 @@ delete it. Publish ships it with the piece — the owner's click, never this pro
 
 ## Rules
 
+- **The image depicts the piece's idea; brand is its language, not its subject.** No
+  typeset-a-word cards as lead images, no logos on content images unless asked.
+- **Every render gets looked at before it attaches** — the step-2 checklist is the gate;
+  a graphic that fails it gets fixed, not shipped.
 - Alt text on every image, no exceptions.
 - Brand guidelines load before anything is produced; refs get viewed, not skipped.
-- deviceScaleFactor 2 and PNG intermediates for screenshots; single compression pass;
-  never upscale.
+- deviceScaleFactor 2 and PNG intermediates; single compression pass; never upscale.
 - Blur anything personal in a screenshot that isn't the owner's to publish.
 - The owner picks the image; candidates are shown, never silently attached.
 - Never publishes, never edits the piece's text (that's the draft/revise procedures).

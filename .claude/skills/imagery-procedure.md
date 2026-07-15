@@ -10,8 +10,9 @@ ships the image with the piece (LinkedIn upload / web export bundling), and that
 the owner's.
 
 **The owner picks the image.** Like the take, the visual is theirs: propose concepts,
-show candidates, let them choose or redirect. Never attach an image they haven't seen
-described (composed/screenshot) or listed (Unsplash picks).
+show candidates, let them choose or redirect. Never attach an image they haven't seen —
+concepts are described in a sentence, but a produced image (composed/screenshot) is shown
+as the image itself before it attaches, and Unsplash picks are listed with previews.
 
 ## 0. Read the idea and its piece
 
@@ -117,7 +118,13 @@ ships with a dead band of empty canvas.
      nothing tinted "for decoration";
    - it would sit naturally next to the brand refs from step 1.
 
-3. **Attach** once it passes — same payload with `ideaId` + `alt`, `out` removed:
+3. **Show the owner the preview and ask** — approval is on the image, never on a
+   description of it. In a console/headless run, pass the preview's path on the ask
+   (`ask_user` with `imageFile: "/tmp/graphic-preview.png"`) so it renders above the
+   question; in a terminal run, tell them the path so they can open it. If they redirect,
+   revise and show again.
+
+4. **Attach** once they approve — same payload with `ideaId` + `alt`, `out` removed:
 
 ```bash
 cat > .image-payload.json <<'JSON'
@@ -243,5 +250,7 @@ delete it. Publish ships it with the piece — the owner's click, never this pro
 - Brand guidelines load before anything is produced; refs get viewed, not skipped.
 - deviceScaleFactor 2 and PNG intermediates; single compression pass; never upscale.
 - Blur anything personal in a screenshot that isn't the owner's to publish.
-- The owner picks the image; candidates are shown, never silently attached.
+- The owner picks the image; candidates are shown, never silently attached — and
+  "shown" means the actual image: in a console/headless run, put the file's path on the
+  ask (`ask_user`'s `imageFile`) so it renders with the question.
 - Never publishes, never edits the piece's text (that's the draft/revise procedures).

@@ -1,6 +1,6 @@
 import type { Server } from 'node:http';
 import { existsSync, readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { extname, resolve } from 'node:path';
 import { homedir } from 'node:os';
 import { WebSocketServer, type WebSocket } from 'ws';
 import { nanoid } from 'nanoid';
@@ -12,6 +12,7 @@ import type {
   DownstreamFrame,
   UpstreamMessage,
   AskChoiceOption,
+  AskImage,
 } from './skill-protocol';
 
 // The headless counterpart to the interactive PTY terminal (src/server/terminal.ts).
@@ -34,7 +35,10 @@ const PREAMBLE =
   'your text, only ask_user calls and the final outcome. Each ask_user prompt renders as ' +
   'a small question card: keep it to one plain-language question of a sentence or two — ' +
   'no headings, section labels, bullet lists, or jargon the sentence does not explain — ' +
-  "and put any teaching or examples in the options' descriptions instead. " +
+  "and put any teaching or examples in the options' descriptions instead. When a " +
+  'question is about an image you produced (a rendered preview, a screenshot, a candidate ' +
+  "photo), pass the image file's path as `imageFile` so the user sees the actual image — " +
+  'never ask anyone to approve a visual from a description alone. ' +
   'Follow the skill exactly.';
 
 // Answer + overall run guards so a wedged model turn or an unanswered question
@@ -89,6 +93,35 @@ function loadSkillMarkdown(skillName: string): string | null {
   const file = resolve(SKILLS_DIR, skillName, 'SKILL.md');
   if (!file.startsWith(SKILLS_DIR) || !existsSync(file)) return null;
   return readFileSync(file, 'utf8');
+}
+
+// Inline an image file as a data URI for an ask frame, so the page can render the
+// visual a question is about (a preview awaiting approval) with no extra route or
+// fetch. Local single-user tool: the session already runs its own shell with full
+// local access, so the path is trusted the same way its Bash commands are. An
+// unreadable, oversized, or unknown-type file degrades to "no image" — a bad path
+// must never block the question itself.
+const ASK_IMAGE_MAX_BYTES = 8 * 1024 * 1024;
+const ASK_IMAGE_MIME: Record<string, string> = {
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.webp': 'image/webp',
+  '.gif': 'image/gif',
+  '.svg': 'image/svg+xml',
+};
+
+function loadAskImage(file: string | undefined, alt: string | undefined): AskImage | undefined {
+  if (!file) return undefined;
+  try {
+    const mime = ASK_IMAGE_MIME[extname(file).toLowerCase()];
+    if (!mime) return undefined;
+    const buf = readFileSync(file);
+    if (buf.byteLength > ASK_IMAGE_MAX_BYTES) return undefined;
+    return { src: `data:${mime};base64,${buf.toString('base64')}`, alt };
+  } catch {
+    return undefined;
+  }
 }
 
 // Drives exactly one skill session for one socket. All protocol I/O for the
@@ -157,8 +190,11 @@ function driveSession(ws: WebSocket, skillName: string, initialInput: string | u
       'multiple-choice question (each with a label and a one-line description), or omit ' +
       'options for a free-text question. Every choice question also shows the user a ' +
       'free-text box, so the answer may be one of your option labels or the user\'s own ' +
-      'words — treat an off-menu answer as a valid response, not an error. Returns the ' +
-      'answer as text.',
+      'words — treat an off-menu answer as a valid response, not an error. When the ' +
+      'question is about an image (a rendered preview to approve, a screenshot, a ' +
+      'candidate photo), pass its file path as `imageFile` — the image renders above the ' +
+      'question, so the user judges the actual visual, never a description of one. ' +
+      'Returns the answer as text.',
     {
       prompt: z.string().describe('The question shown to the user.'),
       options: z
@@ -172,6 +208,14 @@ function driveSession(ws: WebSocket, skillName: string, initialInput: string | u
         .optional()
         .describe('Present => a choice question. Absent/empty => free text.'),
       multiSelect: z.boolean().optional(),
+      imageFile: z
+        .string()
+        .optional()
+        .describe(
+          'Path to an image file the question is about (png/jpg/webp/gif/svg). Shown to ' +
+            'the user above the question.',
+        ),
+      imageAlt: z.string().optional().describe('Short alt text for imageFile.'),
     },
     async (args) => {
       const answer = await new Promise<string>((resolvePromise, rejectPromise) => {
@@ -203,6 +247,7 @@ function driveSession(ws: WebSocket, skillName: string, initialInput: string | u
         send({ type: 'thought', conversationId, text: '' });
 
         const opts = args.options as AskChoiceOption[] | undefined;
+        const image = loadAskImage(args.imageFile, args.imageAlt);
         if (opts && opts.length > 0) {
           send({
             type: 'ask_choice',
@@ -213,9 +258,10 @@ function driveSession(ws: WebSocket, skillName: string, initialInput: string | u
             multiSelect: args.multiSelect,
             // Always on: the user must never be boxed into the offered options.
             allowFreeText: true,
+            image,
           });
         } else {
-          send({ type: 'ask_text', conversationId, id, prompt: args.prompt });
+          send({ type: 'ask_text', conversationId, id, prompt: args.prompt, image });
         }
       });
       // Answer in hand — the model holds the turn again; restart its budget fresh.

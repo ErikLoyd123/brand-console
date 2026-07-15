@@ -12,6 +12,13 @@ export interface AskChoiceOption {
   preview?: string;
 }
 
+// An image the question is about (e.g. a rendered graphic awaiting approval),
+// inlined as a data URI so the page can show it with no extra route or fetch.
+export interface AskImage {
+  src: string;
+  alt?: string;
+}
+
 export interface AskChoice {
   type: 'ask_choice';
   conversationId: string;
@@ -20,6 +27,7 @@ export interface AskChoice {
   options: AskChoiceOption[];
   multiSelect?: boolean;
   allowFreeText?: boolean;
+  image?: AskImage;
 }
 
 export interface AskText {
@@ -28,6 +36,7 @@ export interface AskText {
   id: string;
   prompt: string;
   placeholder?: string;
+  image?: AskImage;
 }
 
 export interface Status {

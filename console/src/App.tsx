@@ -38,6 +38,7 @@ import { ApiReferenceView } from './views/ApiReferenceView'
 import { VoiceView } from './views/VoiceView'
 import { BrandView } from './views/BrandView'
 import { DocsView } from './views/DocsView'
+import { WelcomeView } from './views/WelcomeView'
 import { TerminalDrawer } from './components/TerminalDrawer'
 
 // Every nav item's key. Used to validate `#/<key>` hashes so a stray/typo'd hash
@@ -111,6 +112,10 @@ export default function App() {
   const [backend, setBackend] = useState<'checking' | 'live' | 'offline'>('checking')
   const [terminalOpen, setTerminalOpen] = useState(false)
   const [activeProfile, setActiveProfile] = useState<Profile | null>(null)
+  // Zero-profile first run: null while unknown (loading, or the fetch failed), so the
+  // welcome screen only replaces the shell when the API answered with an empty list —
+  // never as a flash during load or a false positive while the server is down.
+  const [noProfiles, setNoProfiles] = useState<boolean | null>(null)
 
   // Honest topbar signal: probe the local API once on load. checkHealth reads the
   // raw fetch result, so a down or unreachable server reports 'offline' and a live
@@ -125,8 +130,14 @@ export default function App() {
   useEffect(() => {
     api
       .getProfiles()
-      .then((profiles) => setActiveProfile(profiles.find((p) => p.active) ?? null))
-      .catch(() => setActiveProfile(null))
+      .then((profiles) => {
+        setNoProfiles(profiles.length === 0)
+        setActiveProfile(profiles.find((p) => p.active) ?? null)
+      })
+      .catch(() => {
+        setNoProfiles(null)
+        setActiveProfile(null)
+      })
   }, [active])
 
   // Setup on-ramp: when the active profile is incomplete (fresh clone, or a profile
@@ -163,6 +174,9 @@ export default function App() {
   // reflects actual state. A failed probe yields a missing badge count, never a
   // fabricated one.
   useEffect(() => {
+    // Nothing to count before the first profile exists; skip the fetches so the
+    // welcome screen doesn't fire a volley of guaranteed-409 requests.
+    if (noProfiles) return
     Promise.all([
       api.getInbox({ state: 'inbox' }).catch(() => []),
       api.getQueue().catch(() => []),
@@ -175,7 +189,7 @@ export default function App() {
         published: posts.length,
       })
     })
-  }, [active])
+  }, [active, noProfiles])
 
   const groups: NavGroup[] = useMemo(
     () => [
@@ -229,6 +243,10 @@ export default function App() {
     setToast(message)
     window.setTimeout(() => setToast(null), 3200)
   }
+
+  // First run: the API is live but no profile exists yet. The welcome screen replaces
+  // the whole shell — every other view is profile-scoped and would just error behind it.
+  if (noProfiles) return <WelcomeView />
 
   return (
     <AppShell

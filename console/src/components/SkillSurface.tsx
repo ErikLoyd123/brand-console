@@ -6,7 +6,7 @@ import { Markdown } from './Markdown'
 import { cn } from '../lib/cn'
 import { api } from '../lib/api'
 import { useSkillSession } from '../lib/useSkillSession'
-import type { AskChoice, AskText, DownstreamFrame, Result } from '../lib/skill-protocol'
+import type { AskChoice, AskImage, AskText, DownstreamFrame, Result } from '../lib/skill-protocol'
 
 // The reusable host that turns any console view into a live skill surface. It
 // renders the four downstream protocol message types, owns the AI/plain toggle,
@@ -478,6 +478,19 @@ function WorkingState({
   )
 }
 
+// The visual a question is about — a rendered preview awaiting the user's approval.
+// Shown at natural size up to a sane height so the user judges the actual image,
+// never a description of one.
+function AskImageFigure({ image }: { image: AskImage }) {
+  return (
+    <img
+      src={image.src}
+      alt={image.alt ?? ''}
+      className="max-h-96 w-full rounded-lg border border-border bg-surface-sunken object-contain"
+    />
+  )
+}
+
 function toggle(label: string, picked: string[], setPicked: (v: string[]) => void) {
   setPicked(picked.includes(label) ? picked.filter((l) => l !== label) : [...picked, label])
 }
@@ -500,6 +513,7 @@ function AskChoiceTurn({
       <div className="flex flex-col gap-2">
         <Markdown variant="prompt">{turn.prompt}</Markdown>
       </div>
+      {turn.image && <AskImageFigure image={turn.image} />}
       <div className="flex flex-col gap-2">
         {turn.options.map((o) => (
           <Button
@@ -555,6 +569,7 @@ function AskTextTurn({ turn, onSubmit }: { turn: AskText; onSubmit: (value: stri
       <div className="flex flex-col gap-2">
         <Markdown variant="prompt">{turn.prompt}</Markdown>
       </div>
+      {turn.image && <AskImageFigure image={turn.image} />}
       <Textarea
         autoFocus
         value={value}

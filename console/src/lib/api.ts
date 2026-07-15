@@ -661,12 +661,12 @@ export const api = {
       body: JSON.stringify({ text, isProductAdjacent, silo }),
     }),
 
-  // Frontend-only health probe. Uses a RAW fetch (NOT http()) and hits an existing
-  // GET route, so a down or unreachable server reports 'offline' and a live server
-  // reports 'live'. Drives the topbar badge.
+  // Frontend-only health probe. Uses a RAW fetch (NOT http()) against /api/profiles —
+  // the one endpoint that succeeds even with zero profiles — so the badge measures
+  // "is the server up", not "does a profile exist". Drives the topbar badge.
   checkHealth: async (): Promise<'live' | 'offline'> => {
     try {
-      const res = await fetch('/api/pillars', { method: 'GET' })
+      const res = await fetch('/api/profiles', { method: 'GET' })
       return res.ok ? 'live' : 'offline'
     } catch {
       return 'offline'

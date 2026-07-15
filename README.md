@@ -55,9 +55,10 @@ make dev
 
 Then open **http://localhost:3001**. Everything else happens in the console:
 
-1. **Create your first profile.** Open the profile switcher at the top of the sidebar →
-   **New profile** → give it a name and pick its kind (a person or a brand). The console
-   reloads into the new, empty profile.
+1. **Create your first profile.** A fresh install opens straight onto a **welcome
+   screen**: give the profile a name, pick its kind (a person or a brand), and hit
+   **Create profile**. The console reloads into the new, empty profile. (Later profiles
+   are created from the profile switcher at the top of the sidebar.)
 2. **Run setup from the Voice page.** The console lands you there automatically while a
    profile is incomplete. It shows what's still missing and a **Start setup** button that
    runs the guided voice interview and identity walk right in the app — no commands to

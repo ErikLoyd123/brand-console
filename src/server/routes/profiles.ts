@@ -58,8 +58,12 @@ function setActiveProfile(id: string): void {
 // page's setup surface renders as a checklist. This is the switcher's menu and
 // provenance source.
 router.get('/profiles', (_req, res) => {
-  const activeId = getActiveProfileId();
   const rows = db.select().from(profiles).all();
+  // Zero profiles (fresh clone) is a valid answer here, not an error: this is the
+  // bootstrap endpoint the console's welcome screen and health badge rely on, so it
+  // must never trip NoProfileError.
+  if (rows.length === 0) return res.json([]);
+  const activeId = getActiveProfileId();
   res.json(
     rows.map((p) => {
       const completeness = checkCompleteness(p.slug);

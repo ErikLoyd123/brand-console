@@ -1,5 +1,6 @@
 import http from 'node:http';
-import express from 'express';
+import express, { type NextFunction, type Request, type Response } from 'express';
+import { NoProfileError } from '../profile/loader';
 import sourcesRouter from './routes/sources';
 import queueRouter from './routes/queue';
 import draftsRouter from './routes/drafts';
@@ -51,6 +52,17 @@ app.use('/api', overviewRouter);
 app.use('/api', profilesRouter);
 app.use('/api/auth', authLinkedinRouter);
 app.use('/api/publish', publishLinkedinRouter);
+
+// Zero-profile state (fresh clone): every profile-scoped route throws NoProfileError via
+// getActiveProfileId(). Map it to a quiet 409 the console understands — GET /api/profiles
+// returns [] and stays the one bootstrap endpoint that never needs a profile. Anything
+// else falls through to Express's default handler.
+app.use((err: unknown, _req: Request, res: Response, next: NextFunction) => {
+  if (err instanceof NoProfileError) {
+    return res.status(409).json({ error: 'no_profile' });
+  }
+  next(err);
+});
 
 const server = http.createServer(app);
 attachTerminal(server);

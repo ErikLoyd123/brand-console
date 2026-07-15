@@ -181,15 +181,17 @@ run right from the Voice page (or any terminal):
    the Voice page (or the embedded terminal) is where you run `setup`, and the **Connections** screen handles the
    optional **LinkedIn** sign-in used for direct publishing. Reddit needs no sign-in — it's a
    manual copy-paste channel. If you open a screen that needs a profile you don't have yet, the
-   gate points you back to `setup`. A **profile switcher** at the top of the sidebar shows which
-   brand you're working as (name + a personal/brand pill), switches the whole console to that
-   profile's data, and can create a new empty profile (**New profile**: name + kind); profiles
-   live in `profiles/<slug>/` and are populated with the `setup` skill. While the active profile
-   is incomplete, the console lands on the **Voice** page, which doubles as the setup surface —
-   a checklist of what's missing plus a button that runs the setup interview — so a fresh clone
-   or a just-created brand is walked straight into setup, and every other screen shows a
-   **setup banner** under the top bar ("… isn't set up yet — Set up voice →") until the
-   profile is complete. See **Profiles & brands** for the full story.
+   gate points you back to `setup`. On a **fresh install with no profiles at all**, the console
+   opens on a **welcome screen** instead of the app: name your first profile, pick its kind
+   (personal or brand), and create it — no terminal step. A **profile switcher** at the top of
+   the sidebar shows which brand you're working as (name + a personal/brand pill), switches the
+   whole console to that profile's data, and creates later profiles (**New profile**: name +
+   kind); profiles live in `profiles/<slug>/` and are populated with the `setup` skill. While
+   the active profile is incomplete, the console lands on the **Voice** page, which doubles as
+   the setup surface — a checklist of what's missing plus a button that runs the setup
+   interview — so a fresh clone or a just-created brand is walked straight into setup, and
+   every other screen shows a **setup banner** under the top bar ("… isn't set up yet — Set up
+   voice →") until the profile is complete. See **Profiles & brands** for the full story.
 
 The short version: **your identity is authored through `setup` (conversation → files);
 the console is where you then run the pipeline day to day.**

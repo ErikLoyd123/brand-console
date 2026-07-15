@@ -111,10 +111,21 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 // loader.ts lives at <repo-root>/src/profile/loader.ts.
 export const REPO_ROOT = resolve(HERE, '..', '..');
 
+// Typed marker for the zero-profiles state (fresh clone, nothing created yet) so the
+// API layer can map it to a clean 409 instead of a stack-trace 500. Everything
+// downstream of getActiveProfileId() surfaces this until the first profile exists.
+export class NoProfileError extends Error {
+  constructor() {
+    super('No profiles exist yet. Open the console (http://localhost:3001) to create one.');
+    this.name = 'NoProfileError';
+  }
+}
+
 // The active profile is chosen by the app_settings.active_profile_id row (written by the
 // console switcher). Resolution is per-call, never a module-load constant, so a switch takes
 // effect on the next read without restarting the long-lived API. See design
 // 2026-07-13-multi-profile-longform-lane/02-profile-switching-and-setup.
+// Throws NoProfileError when the profiles table is empty.
 export function getActiveProfileId(): string {
   const rows = db
     .select()
@@ -126,7 +137,7 @@ export function getActiveProfileId(): string {
   // to the single migrated profile.
   const all = db.select().from(profiles).all();
   if (all.length === 0) {
-    throw new Error('No profiles exist yet. Run the setup skill to create one.');
+    throw new NoProfileError();
   }
   return all[0].id;
 }

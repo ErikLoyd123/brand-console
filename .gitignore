@@ -28,6 +28,10 @@ docs/brand/
 # repo carries no PII; stays on disk locally.
 docs/superpowers/
 
+# Local git worktrees (feature-branch checkouts kept inside the repo, e.g.
+# .claude/worktrees/<branch>/). Machine-local working copies, never committed.
+.claude/worktrees/
+
 # The owner's real per-user identity, now one sub-folder per profile. Never committed;
 # the tool reads profiles/ purely as local runtime data. Only profile.example/ (a fictional
 # persona) is tracked. Anchored to the repo root so it never over-matches src/profile/

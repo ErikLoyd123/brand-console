@@ -169,7 +169,9 @@ run right from the Voice page (or any terminal):
 
 1. **The `setup` skill** does the real work, in two independent stages:
    - **Stage A — the voice interview.** A guided conversation that becomes your
-     `voice-card.md` (raw answers saved to `interview.md`).
+     `voice-card.md`. Raw answers are saved to `interview.md` **as you answer**, so
+     closing the page mid-interview loses nothing — the next run resumes from the first
+     unanswered question instead of starting over.
    - **Stage B — the knob-walk.** Plain-language questions that fill `identity.yaml`:
      pillars, feeds, products, CTA policy, and your **platforms + tones**.
    You can run either stage alone to update, any time. It never wipes what's there.

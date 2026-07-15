@@ -281,6 +281,10 @@ export interface Profile {
   // What setup still has to fill, in the completeness check's own words. Empty when
   // complete. The Voice page's setup surface renders this as the checklist.
   missing: string[]
+  // Whether interview.md holds any saved answers yet (setup appends after every
+  // question). Lets the setup surface say "resume" instead of "this profile is empty"
+  // after an interrupted interview.
+  interviewStarted: boolean
 }
 export interface NewProfile {
   name: string

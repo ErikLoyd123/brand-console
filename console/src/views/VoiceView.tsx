@@ -186,17 +186,23 @@ export function VoiceView() {
 // completeness check says is missing and hosts the `setup` skill surface — the guided
 // interview (personal or brand, per the profile's kind) plus the identity knob-walk.
 // When setup finishes, the parent's reloads flip this page back to the normal voice view.
+// A profile with saved interview answers (interviewStarted) gets resume copy, not
+// fresh-start copy — the interview appends to interview.md after every question, so an
+// interrupted session picks up where it left off rather than starting over.
 function SetupSurface({ profile, onChanged }: { profile: Profile; onChanged: () => void }) {
   const brand = profile.kind === 'brand'
+  const resuming = profile.interviewStarted
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
         eyebrow="Inputs · Voice"
         title={`Set up ${profile.name}`}
         description={
-          brand
-            ? 'This brand profile is empty. The setup interview captures its positioning, audience, banned claims, and product naming — then distills the voice card every draft and review reads.'
-            : 'This profile is empty. The setup interview captures your story, opinions, and how you talk — then distills the voice card every draft and review reads.'
+          resuming
+            ? 'Setup is underway — the interview answers given so far are saved in this profile. Resuming continues from where it left off; nothing already answered is asked again.'
+            : brand
+              ? 'This brand profile is empty. The setup interview captures its positioning, audience, banned claims, and product naming — then distills the voice card every draft and review reads.'
+              : 'This profile is empty. The setup interview captures your story, opinions, and how you talk — then distills the voice card every draft and review reads.'
         }
       />
 
@@ -217,18 +223,32 @@ function SetupSurface({ profile, onChanged }: { profile: Profile; onChanged: () 
                 <Sparkles className="size-4" />
               </div>
               <div>
-                <p className="text-sm font-medium text-text-strong">Run the setup interview</p>
+                <p className="text-sm font-medium text-text-strong">
+                  {resuming ? 'Resume the setup interview' : 'Run the setup interview'}
+                </p>
                 <p className="text-xs text-text-subtle">
-                  A guided conversation — one question at a time
-                  {brand ? ', shaped for a company voice' : ''}. It writes{' '}
-                  <code className="font-mono text-[11px]">profiles/{'<slug>'}/voice-card.md</code> and{' '}
-                  <code className="font-mono text-[11px]">identity.yaml</code>; re-running it later is
-                  safe.
+                  {resuming ? (
+                    <>
+                      Your answers so far are saved in{' '}
+                      <code className="font-mono text-[11px]">profiles/{'<slug>'}/interview.md</code>;
+                      resuming continues from the first unanswered question, then writes{' '}
+                      <code className="font-mono text-[11px]">voice-card.md</code> and{' '}
+                      <code className="font-mono text-[11px]">identity.yaml</code>.
+                    </>
+                  ) : (
+                    <>
+                      A guided conversation — one question at a time
+                      {brand ? ', shaped for a company voice' : ''}. It writes{' '}
+                      <code className="font-mono text-[11px]">profiles/{'<slug>'}/voice-card.md</code>{' '}
+                      and <code className="font-mono text-[11px]">identity.yaml</code>; re-running it
+                      later is safe.
+                    </>
+                  )}
                 </p>
               </div>
             </div>
             <Button size="sm" disabled={disabled} onClick={() => start('')}>
-              Start setup
+              {resuming ? 'Resume setup' : 'Start setup'}
             </Button>
           </div>
         )}

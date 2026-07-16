@@ -68,7 +68,8 @@ router.get('/', (_req, res) => {
     const brand = loadBrand();
     res.json({
       brandDir: dir,
-      exists: existsSync(resolve(dir, 'brand.yaml')),
+      // The loader's definition of "set up": brand.yaml OR any uploaded asset.
+      exists: brand.exists,
       colors: brand.colors,
       fonts: brand.fonts,
       // Both brand/-relative paths, so `logo` matches its entry in `logos`.

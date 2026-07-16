@@ -83,6 +83,10 @@ export function BrandView() {
 
   // Bumped after every write so the preview card re-renders in the new look.
   const [previewKey, setPreviewKey] = useState(0)
+  // With no brand on disk the page shows a true empty state — no pre-filled look
+  // that reads as configured. This opts into the by-hand editor, whose fields are
+  // seeded from the neutral defaults purely as a starting point.
+  const [editByHand, setEditByHand] = useState(false)
 
   const [viewingDoc, setViewingDoc] = useState<{ name: string; content: string } | null>(null)
   const [confirmingDelete, setConfirmingDelete] = useState<string | null>(null)
@@ -255,35 +259,60 @@ export function BrandView() {
         )}
       />
 
-      {usingDefaults && brand && (
+      {/* No brand on disk and no editor opened: a true empty state. Nothing here
+          may read as a configured look — no filled palette, no branded preview.
+          The imagery pipeline treats this state as unbranded too (loadBrand's
+          `exists: false`): generated images take no palette from the fallback. */}
+      {usingDefaults && !editByHand && brand && (
+        <div className="flex flex-col items-start gap-3 rounded-lg bg-surface p-6 shadow-sm">
+          <span className="font-mono text-[11px] font-medium uppercase tracking-wide text-text-subtle">
+            No brand set up
+          </span>
+          <p className="text-sm text-text-muted">
+            This profile has no brand — and that's a valid state: images are produced
+            unbranded (no palette, fonts, or logo applied) until you create one. Set it up
+            with AI above, upload a logo / reference / document below, or start by hand —
+            saving creates <code className="font-mono text-xs">{brand.brandDir}</code> for
+            you.
+          </p>
+          <Button size="sm" variant="outline" onClick={() => setEditByHand(true)}>
+            Start by hand
+          </Button>
+        </div>
+      )}
+
+      {usingDefaults && editByHand && (
         <p className="rounded-lg border-l-2 border-primary/40 bg-surface-nested px-4 py-3 text-sm text-text-muted">
-          <span className="font-medium text-text">No brand saved for this profile yet.</span> The
-          colors, fonts, and preview below are the neutral default every profile falls back to —
-          not values you've set. Edit any field and Save, or upload a logo, reference, or document,
-          and <code className="font-mono text-xs">{brand.brandDir}</code> is created for you.
+          <span className="font-medium text-text">Nothing saved yet.</span> The fields below
+          are seeded with neutral starting values, not a brand — adjust and{' '}
+          <span className="font-medium">Save as this profile's brand</span> to create it.
         </p>
       )}
 
       {/* Live test card — a real render from the saved brand, so edits are judged on
-          pixels, not swatches. */}
-      <section className="flex flex-col gap-3">
-        <SectionHeading
-          title="Preview"
-          hint={
-            usingDefaults
-              ? 'A test card in the neutral default look — nothing is saved yet. Save the look to make it this profile’s.'
-              : 'A test card rendered live from the saved brand — exactly what composed graphics will look like. Save to refresh.'
-          }
-          action={usingDefaults ? <DefaultBadge /> : undefined}
-        />
-        <img
-          key={previewKey}
-          src={`/api/brand/preview.png?v=${previewKey}`}
-          alt="Test card rendered in the saved brand look"
-          className="w-full max-w-xl rounded-lg border border-border shadow-sm"
-        />
-      </section>
+          pixels, not swatches. Hidden entirely while no brand exists and the by-hand
+          editor is closed: an empty state must not exhibit a look. */}
+      {(!usingDefaults || editByHand) && (
+        <section className="flex flex-col gap-3">
+          <SectionHeading
+            title="Preview"
+            hint={
+              usingDefaults
+                ? 'A test card in the neutral starting look — nothing is saved yet. Save the look to make it this profile’s.'
+                : 'A test card rendered live from the saved brand — exactly what composed graphics will look like. Save to refresh.'
+            }
+            action={usingDefaults ? <DefaultBadge /> : undefined}
+          />
+          <img
+            key={previewKey}
+            src={`/api/brand/preview.png?v=${previewKey}`}
+            alt="Test card rendered in the saved brand look"
+            className="w-full max-w-xl rounded-lg border border-border shadow-sm"
+          />
+        </section>
+      )}
 
+      {(!usingDefaults || editByHand) && (
       <section className="flex flex-col gap-3">
         <SectionHeading
           title="The look"
@@ -368,6 +397,7 @@ export function BrandView() {
           </div>
         </div>
       </section>
+      )}
 
       <section className="flex flex-col gap-3">
         <SectionHeading

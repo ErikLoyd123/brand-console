@@ -61,10 +61,12 @@ files; some now have console editors too.
   leaves your machine; optional, offered once during setup and deferrable for good) — and
   can composite a crisp brand card onto a generated screen so on-screen text is legible.
   Images are supporting visuals — a chart, a photo, a diagram — never title covers.
-  Optional — without it a neutral default applies. Three ways to set it up: the **Brand**
-  page in the console (color pickers, font fields, style notes, logo/reference/document
-  uploads, and a live test card), the **brand** skill (which can derive a palette from
-  your live website or a reference image), or by hand in the files;
+  Optional — with no brand set up, images are produced **unbranded**: no palette, fonts,
+  or logo is applied (composed figures fall back to a neutral rendering default, and
+  generated images take their style from the piece alone). Three ways to set it up: the
+  **Brand** page in the console (color pickers, font fields, style notes,
+  logo/reference/document uploads, and a live test card), the **brand** skill (which can
+  derive a palette from your live website or a reference image), or by hand in the files;
   `profile.example/brand/` shows the documented shape.
 - **The skills and agents** — the `.claude/skills/` and `.claude/agents/` definitions.
   There is **one skill per console page** — `spark`, `discovery`, `queue`,

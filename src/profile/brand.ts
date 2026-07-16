@@ -45,6 +45,11 @@ export interface BrandFonts {
 }
 
 export interface BrandGuidelines {
+  // Whether ANY brand is actually set up (brand.yaml, or uploaded logos/refs/docs).
+  // False means every value below is the neutral rendering fallback, NOT the
+  // owner's look — consumers must not present or apply it as a brand (e.g. never
+  // steer a generated image's palette by it).
+  exists: boolean;
   colors: BrandColors;
   fonts: BrandFonts;
   // The default logo composited onto composed cards (brand.yaml `logo:`,
@@ -69,6 +74,7 @@ export interface BrandGuidelines {
 // Neutral placeholder look, deliberately unbranded. A real profile overrides it
 // in brand.yaml; profile.example ships a fictional one.
 export const DEFAULT_BRAND: BrandGuidelines = {
+  exists: false,
   colors: {
     primary: '#2f6f9c',
     accent: '#e8a33d',
@@ -154,8 +160,15 @@ export function loadBrand(slug?: string): BrandGuidelines {
   const fonts = (raw.fonts ?? {}) as Record<string, unknown>;
   const logo = asString(raw.logo, '');
   const logoAbs = logo ? resolve(dir, logo) : '';
+  const logoPaths = listLogos(dir);
+  const refPaths = listRefs(dir);
+  const docPaths = listDocs(dir);
 
   return {
+    // A brand exists once anything was deliberately saved: brand.yaml, or any
+    // uploaded logo/reference/document. Bare defaults => exists: false.
+    exists:
+      existsSync(yamlPath) || logoPaths.length > 0 || refPaths.length > 0 || docPaths.length > 0,
     colors: {
       primary: asString(colors.primary, DEFAULT_BRAND.colors.primary),
       accent: asString(colors.accent, DEFAULT_BRAND.colors.accent),
@@ -168,9 +181,9 @@ export function loadBrand(slug?: string): BrandGuidelines {
       body: asString(fonts.body, DEFAULT_BRAND.fonts.body),
     },
     logoPath: logoAbs && existsSync(logoAbs) ? logoAbs : null,
-    logoPaths: listLogos(dir),
+    logoPaths,
     styleNotes: asString(raw.style_notes, ''),
-    refPaths: listRefs(dir),
-    docPaths: listDocs(dir),
+    refPaths,
+    docPaths,
   };
 }

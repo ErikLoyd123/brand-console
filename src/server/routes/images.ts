@@ -7,7 +7,7 @@
 // all of them meet in the same images table + data/images/ files.
 
 import { Router } from 'express';
-import { existsSync, readdirSync, statSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, rmSync, statSync, unlinkSync } from 'node:fs';
 import { join } from 'node:path';
 import sharp from 'sharp';
 import { eq } from 'drizzle-orm';
@@ -77,6 +77,75 @@ router.get('/previews', (req, res) => {
     .map((name) => ({ name, mtimeMs: statSync(join(dir, name)).mtimeMs }))
     .sort((a, b) => a.mtimeMs - b.mtimeMs);
   res.json(rows);
+});
+
+// POST /api/images/previews/attach — promote a candidate into a real attachment:
+// { ideaId, name, alt }. Reads the preview file, stores it through the shared
+// writer (row + data/images/ file), then removes the preview so the candidate and
+// the attachment never show side by side. Lets the owner keep a candidate from the
+// strip even after the session that generated it is gone.
+router.post('/previews/attach', async (req, res) => {
+  const { ideaId, name, alt } = req.body as { ideaId?: string; name?: string; alt?: string };
+  if (!ideaId || !SAFE_SEGMENT.test(ideaId) || !name || !SAFE_SEGMENT.test(name)) {
+    return res.status(400).json({ error: 'valid ideaId and name are required' });
+  }
+  if (typeof alt !== 'string' || alt.trim() === '') {
+    return res.status(400).json({ error: 'alt text is required — every image ships with alt text' });
+  }
+  const abs = join(previewDirForIdea(ideaId), name);
+  if (!existsSync(abs)) return res.status(404).json({ error: 'preview not found' });
+  const extRaw = name.slice(name.lastIndexOf('.') + 1).toLowerCase();
+  const ext = extRaw === 'jpeg' ? 'jpg' : extRaw;
+  if (ext !== 'png' && ext !== 'jpg' && ext !== 'webp') {
+    return res.status(400).json({ error: 'preview must be png, jpg, or webp' });
+  }
+  try {
+    const idea = requireIdea(ideaId);
+    const buffer = readFileSync(abs);
+    const meta = await sharp(buffer).metadata();
+    const row = storeImage({
+      profileId: idea.profileId,
+      ideaId: idea.id,
+      source: 'generated',
+      buffer,
+      ext,
+      alt: alt.trim(),
+      width: meta.width ?? 0,
+      height: meta.height ?? 0,
+      params: { attachedFrom: 'session-candidate', file: name },
+    });
+    try {
+      unlinkSync(abs);
+    } catch {
+      /* candidate already gone — the attachment is what matters */
+    }
+    res.status(201).json(row);
+  } catch (e) {
+    res.status(400).json({ error: (e as Error).message });
+  }
+});
+
+// DELETE /api/images/previews?ideaId=… — discard ALL of an idea's candidates
+// (e.g. leftovers from a session that ended without attaching).
+router.delete('/previews', (req, res) => {
+  const ideaId = req.query.ideaId as string | undefined;
+  if (!ideaId || !SAFE_SEGMENT.test(ideaId)) {
+    return res.status(400).json({ error: 'a valid ideaId query param is required' });
+  }
+  rmSync(previewDirForIdea(ideaId), { recursive: true, force: true });
+  res.status(204).end();
+});
+
+// DELETE /api/images/previews/:ideaId/:name — discard one candidate.
+router.delete('/previews/:ideaId/:name', (req, res) => {
+  const { ideaId, name } = req.params;
+  if (!SAFE_SEGMENT.test(ideaId) || !SAFE_SEGMENT.test(name)) {
+    return res.status(400).json({ error: 'invalid preview path' });
+  }
+  const abs = join(previewDirForIdea(ideaId), name);
+  if (!existsSync(abs)) return res.status(404).json({ error: 'preview not found' });
+  unlinkSync(abs);
+  res.status(204).end();
 });
 
 // GET /api/images/previews/:ideaId/:name — one candidate's bytes.

@@ -120,7 +120,9 @@ are stored in the local database.
   `UNSPLASH_ACCESS_KEY` in `.env`) —
   rows live in the database, files under `data/images/`. Generation runs take minutes, so
   they run in the background and **candidates appear live on the strip** ("not attached
-  yet") while the session works — nothing attaches until you pick. **Where images go:** a LinkedIn
+  yet") while the session works — nothing attaches until you pick, in the session or right
+  on the strip: each candidate has **Attach** (alt text required) and discard, plus a
+  discard-all for leftovers from an ended session. **Where images go:** a LinkedIn
   image sits below the post text — the publish modal offers the card's images as picks,
   and picking several makes a multi-photo post; a web article places images **inline in
   the markdown** as `![alt](image:<id>)` references (the AI inserts them where you agree,
@@ -225,7 +227,7 @@ the console is where you then run the pipeline day to day.**
 | Queue (ideas + full content) | — | ✅ the review phase: seed, points, content editor, AI write/revise, Publish | ✅ | Console-owned; every idea carries its full written piece (post fields, or a web article's markdown body) on the card |
 | Article SEO fields | — | ✅ edit (on the web idea's queue card) | ✅ | Target keyword / search intent captured at intake; meta / slug filled at write time; all feed the export frontmatter |
 | Web publish (= export) | — | ✅ Publish on the queue card | ✅ | Writes `data/exports/<profile>/<slug>.md` (gitignored) and moves the piece to Published; the file is the shipped artifact — attached images are bundled beside it |
-| Images on a card | — | ✅ Images strip (view / upload / delete) + LinkedIn publish pick | ✅ (`images`) | Produced by the `imagery` skill (generated image / composed graphic / annotated screenshot / Unsplash) or uploaded; files in `data/images/`; alt text required; unattached generation candidates show live on the strip during a session |
+| Images on a card | — | ✅ Images strip (view / upload / delete) + LinkedIn publish pick | ✅ (`images`) | Produced by the `imagery` skill (generated image / composed graphic / annotated screenshot / Unsplash) or uploaded; files in `data/images/`; alt text required; unattached generation candidates show live on the strip during a session and can be attached or discarded right there |
 | Local image generation | ✅ (`image-generation.config.json`, gitignored) | 👁 status on Connections (+ setup steps) | ✅ defer flag (`app_settings`) | Optional, Apple Silicon; offered once by `setup` (install / skip / don't-ask-again); `make image-gen` installs; without it the generated type is left off the menu |
 | Brand look (imagery) | ✅ (`profiles/<slug>/brand/`) | ✅ Brand page (form + uploads + live preview / AI `brand` skill) | — | `brand.yaml` colors/fonts/logo/style notes + `refs/` example images + optional `.md`/`.html` brand docs (brand book, tone guide); read by `imagery`; optional (neutral default) |
 | Profiles / active profile | ✅ (`profiles/<slug>/`, via `setup`) | ✅ switcher | ✅ setting | Disk holds each profile; the sidebar switcher sets the active one and re-scopes the console |

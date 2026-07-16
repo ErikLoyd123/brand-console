@@ -70,6 +70,10 @@ export function ImageStrip({
     dataBase64: string
     mimeType: string
   } | null>(null)
+  // Candidate being attached from the strip (its filename) — same alt-first rule
+  // as uploads. Mutually exclusive with pendingFile; both share the alt field.
+  const [pendingPreview, setPendingPreview] = useState<string | null>(null)
+  const [confirmingClear, setConfirmingClear] = useState(false)
   const [alt, setAlt] = useState('')
 
   const reload = useCallback(() => {
@@ -121,6 +125,7 @@ export function ImageStrip({
     }
     try {
       const data = await readFileAsBase64(file)
+      setPendingPreview(null)
       setPendingFile({ name: file.name, ...data })
       setAlt('')
     } catch (err) {
@@ -151,6 +156,55 @@ export function ImageStrip({
       await api.deleteImage(id)
       setConfirmingDelete(null)
       reload()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  // Candidate actions: keep one (promote to a real attachment, alt required),
+  // discard one, or clear the whole batch — so leftovers from an ended session
+  // never need a terminal to deal with.
+  async function attachPreview() {
+    if (!pendingPreview || alt.trim() === '') return
+    setBusy(true)
+    setError(null)
+    try {
+      await api.attachImagePreview(ideaId, pendingPreview, alt.trim())
+      setPendingPreview(null)
+      setAlt('')
+      reload()
+      reloadPreviews()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function removePreview(name: string) {
+    setBusy(true)
+    setError(null)
+    try {
+      await api.deleteImagePreview(ideaId, name)
+      if (pendingPreview === name) setPendingPreview(null)
+      reloadPreviews()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function clearPreviews() {
+    setBusy(true)
+    setError(null)
+    try {
+      await api.clearImagePreviews(ideaId)
+      setConfirmingClear(false)
+      setPendingPreview(null)
+      reloadPreviews()
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
     } finally {
@@ -198,29 +252,113 @@ export function ImageStrip({
 
       {previews.length > 0 && (
         <div className="flex flex-col gap-1.5">
-          <span
-            className="font-mono text-[10px] font-medium uppercase tracking-wide text-text-subtle"
-            title="Fresh candidates from the imagery session — files under data/images/previews/, not attached to the piece. Pick one in the session; the rest are cleaned up."
-          >
-            Candidates · not attached yet
-          </span>
+          <div className="flex items-center justify-between gap-2">
+            <span
+              className="font-mono text-[10px] font-medium uppercase tracking-wide text-text-subtle"
+              title="Candidates from an imagery session — files under data/images/previews/, not attached to the piece. Attach the one you want (alt text required) or discard; picking in the session does the same."
+            >
+              Candidates · not attached yet
+            </span>
+            {confirmingClear ? (
+              <span className="flex items-center gap-2">
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={clearPreviews}
+                  className="text-[10px] font-medium text-error-fg underline-offset-2 hover:underline"
+                >
+                  Discard all {previews.length}?
+                </button>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => setConfirmingClear(false)}
+                  className="text-text-subtle hover:text-text"
+                  aria-label="Cancel discard all"
+                >
+                  <X className="size-3" />
+                </button>
+              </span>
+            ) : (
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => setConfirmingClear(true)}
+                className="text-[10px] text-text-subtle underline-offset-2 hover:text-error-fg hover:underline"
+              >
+                Discard all
+              </button>
+            )}
+          </div>
           <div className="flex flex-wrap gap-3">
             {previews.map((p) => (
-              <a
-                key={p.name}
-                href={imagePreviewUrl(ideaId, p.name)}
-                target="_blank"
-                rel="noreferrer"
-                title={`${p.name} — open full size`}
-              >
-                <img
-                  src={`${imagePreviewUrl(ideaId, p.name)}?t=${p.mtimeMs}`}
-                  alt={`Candidate ${p.name}`}
-                  className="h-24 w-40 rounded-md border border-dashed border-border object-cover opacity-90"
-                />
-              </a>
+              <div key={p.name} className="flex w-40 flex-col gap-1">
+                <a
+                  href={imagePreviewUrl(ideaId, p.name)}
+                  target="_blank"
+                  rel="noreferrer"
+                  title={`${p.name} — open full size`}
+                >
+                  <img
+                    src={`${imagePreviewUrl(ideaId, p.name)}?t=${p.mtimeMs}`}
+                    alt={`Candidate ${p.name}`}
+                    className="h-24 w-40 rounded-md border border-dashed border-border object-cover opacity-90"
+                  />
+                </a>
+                <div className="flex items-center justify-between gap-1">
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => {
+                      setPendingFile(null)
+                      setPendingPreview(p.name)
+                      setAlt('')
+                    }}
+                    className="text-[10px] font-medium text-primary-ink underline-offset-2 hover:underline"
+                  >
+                    Attach
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => removePreview(p.name)}
+                    className="rounded p-0.5 text-text-subtle transition-colors hover:text-error-fg"
+                    aria-label={`Discard candidate ${p.name}`}
+                    title="Discard this candidate (file only — it was never attached)"
+                  >
+                    <Trash2 className="size-3" />
+                  </button>
+                </div>
+              </div>
             ))}
           </div>
+          {pendingPreview && (
+            <div className="flex flex-col gap-2 rounded-lg bg-surface p-3">
+              <span className="text-xs text-text-muted">
+                Attaching candidate <span className="font-medium">{pendingPreview}</span> —
+                describe it first (alt text rides with the image everywhere it ships).
+              </span>
+              <div className="flex flex-wrap items-center gap-2">
+                <Input
+                  value={alt}
+                  onChange={(e) => setAlt(e.target.value)}
+                  placeholder="What does the image show?"
+                  className="w-72"
+                />
+                <Button size="sm" disabled={busy || alt.trim() === ''} onClick={attachPreview}>
+                  <Check className="size-3.5" /> {busy ? 'Attaching…' : 'Attach'}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  disabled={busy}
+                  onClick={() => setPendingPreview(null)}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

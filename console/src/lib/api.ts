@@ -517,6 +517,20 @@ export const api = {
   // Unattached candidates from a running imagery session (see ImagePreview above).
   getImagePreviews: (ideaId: string) =>
     http<ImagePreview[]>(`/images/previews?ideaId=${encodeURIComponent(ideaId)}`),
+  // Promote a candidate into a real attachment (alt required); removes the preview.
+  attachImagePreview: (ideaId: string, name: string, alt: string) =>
+    http<ImageAttachment>('/images/previews/attach', {
+      method: 'POST',
+      body: JSON.stringify({ ideaId, name, alt }),
+    }),
+  // Discard one candidate, or all of an idea's candidates.
+  deleteImagePreview: (ideaId: string, name: string) =>
+    http<void>(
+      `/images/previews/${encodeURIComponent(ideaId)}/${encodeURIComponent(name)}`,
+      { method: 'DELETE' },
+    ),
+  clearImagePreviews: (ideaId: string) =>
+    http<void>(`/images/previews?ideaId=${encodeURIComponent(ideaId)}`, { method: 'DELETE' }),
   // Is local image generation set up? (backend + reachable/installed)
   getGeneratorStatus: () => http<GeneratorStatus>('/images/generator-status'),
   uploadImage: (ideaId: string, dataBase64: string, mimeType: string, alt: string) =>

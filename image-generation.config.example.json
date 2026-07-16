@@ -27,6 +27,18 @@
       "apiUrl": "http://localhost:7860",
       "model": null,
       "steps": 4
+    },
+    "nano-banana": {
+      "_help": "Google's Gemini image model, 'Nano Banana 2'. THE ONE CLOUD ENTRY: your prompt is sent to Google, unlike every other model here. Needs GEMINI_API_KEY in .env (free tier is generous but rate-limited). Nothing to download. Gemini takes an aspect ratio rather than pixel dimensions, so width/height are snapped to the nearest supported ratio; set 'aspectRatio'/'imageSize' to pin them. It accepts no seed, so runs are not reproducible.",
+      "backend": "gemini",
+      "model": "gemini-3.1-flash-image",
+      "imageSize": null,
+      "aspectRatio": null
+    },
+    "nano-banana-pro": {
+      "_help": "Nano Banana Pro (gemini-3-pro-image) — the higher-end Gemini image model. Same cloud caveat and same key.",
+      "backend": "gemini",
+      "model": "gemini-3-pro-image"
     }
   }
 }

@@ -58,7 +58,22 @@ export interface DrawThingsModelConfig {
   steps?: number;
 }
 
-export type ModelConfig = MfluxModelConfig | DrawThingsModelConfig;
+// Google's Gemini image models ("Nano Banana"). The one entry in this file that is NOT
+// local: the prompt goes to Google and the image comes back over the wire. It needs
+// GEMINI_API_KEY in the server-side env (never the browser) and is opt-in — absent key,
+// the entry simply reads as unavailable and the skill offers something else.
+export interface GeminiModelConfig {
+  backend: 'gemini';
+  // e.g. gemini-3.1-flash-image (Nano Banana 2), gemini-3-pro-image (Nano Banana Pro),
+  // gemini-2.5-flash-image (the original).
+  model: string;
+  // '512px' | '1K' | '2K' | '4K'. Omitted/null = derived from the requested width.
+  imageSize?: string | null;
+  // Overrides the aspect ratio derived from width/height (e.g. '1:1', '16:9').
+  aspectRatio?: string | null;
+}
+
+export type ModelConfig = MfluxModelConfig | DrawThingsModelConfig | GeminiModelConfig;
 
 export interface GeneratorConfig {
   // Name (key into `models`) of the model used when a call doesn't pick one.
@@ -66,6 +81,21 @@ export interface GeneratorConfig {
   width: number;
   height: number;
   models: Record<string, ModelConfig>;
+}
+
+// The API server gets .env via node's --env-file-if-exists flag, but the skill-facing
+// CLIs (generate-image.ts etc.) run through plain `npx tsx`, which loads nothing. Fill
+// that gap here so the Gemini entries work from the CLI too — same pattern as
+// unsplash.ts. loadEnvFile never overrides variables already set.
+if (!process.env.GEMINI_API_KEY) {
+  const envPath = resolve(REPO_ROOT, '.env');
+  if (existsSync(envPath)) {
+    try {
+      process.loadEnvFile(envPath);
+    } catch {
+      /* unreadable .env — geminiConfigured() then reports it plainly */
+    }
+  }
 }
 
 const DEFAULT_STEPS = 4;
@@ -218,10 +248,17 @@ export async function generatorConfigured(
   try {
     const { entry } = resolveModel(config, modelName);
     if (entry.backend === 'mflux') return findOnPath(mfluxCommand(entry)) !== null;
+    // Gemini needs no install — just the key. We don't spend a live request probing it;
+    // a wrong key surfaces as a clear error on first use.
+    if (entry.backend === 'gemini') return geminiConfigured();
     return drawThingsReachable(entry.apiUrl ?? 'http://localhost:7860');
   } catch {
     return false;
   }
+}
+
+export function geminiConfigured(): boolean {
+  return typeof process.env.GEMINI_API_KEY === 'string' && process.env.GEMINI_API_KEY !== '';
 }
 
 // "Are this model's weights already on disk?" — the difference between a fast
@@ -231,6 +268,8 @@ export async function generatorConfigured(
 //   false → tool may be installed but the first run will download weights
 //   null  → not knowable here (Draw Things manages its own models in-app)
 export function modelWeightsCached(entry: ModelConfig): boolean | null {
+  // Non-mflux backends manage their own models (Draw Things in-app) or have no weights
+  // to cache at all (Gemini runs on Google's hardware) — nothing to report either way.
   if (entry.backend !== 'mflux') return null;
   if (entry.modelPath) return existsSync(entry.modelPath);
   const hub = join(homedir(), '.cache', 'huggingface', 'hub');
@@ -265,13 +304,15 @@ export async function generateImage(
     prompt: opts.prompt,
     width: opts.width ?? config.width,
     height: opts.height ?? config.height,
-    steps: opts.steps ?? entry.steps ?? DEFAULT_STEPS,
+    // Not every backend has a step count (Gemini doesn't expose one) — carry a value
+    // anyway so the shared shape holds; the backends that ignore it simply ignore it.
+    steps: opts.steps ?? ('steps' in entry ? entry.steps : undefined) ?? DEFAULT_STEPS,
     seed: opts.seed ?? Math.floor(Math.random() * 1_000_000_000),
     outPath: opts.outPath,
   };
-  return entry.backend === 'mflux'
-    ? generateWithMflux(merged, name, entry)
-    : generateWithDrawThings(merged, name, entry);
+  if (entry.backend === 'mflux') return generateWithMflux(merged, name, entry);
+  if (entry.backend === 'gemini') return generateWithGemini(merged, name, entry);
+  return generateWithDrawThings(merged, name, entry);
 }
 
 type Merged = Required<Omit<GenerateOptions, 'model' | 'width' | 'height' | 'steps' | 'seed'>> & {
@@ -352,6 +393,147 @@ async function generateWithDrawThings(
       prompt: m.prompt,
       steps: m.steps,
       seed: m.seed,
+    },
+  };
+}
+
+// ---- Gemini backend ("Nano Banana") ----
+
+export const GEMINI_NO_KEY =
+  'GEMINI_API_KEY is not set, so the Gemini image models are unavailable. Get a key at ' +
+  'aistudio.google.com/apikey and put it in .env (see .env.example). Note this model is a ' +
+  'CLOUD call — unlike the local models, the prompt leaves your machine.';
+
+// Gemini takes an aspect ratio, not pixel dimensions. Snap the requested w:h onto the
+// nearest ratio it supports so a caller asking for 1024x1024 gets a square rather than
+// an error, and say what we did in `params` so the mismatch is never silent.
+const GEMINI_RATIOS: { label: string; value: number }[] = [
+  { label: '1:1', value: 1 },
+  { label: '3:2', value: 3 / 2 },
+  { label: '2:3', value: 2 / 3 },
+  { label: '3:4', value: 3 / 4 },
+  { label: '4:3', value: 4 / 3 },
+  { label: '4:5', value: 4 / 5 },
+  { label: '5:4', value: 5 / 4 },
+  { label: '9:16', value: 9 / 16 },
+  { label: '16:9', value: 16 / 9 },
+  { label: '21:9', value: 21 / 9 },
+];
+
+export function nearestGeminiRatio(width: number, height: number): string {
+  const target = width / height;
+  return GEMINI_RATIOS.reduce((best, r) =>
+    Math.abs(r.value - target) < Math.abs(best.value - target) ? r : best,
+  ).label;
+}
+
+// The API's size buckets, not free pixels: pick the smallest bucket that covers the
+// longest requested edge.
+export function geminiImageSize(width: number, height: number): string {
+  const longest = Math.max(width, height);
+  if (longest <= 512) return '512px';
+  if (longest <= 1024) return '1K';
+  if (longest <= 2048) return '2K';
+  return '4K';
+}
+
+// Walk the interactions response for the first image block. Defensive on shape: the
+// response nests images under steps[].content[], and we'd rather throw a readable error
+// than a TypeError if that ever changes.
+function geminiImageFromResponse(json: unknown): string | null {
+  const root = json as {
+    output_image?: { data?: string };
+    steps?: { type?: string; content?: { type?: string; data?: string }[] }[];
+  };
+  if (typeof root?.output_image?.data === 'string') return root.output_image.data;
+  for (const step of root?.steps ?? []) {
+    for (const block of step?.content ?? []) {
+      if (block?.type === 'image' && typeof block.data === 'string') return block.data;
+    }
+  }
+  return null;
+}
+
+async function generateWithGemini(
+  m: Merged,
+  name: string,
+  entry: GeminiModelConfig,
+): Promise<GeneratedImage> {
+  if (!geminiConfigured()) throw new Error(GEMINI_NO_KEY);
+
+  const aspectRatio = entry.aspectRatio ?? nearestGeminiRatio(m.width, m.height);
+  const imageSize = entry.imageSize ?? geminiImageSize(m.width, m.height);
+
+  let res: Response;
+  try {
+    res = await fetch('https://generativelanguage.googleapis.com/v1beta/interactions', {
+      method: 'POST',
+      headers: {
+        'x-goog-api-key': process.env.GEMINI_API_KEY as string,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: entry.model,
+        input: [{ type: 'text', text: m.prompt }],
+        response_format: {
+          // JPEG only — the API rejects image/png outright ("Supported values:
+          // 'image/jpeg'"), so we take JPEG and transcode to PNG below to match every
+          // other producer. That means Gemini output has one generation of JPEG loss
+          // baked in before we ever see it; nothing we can do from this side.
+          type: 'image',
+          mime_type: 'image/jpeg',
+          aspect_ratio: aspectRatio,
+          image_size: imageSize,
+        },
+      }),
+      signal: AbortSignal.timeout(5 * 60 * 1000),
+    });
+  } catch (e) {
+    throw new Error(`Gemini request failed (network): ${(e as Error).message}`);
+  }
+
+  if (!res.ok) {
+    const body = (await res.text()).slice(0, 400);
+    // 429 is the free tier's most likely failure and deserves to be named, not buried.
+    const hint =
+      res.status === 429
+        ? ' — that\'s the rate limit; wait a moment or check your quota at aistudio.google.com'
+        : res.status === 400 || res.status === 403
+          ? ' — check GEMINI_API_KEY is valid and the model name exists'
+          : '';
+    throw new Error(`Gemini generation failed: HTTP ${res.status}${hint}. ${body}`);
+  }
+
+  const json = (await res.json()) as unknown;
+  const b64 = geminiImageFromResponse(json);
+  if (!b64) {
+    // A safety block or a text-only reply lands here; show a slice so it's diagnosable.
+    throw new Error(
+      `Gemini returned no image (it may have refused the prompt): ${JSON.stringify(json).slice(0, 400)}`,
+    );
+  }
+
+  // Transcode the JPEG the API insists on into the PNG the rest of the pipeline stores.
+  const buffer = await sharp(Buffer.from(b64, 'base64')).png().toBuffer();
+  const dims = await imageDimensions(buffer);
+
+  return {
+    buffer,
+    width: dims.width,
+    height: dims.height,
+    params: {
+      generator: 'gemini',
+      modelEntry: name,
+      model: entry.model,
+      prompt: m.prompt,
+      // Recorded because Gemini ignores exact pixels: this is what we actually asked for.
+      aspectRatio,
+      imageSize,
+      // No seed is accepted by this API, so runs are not reproducible the way mflux is.
+      seed: null,
+      cloud: true,
+      // Honest provenance: it arrived as JPEG and we re-encoded it.
+      transcodedFrom: 'image/jpeg',
     },
   };
 }

@@ -118,6 +118,15 @@ function downloadOne(name: string, entry: ModelConfig): boolean {
     return true;
   }
 
+  if (entry.backend === 'gemini') {
+    console.log(
+      `"${name}" runs on Google's servers (model ${entry.model}) — there are no weights to ` +
+        'download. All it needs is GEMINI_API_KEY in .env (aistudio.google.com/apikey). Note it ' +
+        'is the one cloud entry: prompts sent to it leave this machine.',
+    );
+    return true;
+  }
+
   const command = mfluxCommand(entry);
   console.log(`Fetching weights for "${name}" (model ${entry.model}, via ${command}).`);
   console.log(

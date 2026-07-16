@@ -38,21 +38,19 @@ console: ## Run the Vite console only (:3001)
 discover: ## Refresh the idea queue (RSS engine)
 	npx tsx src/ingest/discover-rss.ts
 
-image-gen: ## Optional: set up local AI image generation (installs mflux, prints HF steps)
+image-gen: ## Optional: set up local AI image generation (installs/updates mflux, prints next steps)
 	@command -v uv >/dev/null || { echo "uv is required first — https://docs.astral.sh/uv/"; exit 1; }
-	uv tool install mflux
+	uv tool install --upgrade mflux
 	uv tool install huggingface_hub
 	@echo ""
-	@echo "  ✓ mflux + hf installed. Two one-time steps left:"
+	@echo "  ✓ mflux + hf installed. You're ready — the default model is FLUX.2 [klein]"
+	@echo "    (Apache-2.0, no Hugging Face token needed; ~13 GB downloaded on first image)."
 	@echo ""
-	@echo "  1. Accept the FLUX.1 [schnell] license (free — Apache-2.0, but gated):"
-	@echo "       open https://huggingface.co/black-forest-labs/FLUX.1-schnell"
-	@echo "       and click 'Agree and access repository'"
-	@echo "  2. Create a READ token at https://huggingface.co/settings/tokens, then:"
-	@echo "       hf auth login"
-	@echo ""
-	@echo "  Then: cp image-generation.config.example.json image-generation.config.json"
-	@echo "  The first image downloads the weights (~24 GB) once. See Docs → Setup → Local image generation."
+	@echo "  Optional: cp image-generation.config.example.json image-generation.config.json"
+	@echo "    to pick models (FLUX.1 [schnell], Draw Things, or bring-your-own mflux entries)."
+	@echo "  For a GATED Hugging Face model only: accept its license on its HF page, create a"
+	@echo "    READ token at https://huggingface.co/settings/tokens, then: hf auth login"
+	@echo "  See Docs → Setup → Local image generation."
 
 typecheck: ## Typecheck the API and the console
 	npx tsc --noEmit

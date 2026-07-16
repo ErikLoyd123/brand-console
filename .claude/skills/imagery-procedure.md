@@ -72,6 +72,15 @@ with a one-line why** — a menu with no point of view makes the owner do the th
 recommendation is advice, never a default that self-selects. One short ask; the owner picks
 or redirects. If they already asked for something specific, skip the menu and do it.
 
+**A pre-picked producer skips the menu entirely.** The console's Image with AI action
+carries a model picker, and when the opening message says the owner pre-picked the
+producer, that choice is final: **local** means every image in the run is a generated image
+from the named model entry the message gives (pass it as `"model"` in each generate-image
+payload); **claude** means every image is a composed figure you author. Do not re-open the
+type question or switch producers or models on your own judgment. If the pick fights the
+content (e.g. a text-dense table forced into a generated image), say so in one line while
+proceeding — flag, never veto.
+
 **A web article gets an image *plan*, not a single image.** Long-form pieces carry several
 images inline, so before the type menu, read the article's sections and ask **how many
 images it should carry and where** — one line per proposed image naming the section it
@@ -89,7 +98,7 @@ look the same.
 
 | Type | The job it does | Producer |
 |------|-----------------|----------|
-| **Generated image** | Atmosphere, a real-world moment, or a stylized visual metaphor — photoreal *or* illustrated, any treatment. Not precise information. | `generate-image.ts` (local FLUX) |
+| **Generated image** | Atmosphere, a real-world moment, or a stylized visual metaphor — photoreal *or* illustrated, any treatment. Not precise information. | `generate-image.ts` (local model) |
 | **Explainer diagram** | Teach structure — a flow, a decision path, a comparison. | `render-image.ts` (composed) |
 | **Data figure** | One clean stat/proportion/trend as a bare figure — bar, dot plot, donut, split bar. | `render-image.ts` (composed) |
 | **Comparison table** | A tidy side-by-side of two sets. | `render-image.ts` (composed) |
@@ -106,7 +115,7 @@ backend is actually usable (and Unsplash only when its key is set) — check fir
 never offers something that will fail:
 
 ```bash
-npx tsx -e "import('./src/images/generate.js').then(async m => { const c = m.loadGeneratorConfig(); console.log(JSON.stringify({ backend: c.backend, configured: await m.generatorConfigured(c) })) })"
+npx tsx -e "import('./src/images/generate.js').then(async m => { const c = m.loadGeneratorConfig(); const models = {}; for (const n of Object.keys(c.models)) models[n] = await m.generatorConfigured(c, n); console.log(JSON.stringify({ default: c.default, configured: models[c.default], models })) })"
 ```
 
 If the generator is **not** configured, read the one-time opt-out before saying anything:
@@ -132,12 +141,15 @@ Never block the run on this — every other type keeps working regardless of the
 All producers are payload-file CLIs; each prints the stored image row as JSON. **Alt text
 is mandatory everywhere** — write what the image shows, plainly.
 
-### Generated image — local FLUX (the generative path)
+### Generated image — local model (the generative path)
 
-`generate-image.ts` runs FLUX.1 [schnell] locally — no key, no cloud. The backend is set in
-`image-generation.config.json`: headless **`mflux`** by default (`uv tool install mflux`,
-no app), or **`drawthings`** to drive the Draw Things app's local API instead. (Availability
-and the install/defer offer are handled in step 2 — by the time you're here the backend works.)
+`generate-image.ts` runs a local model — no key, no cloud. Models are **named entries** in
+`image-generation.config.json` (FLUX.2 [klein] via headless **`mflux`** by default, with
+FLUX.1 [schnell], **`drawthings`** driving the Draw Things app's local API, or any
+bring-your-own mflux model as further entries); the payload's optional `"model"` names an
+entry, omitted = the config's default. Use the default unless the owner asks for a specific
+one. (Availability and the install/defer offer are handled in step 2 — by the time you're
+here the default model works.)
 
 **Not everything is photoreal.** One model does every treatment: photoreal photography,
 editorial illustration, watercolor, flat vector-style, isometric 3D, collage. Pick treatments
@@ -149,12 +161,13 @@ them to the owner as one short ask: for each, a plain sentence of what the viewe
 then the prompt itself. **Mark one as recommended and say why in a line** (fit with the
 argument, the brand look, variety against recent images) — the owner still picks freely.
 Prompts are natural descriptive sentences (not keyword soup): subject, setting, lighting or
-materials, mood, treatment. FLUX **garbles text**, so never rely on legible words in the
-image. The owner picks one, edits one, or redirects.
+materials, mood, treatment. Image models **garble text** (FLUX.2 less than FLUX.1, but never
+depend on it), so don't rely on legible words in the image. The owner picks one, edits one,
+or redirects.
 
 **Generate in the background; previews land on the card.** A generation takes roughly one to
-a few minutes per image — and the **first-ever run also downloads the ~24 GB weights, which
-can take much longer**. Two hard rules:
+a few minutes per image — and a model's **first-ever run also downloads its weights
+(~13–24 GB for the FLUX defaults), which can take much longer**. Two hard rules:
 
 - **Never run generation as a plain foreground command** — the default shell timeout will
   kill it mid-run. Launch it in the background, keep talking, and report as each candidate
@@ -216,7 +229,7 @@ Relay it, offer another type, and continue — never block the run.
 
 ### Scene + UI composite — legible screen in a photo
 
-When the scene should show a real, correct screen (a dashboard, a chart), let FLUX make the
+When the scene should show a real, correct screen (a dashboard, a chart), let the model make the
 scene and stamp a crisp card onto the monitor with `compose-scene.ts` (perspective-correct,
 via the Playwright renderer — see design 03). Never eyeball corners blind:
 
@@ -303,8 +316,8 @@ it with the piece — the owner's click, never this procedure's.
   typeset-a-headline cards, no lone-number posters, no logos on content images unless asked.
 - **Every render gets looked at before it attaches** — composed figures, composites, and
   screenshots alike; a render that fails the eye gets fixed, not shipped.
-- **FLUX garbles text and swings run-to-run** — never depend on legible words in a raw
-  scene; generate a batch of seeds and let the owner pick the best. And FLUX is not only
+- **Image models garble text and swing run-to-run** — never depend on legible words in a raw
+  scene; generate a batch of seeds and let the owner pick the best. And generation is not only
   photoreal — propose illustrated/stylized treatments too, per the brand look and variety.
 - **Generation runs in the background, never foreground into the default shell timeout,**
   with previews written to `data/images/previews/<ideaId>/` so they appear live on the

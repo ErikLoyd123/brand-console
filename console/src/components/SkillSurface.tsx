@@ -32,6 +32,11 @@ export interface SkillSurfaceProps {
   onPlainSubmit: (input: string) => void | Promise<void>
   /** Optional seed opened immediately on mount (callers that already hold input). */
   initialInput?: string
+  /**
+   * Optional Claude model override for the session (alias or full id, e.g.
+   * "claude-opus-4-8"). Omitted = the engine's default. Applies to the whole run.
+   */
+  model?: string
   /** Fired once on the terminal `result`. */
   onResult?: (result: { summary: string; link?: string }) => void
   /**
@@ -83,6 +88,7 @@ export function SkillSurface({
   fallback,
   onPlainSubmit,
   initialInput,
+  model,
   onResult,
   onProgress,
   onFallback,
@@ -179,9 +185,9 @@ export function SkillSurface({
       startedRef.current = true
       setThought('')
       setPhase({ kind: 'connecting' })
-      session.open(input)
+      session.open(input, model)
     },
-    [session],
+    [session, model],
   )
 
   // Routes a submit from the page's fallback form: live AI conversation when AI

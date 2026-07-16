@@ -503,12 +503,23 @@ export function brandAssetUrl(relPath: string): string {
   return `/api/brand/asset?path=${encodeURIComponent(relPath)}`
 }
 
-// Local image generation status: which backend is configured and whether
-// it's actually available (mflux installed / Draw Things API reachable). Generation
-// is local and key-free, so this is just capability status, not a secret.
+// Local image generation status. `backend`/`configured` describe the config's
+// DEFAULT model (what Image with AI uses); `models` is the whole named roster from
+// image-generation.config.json with per-model availability (mflux command installed
+// / Draw Things API reachable). Generation is local and key-free, so this is just
+// capability status, not a secret.
+export interface GeneratorModelStatus {
+  name: string
+  backend: 'mflux' | 'drawthings' | string
+  model: string | null
+  available: boolean
+  default: boolean
+}
 export interface GeneratorStatus {
   backend: 'mflux' | 'drawthings' | string
   configured: boolean
+  defaultModel?: string
+  models?: GeneratorModelStatus[]
 }
 
 export const api = {

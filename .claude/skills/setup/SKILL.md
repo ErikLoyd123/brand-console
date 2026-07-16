@@ -181,8 +181,10 @@ Report the platform selection alongside the other written fields: name the activ
 
 ## Stage C (optional): local image generation
 
-The imagery skill can generate images locally — photoreal or illustrated, FLUX.1 [schnell],
-no API key, nothing leaves the machine. It is **optional and app-wide** (a machine capability,
+The imagery skill can generate images locally — photoreal or illustrated, no API key,
+nothing leaves the machine. Models are named entries in `image-generation.config.json`
+(FLUX.2 [klein] by default; bring-your-own via any mflux-supported model or Draw Things).
+It is **optional and app-wide** (a machine capability,
 not a profile file): it never blocks completeness, and skipping it costs nothing — the imagery
 skill still offers diagrams, data figures, screenshots, and Unsplash.
 
@@ -191,7 +193,7 @@ Complete-menu backfill scan runs. Offer it **only** when both are true — the g
 set up, and the owner has not deferred it. Check both first:
 
 ```bash
-npx tsx -e "import('./src/images/generate.js').then(async m => { const c = m.loadGeneratorConfig(); console.log(JSON.stringify({ backend: c.backend, configured: await m.generatorConfigured(c) })) })"
+npx tsx -e "import('./src/images/generate.js').then(async m => { const c = m.loadGeneratorConfig(); console.log(JSON.stringify({ defaultModel: c.default, configured: await m.generatorConfigured(c) })) })"
 npx tsx -e "import('./src/db/client.js').then(async ({db})=>{const {appSettings}=await import('./src/db/schema.js');const {eq}=await import('drizzle-orm');const r=db.select().from(appSettings).where(eq(appSettings.key,'image_gen_setup')).get();console.log(r?.value ?? 'unset')})"
 ```
 
@@ -199,12 +201,16 @@ npx tsx -e "import('./src/db/client.js').then(async ({db})=>{const {appSettings}
 → stay silent about it entirely; the owner opted out and re-opts in by asking (or from the
 Connections page). Otherwise, one plain question, three options:
 
-1. **Set it up now.** Walk it: `make image-gen` (installs `mflux` + the `hf` CLI via uv);
-   accept the FLUX.1 [schnell] license on Hugging Face (free, Apache-2.0, but gated) and
-   `hf auth login` with a read token; `cp image-generation.config.example.json
-   image-generation.config.json`. Full walkthrough: Docs → Setup → *Local image generation*.
-   Warn that the first generated image downloads the weights (~24 GB) once. Verify with the
-   status one-liner above and report the result plainly.
+1. **Set it up now.** Walk it: `make image-gen` (installs `mflux` + the `hf` CLI via uv;
+   if mflux is already installed but older than 0.18, `uv tool upgrade mflux` — the default
+   FLUX.2 [klein] model needs `mflux-generate-flux2`); optionally
+   `cp image-generation.config.example.json image-generation.config.json` to pick models
+   (without a config the FLUX.2 [klein] default applies). A gated Hugging Face model also
+   wants its license accepted and `hf auth login` with a read token — the Apache-2.0 FLUX
+   defaults normally need none. Full walkthrough: Docs → Setup → *Local image generation*.
+   Warn that a model's first generated image downloads its weights once (~13 GB for FLUX.2
+   [klein], ~24 GB for FLUX.1 [schnell]). Verify with the status one-liner above and report
+   the result plainly.
 2. **Not now.** Do nothing — the offer resurfaces on a later run.
 3. **Don't ask again.** Persist the opt-out, then never raise it unprompted again:
 

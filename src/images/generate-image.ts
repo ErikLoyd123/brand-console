@@ -1,21 +1,24 @@
 // src/images/generate-image.ts
-// CLI the imagery procedure invokes for the LOCAL GENERATIVE source — FLUX.1
-// [schnell], run through whichever backend image-generation.config.json selects
-// (headless mflux by default, or the Draw Things app API). No API key. Two modes,
-// both via a JSON payload file (mirrors render-image.ts / unsplash-image.ts):
+// CLI the imagery procedure invokes for the LOCAL GENERATIVE source. The model
+// comes from image-generation.config.json's named `models` (FLUX.2 [klein] by
+// default; FLUX.1 [schnell], Draw Things, or any bring-your-own mflux entry), run
+// fully locally. No API key. Two modes, both via a JSON payload file (mirrors
+// render-image.ts / unsplash-image.ts):
 //
 //   npx tsx src/images/generate-image.ts <payload.json>
 //
 // Preview (no ideaId — writes the PNG to `out`, prints {out,width,height}, does NOT
 // store; this is the show-a-batch-and-let-the-owner-pick loop):
-//   { "prompt": "photorealistic ...", "out": "/tmp/scene.png", "width"?: 1024, "seed"?: 42 }
+//   { "prompt": "photorealistic ...", "out": "/tmp/scene.png", "width"?: 1024,
+//     "seed"?: 42, "model"?: "flux2-klein" }
 //
 // Attach (stores the chosen image against the idea; alt is mandatory):
 //   { "ideaId": "<queue idea id>", "alt": "<what the image shows>", "prompt": "…",
-//     "width"?: 1024, "seed"?: 42 }
+//     "width"?: 1024, "seed"?: 42, "model"?: "flux2-klein" }
 //
-// When the active backend isn't available the CLI exits with a clear message the
-// skill catches, then continues offering the other image types.
+// `model` names an entry in the config's `models` map; omitted = the config's
+// default. When the requested model isn't available the CLI exits with a clear
+// message the skill catches, then continues offering the other image types.
 
 import { readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -31,6 +34,8 @@ if (!payloadPath) {
 
 interface Payload {
   prompt?: string;
+  // Named model entry from image-generation.config.json; omitted = its default.
+  model?: string;
   width?: number;
   height?: number;
   steps?: number;
@@ -51,6 +56,7 @@ async function main() {
   if (preview) {
     const shot = await generateImage({
       prompt: payload.prompt,
+      model: payload.model,
       width: payload.width,
       height: payload.height,
       steps: payload.steps,
@@ -74,6 +80,7 @@ async function main() {
   try {
     const shot = await generateImage({
       prompt: payload.prompt,
+      model: payload.model,
       width: payload.width,
       height: payload.height,
       steps: payload.steps,

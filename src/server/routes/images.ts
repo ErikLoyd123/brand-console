@@ -41,16 +41,32 @@ router.get('/', (req, res) => {
   res.json(listImagesForIdea(ideaId));
 });
 
-// GET /api/images/generator-status — whether local image generation is set up:
-// the configured backend and whether it's actually available (mflux installed, or
-// the Draw Things API reachable). No secret is involved — generation is local and
-// key-free. Lets the console surface setup state + the how-to. Registered before the
-// /:id routes; a single, literal path so it never shadows them.
+// GET /api/images/generator-status — whether local image generation is set up.
+// Reports the config's whole named-model roster with per-model availability (mflux
+// command installed / Draw Things API reachable), plus the flat {backend,
+// configured} of the DEFAULT model for existing consumers. No secret is involved —
+// generation is local and key-free. Lets the console surface setup state + the
+// how-to. Registered before the /:id routes; a single, literal path so it never
+// shadows them.
 router.get('/generator-status', async (_req, res) => {
   try {
     const config = loadGeneratorConfig();
-    const configured = await generatorConfigured(config);
-    res.json({ backend: config.backend, configured });
+    const models = await Promise.all(
+      Object.entries(config.models).map(async ([name, entry]) => ({
+        name,
+        backend: entry.backend,
+        model: entry.model ?? null,
+        available: await generatorConfigured(config, name),
+        default: name === config.default,
+      })),
+    );
+    const def = models.find((m) => m.default);
+    res.json({
+      backend: def?.backend ?? 'mflux',
+      configured: def?.available ?? false,
+      defaultModel: config.default,
+      models,
+    });
   } catch (e) {
     res.status(500).json({ error: (e as Error).message });
   }

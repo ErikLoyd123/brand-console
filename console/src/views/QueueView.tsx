@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode, type CSSPropertie
 import {
   api,
   type Connection,
+  type GeneratorStatus,
   type ContentPlatform,
   type IdeaQueueItem,
   type ImageAttachment,
@@ -17,7 +18,7 @@ import { TagBadge } from '../components/TagBadge'
 import { SiloBadge } from '../components/SiloBadge'
 import { SilosInfoLink } from '../components/SilosInfoLink'
 import { PublishLinkedInModal } from '../components/PublishLinkedInModal'
-import { ImageStrip } from '../components/ImageStrip'
+import { ImageStrip, type ImageEngine } from '../components/ImageStrip'
 import { PostPreview } from '../components/PostPreview'
 import { ChecksPanel } from '../components/ChecksPanel'
 import { getConsoleSilos } from '../lib/silos'
@@ -454,6 +455,7 @@ function QueueRow({
   onDraft,
   onReview,
   onImage,
+  generator = null,
   imageWorking = false,
   highlight = false,
 }: {
@@ -465,7 +467,10 @@ function QueueRow({
   onDevelop: () => void
   onDraft: () => void
   onReview: () => void
-  onImage: () => void
+  // Launches the imagery session with the producer the strip's model picker chose.
+  onImage: (engine: ImageEngine) => void
+  // Local generator status (model roster) for the strip's picker (page-level fetch).
+  generator?: GeneratorStatus | null
   // True while this idea's imagery session runs (live candidate polling on the strip).
   imageWorking?: boolean
   highlight?: boolean
@@ -823,6 +828,7 @@ function QueueRow({
             ideaId={item.id}
             onChanged={setCardImages}
             onImageAI={onImage}
+            generator={generator}
             working={imageWorking}
           />
           {!(item.platform === 'web' ? item.article?.body?.trim() : item.draft) && (
@@ -891,12 +897,19 @@ export function QueueView() {
   const [linkedinConn, setLinkedinConn] = useState<Connection | null>(null)
   const [profileName, setProfileName] = useState<string | undefined>(undefined)
   const publishEnabled = useCapabilityToggle('linkedin', 'publish')
+  // Local generator status incl. the named-model roster — fetched once here (not
+  // per card) and passed down to every strip's model picker. null = checking; a
+  // failed probe reads as no local models, which leaves only the Claude option.
+  const [generator, setGenerator] = useState<GeneratorStatus | null>(null)
   useEffect(() => {
     api.getConnections().then((rows) => {
       setLinkedinConn(rows.find((c) => c.platform === 'linkedin') ?? null)
     }).catch(() => setLinkedinConn(null))
     // The post preview's author fallback when LinkedIn isn't connected.
     api.getProfile().then((p) => setProfileName(p.name)).catch(() => setProfileName(undefined))
+    api.getGeneratorStatus().then(setGenerator).catch(() =>
+      setGenerator({ backend: 'mflux', configured: false, models: [] }),
+    )
   }, [])
   // One `queue` skill drives this surface; the per-card buttons only vary the first-message
   // directive (develop vs draft) and the local `mode` (which sets the working hints and result
@@ -904,16 +917,24 @@ export function QueueView() {
   // what lets the same card re-trigger.
   const [mode, setMode] = useState<'develop' | 'draft' | 'review' | 'image'>('develop')
   const [surfaceInput, setSurfaceInput] = useState<string | undefined>(undefined)
+  // Claude model pin for the session (only the image picker's Claude-tier options
+  // set it); undefined = the engine's default model.
+  const [surfaceModel, setSurfaceModel] = useState<string | undefined>(undefined)
   const [surfaceKey, setSurfaceKey] = useState(0)
   // Which idea has a live imagery session — its card's Images strip polls for
   // candidates and shows the "generation takes a while" state. Set by imageItem;
   // cleared when any non-image session replaces the surface.
   const [imageIdeaId, setImageIdeaId] = useState<string | null>(null)
   const surfaceRef = useRef<HTMLDivElement>(null)
-  function runQueue(nextMode: 'develop' | 'draft' | 'review' | 'image', input: string) {
+  function runQueue(
+    nextMode: 'develop' | 'draft' | 'review' | 'image',
+    input: string,
+    model?: string,
+  ) {
     if (nextMode !== 'image') setImageIdeaId(null)
     setMode(nextMode)
     setSurfaceInput(input)
+    setSurfaceModel(model)
     setSurfaceKey((k) => k + 1)
     surfaceRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
@@ -961,7 +982,7 @@ export function QueueView() {
             itemContext(item),
     )
   }
-  function imageItem(item: IdeaQueueItem) {
+  function imageItem(item: IdeaQueueItem, engine: ImageEngine) {
     const kind = item.platform === 'web' ? 'article' : 'post'
     setImageIdeaId(item.id)
     // Articles carry several inline images, so their session opens with an image
@@ -971,26 +992,44 @@ export function QueueView() {
         ? `This is a long-form article, so follow the procedure's image-plan flow: first ` +
           `propose how many images it should carry and where (one line per image naming ` +
           `the section it supports, with a recommended count and why), let me set the ` +
-          `plan, then generate at least 2 candidates per planned image in one background ` +
-          `wave and have me pick per image — three planned images means three picks of ` +
-          `two, never one big pool. After each pick, agree where it sits in the body and ` +
-          `insert the markdown reference there.`
+          `plan, then produce at least 2 candidates per planned image and have me pick ` +
+          `per image — three planned images means three picks of two, never one big ` +
+          `pool. After each pick, agree where it sits in the body and insert the ` +
+          `markdown reference there.`
         : `After attaching, you're done — a post's image rides the card, nothing to place ` +
           `inline.`
+    // The card's model picker already chose the producer, so the session skips the
+    // type menu entirely: local = generated images from the named on-machine model
+    // entry; claude = composed figures authored in the brand's language.
+    const engineDirective =
+      engine.kind === 'local'
+        ? `I pre-picked the producer on the card: every image in this run is a GENERATED ` +
+          `image from the local generator using the model entry "${engine.model}" from ` +
+          `image-generation.config.json — pass "model": "${engine.model}" in each ` +
+          `generate-image payload. Skip the type menu — do not propose or switch to ` +
+          `composed graphics, screenshots, or stock. Open by proposing 2-3 candidate ` +
+          `prompts in different styles (photoreal or illustrated, one recommended with a ` +
+          `one-line why), let me pick, then run generation in the background per the ` +
+          `procedure and tell me roughly how long it will take — candidates appear on ` +
+          `the card's Images strip as they finish. If that model turns out to be ` +
+          `unavailable, tell me and stop instead of silently switching model or type.`
+        : `I pre-picked the producer on the card: every image in this run is COMPOSED by ` +
+          `you — an explainer diagram, data figure, or comparison table authored as a ` +
+          `bare figure in my brand's language and rendered. Skip the type menu — do not ` +
+          `propose generated images, screenshots, or stock. Open by proposing in plain ` +
+          `words what each image should show (one recommended with a one-line why), let ` +
+          `me pick, then author, render, and inspect at least two candidates per image ` +
+          `before showing me the pick.`
     runQueue(
       'image',
       `Add images to the queue item whose id is ${item.id} (angle: "${item.proposedAngle}"). ` +
         `Do not ask which item — use this one. Follow the imagery procedure: read the ${kind} ` +
-        `and my brand guidelines first, check which image sources are available (including the ` +
-        `local generator), then open by proposing image concepts in plain words across the ` +
-        `types that fit (generated image — photoreal or illustrated, composed graphic, ` +
-        `annotated screenshot, or stock photo), mark one as your recommendation with a ` +
-        `one-line why, and let me pick before producing anything. For generated images, ` +
-        `offer 2-3 candidate prompts in different styles (again with one recommended), run ` +
-        `generation in the background per the procedure, and tell me roughly how long it ` +
-        `will take — candidates appear on the card's Images strip as they finish. ` +
+        `and my brand guidelines first. ` +
+        engineDirective +
+        ` ` +
         planDirective +
         itemContext(item),
+      engine.kind === 'claude' ? engine.claudeModel : undefined,
     )
   }
   function reviewItem(item: IdeaQueueItem) {
@@ -1055,6 +1094,7 @@ export function QueueView() {
           skillName="queue"
           aiOnly
           initialInput={surfaceInput}
+          model={surfaceModel}
           workingHints={
             mode === 'draft'
               ? DRAFT_HINTS
@@ -1181,7 +1221,8 @@ export function QueueView() {
               onDevelop={() => developItem(item)}
               onDraft={() => draftItem(item)}
               onReview={() => reviewItem(item)}
-              onImage={() => imageItem(item)}
+              onImage={(engine) => imageItem(item, engine)}
+              generator={generator}
               imageWorking={imageIdeaId === item.id}
               highlight={item.id === highlightId}
             />

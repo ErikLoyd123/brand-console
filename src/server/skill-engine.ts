@@ -129,7 +129,20 @@ function loadAskImage(file: string | undefined, alt: string | undefined): AskIma
 
 // Drives exactly one skill session for one socket. All protocol I/O for the
 // conversation flows through here; teardown is idempotent.
-function driveSession(ws: WebSocket, skillName: string, initialInput: string | undefined): void {
+// A model override from the page is used only when it looks like a Claude model
+// alias/id — anything else is ignored rather than crashing the session.
+function sanitizeModel(model: unknown): string | undefined {
+  return typeof model === 'string' && /^[a-z0-9][a-z0-9._-]{0,63}$/i.test(model)
+    ? model
+    : undefined;
+}
+
+function driveSession(
+  ws: WebSocket,
+  skillName: string,
+  initialInput: string | undefined,
+  model?: string,
+): void {
   const conversationId = nanoid();
   const send = (frame: DownstreamFrame) => {
     if (ws.readyState === ws.OPEN) ws.send(JSON.stringify(frame));
@@ -361,6 +374,10 @@ function driveSession(ws: WebSocket, skillName: string, initialInput: string | u
         options: {
           cwd: REPO_ROOT,
           abortController,
+          // The page may pin the session's Claude model (e.g. the queue card's
+          // image picker offering Opus/Sonnet for composed graphics); omitted =
+          // the SDK's default.
+          ...(model ? { model } : {}),
           mcpServers: { 'skill-surface': askServer },
           // Headless, single-user, local: no human is present to approve each
           // step, so the session runs the skill's own commands (e.g. spark's
@@ -555,7 +572,7 @@ export function attachSkillSurface(server: Server): void {
       }
       if (msg.type !== 'start') return; // ignore anything before start
       ws.off('message', onFirst);
-      driveSession(ws, msg.skillName, msg.initialInput);
+      driveSession(ws, msg.skillName, msg.initialInput, sanitizeModel(msg.model));
     };
     ws.on('message', onFirst);
   });

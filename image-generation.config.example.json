@@ -1,18 +1,32 @@
 {
-  "_readme": "Local generative-image backend for the imagery skill. Copy this to image-generation.config.json (gitignored) and edit. No API key, nothing leaves your machine. Default backend 'mflux' is fully headless (no app): FLUX.1 [schnell] via MLX, installed with `uv tool install mflux`. Alternate 'drawthings' drives the Draw Things app's local API to reuse a model already downloaded there.",
-  "backend": "mflux",
-  "steps": 4,
+  "_readme": "Local generative-image setup for the imagery skill. Copy this to image-generation.config.json (gitignored) and edit. No API key, nothing leaves your machine. `models` is a set of NAMED entries — `default` picks the one Image with AI uses, and the skill can request another by name. Bring your own model by adding an entry: any model mflux can run (one mflux CLI per family: mflux-generate, mflux-generate-flux2, mflux-generate-qwen, mflux-generate-z-image, ...) or whatever the Draw Things app has loaded. Without this file the defaults below apply (mflux, FLUX.2 [klein]).",
+  "default": "flux2-klein",
   "width": 1024,
   "height": 1024,
-  "mflux": {
-    "_help": "Install with `uv tool install mflux`. First run downloads FLUX.1 [schnell] weights (~24 GB) to ~/.cache/huggingface. 'modelPath' can point mflux at a local Hugging Face weights dir (or a pre-quantized mflux repo) to control what's loaded; 'quantize' (4/8) trades quality for lower memory.",
-    "model": "schnell",
-    "modelPath": null,
-    "quantize": null
-  },
-  "drawThings": {
-    "_help": "Alternate backend. Enable in Draw Things: Advanced -> API Server -> HTTP, port 7860, localhost, with FLUX.1 [schnell] selected. 'model' null = use whatever the app currently has selected.",
-    "apiUrl": "http://localhost:7860",
-    "model": null
+  "models": {
+    "flux2-klein": {
+      "_help": "Recommended default: FLUX.2 [klein] 4B (Apache-2.0) — fast, ~13 GB download, strong at readable in-image text. Needs mflux >= 0.18 (`uv tool install mflux` / `uv tool upgrade mflux`); first run downloads weights to ~/.cache/huggingface. 'quantize' (4/8) trades quality for lower memory; 'modelPath' points at a local weights dir; 'extraArgs' appends raw CLI flags.",
+      "backend": "mflux",
+      "command": "mflux-generate-flux2",
+      "model": "flux2-klein-4b",
+      "steps": 4,
+      "modelPath": null,
+      "quantize": null,
+      "extraArgs": []
+    },
+    "flux1-schnell": {
+      "_help": "The previous default: FLUX.1 [schnell] (Apache-2.0, ~24 GB). Keep it if the weights are already downloaded.",
+      "backend": "mflux",
+      "command": "mflux-generate",
+      "model": "schnell",
+      "steps": 4
+    },
+    "drawthings": {
+      "_help": "Runs on the Draw Things app's local API instead of headless mflux — reuses whatever model the app has downloaded and selected ('model' null = app-selected). Enable in Draw Things: Advanced -> API Server -> HTTP, port 7860, localhost.",
+      "backend": "drawthings",
+      "apiUrl": "http://localhost:7860",
+      "model": null,
+      "steps": 4
+    }
   }
 }

@@ -19,8 +19,9 @@ operated through a local **brand-console** web UI.
   (`discover-rss.ts`, `capture.ts`, `add-feed.ts`, `manage-feed.ts`).
 - **Imagery** — image-producer CLIs under `src/images/` (composed render, screenshot
   capture/annotate, Unsplash, scene composite, and local generation: `generate.ts` runs
-  FLUX.1 [schnell] through headless `mflux` by default or the Draw Things app API,
-  selected in gitignored `image-generation.config.json` — see the `.example`; optional,
+  a named model entry from gitignored `image-generation.config.json` — FLUX.2 [klein]
+  through headless `mflux` by default, with FLUX.1 [schnell], the Draw Things app API,
+  and bring-your-own mflux models as further entries (see the `.example`); optional,
   offered once by `setup` with a persisted defer in `app_settings.image_gen_setup`).
   Every producer stores through `src/images/store.ts` into the `images` table + gitignored
   `data/images/`; transient generation candidates live under

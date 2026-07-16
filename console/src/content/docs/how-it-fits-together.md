@@ -57,8 +57,10 @@ files; some now have console editors too.
   so composed graphics and screenshot annotations land in *your* palette and follow *your*
   rules, not stock ones — while the voice card stays the authority for the writing itself.
   The imagery skill also makes **generated images** locally — photoreal scenes or
-  illustrations, any style (FLUX.1 [schnell] via the `mflux` CLI — no API key, nothing
-  leaves your machine; optional, offered once during setup and deferrable for good) — and
+  illustrations, any style (a named model from `image-generation.config.json`: FLUX.2
+  [klein] via the `mflux` CLI by default, FLUX.1 [schnell], Draw Things, or your own
+  mflux-supported model — no API key, nothing leaves your machine; optional, offered once
+  during setup and deferrable for good) — and
   can composite a crisp brand card onto a generated screen so on-screen text is legible.
   Images are supporting visuals — a chart, a photo, a diagram — never title covers.
   Optional — with no brand set up, images are produced **unbranded**: no palette, fonts,
@@ -115,8 +117,9 @@ are stored in the local database.
   each image came from (AI image / AI graphic / screenshot / Unsplash with photographer
   credit / upload), an **Image with AI** button, and a hand-upload affordance (alt text
   required). Image with AI proposes the image types that fit the piece and produces one — a
-  locally generated image in any style, photoreal or illustrated (FLUX via `mflux`, no key;
-  the skill proposes candidate prompts from your piece), a bare composed graphic
+  locally generated image in any style, photoreal or illustrated (the default model from
+  `image-generation.config.json` via `mflux`, no key; the skill proposes candidate prompts
+  from your piece), a bare composed graphic
   (diagram / data figure / comparison table), an annotated screenshot of a live page (boxes,
   arrows, click marks, privacy blurs, scroll composites), or a stock photo (needs
   `UNSPLASH_ACCESS_KEY` in `.env`) —

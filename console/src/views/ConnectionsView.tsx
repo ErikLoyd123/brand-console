@@ -477,39 +477,66 @@ function ImageGenerationCard() {
         </div>
         <CardDescription>
           The imagery skill can generate images locally — photoreal scenes or illustrations, any
-          style (FLUX.1 [schnell]) — no API key, nothing leaves your machine. Optional: without it
-          the skill still offers diagrams, data figures, screenshots, and Unsplash.
+          style — no API key, nothing leaves your machine. Models are named entries in{' '}
+          <code className="font-mono text-xs">image-generation.config.json</code> (FLUX.2 [klein]
+          by default; add any model mflux or Draw Things can run). Optional: without it the skill
+          still offers diagrams, data figures, screenshots, and Unsplash.
         </CardDescription>
       </CardHeader>
       <CardContent className="text-sm text-text-muted">
         {ready ? (
-          <p>
-            Backend <code className={codeCls}>{backend}</code> is set up and available. Pick the{' '}
-            <span className="text-text">generated image</span> type when you run the imagery skill
-            on a queue idea — photoreal or illustrated, the skill proposes prompts from your piece.
-          </p>
+          <div className="flex flex-col gap-3">
+            <p>
+              The default model (backend <code className={codeCls}>{backend}</code>) is set up and
+              available — Image with AI on a queue card uses it. The skill proposes prompts from
+              your piece, photoreal or illustrated.
+            </p>
+            {(status?.models?.length ?? 0) > 0 && (
+              <ul className="flex flex-col gap-1.5">
+                {status!.models!.map((m) => (
+                  <li key={m.name} className="flex items-center gap-2 text-xs">
+                    <span
+                      className={cn(
+                        'size-1.5 shrink-0 rounded-full',
+                        m.available ? 'bg-primary' : 'bg-text-subtle/60',
+                      )}
+                    />
+                    <code className={codeCls}>{m.name}</code>
+                    <span className="text-text-subtle">
+                      {m.backend}
+                      {m.model ? ` · ${m.model}` : ''}
+                      {m.default ? ' · default' : ''}
+                      {m.available ? '' : ' · unavailable'}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <p className="text-xs text-text-subtle">
+              Defined in <code className={codeCls}>image-generation.config.json</code> at the repo
+              root (gitignored) — edit it to change the default or add your own model.
+            </p>
+          </div>
         ) : (
           <div className="flex flex-col gap-3">
             <p>Set it up once (Apple Silicon):</p>
             <ol className="ml-4 list-decimal space-y-1.5">
               <li>
-                Install the tool: <code className={codeCls}>uv tool install mflux</code> (or run{' '}
-                <code className={codeCls}>make image-gen</code>).
+                Install the tool: <code className={codeCls}>uv tool install mflux</code> (or{' '}
+                <code className={codeCls}>uv tool upgrade mflux</code> if it&rsquo;s older than
+                0.18 — the FLUX.2 [klein] default needs{' '}
+                <code className={codeCls}>mflux-generate-flux2</code>).
               </li>
               <li>
-                Accept the FLUX.1 [schnell] license on{' '}
-                <a
-                  className={linkCls}
-                  href="https://huggingface.co/black-forest-labs/FLUX.1-schnell"
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  Hugging Face <ExternalLink className="size-3" />
-                </a>{' '}
-                (&ldquo;Agree and access repository&rdquo;).
+                Optional: copy{' '}
+                <code className={codeCls}>image-generation.config.example.json</code> →{' '}
+                <code className={codeCls}>image-generation.config.json</code> to pick models —
+                without a config the default is FLUX.2 [klein] via mflux.
               </li>
               <li>
-                Create a read token at{' '}
+                First generation downloads the model&rsquo;s weights (one time; ~13 GB for FLUX.2
+                [klein]). For a gated model on Hugging Face, accept its license and{' '}
+                <code className={codeCls}>hf auth login</code> with a read token from{' '}
                 <a
                   className={linkCls}
                   href="https://huggingface.co/settings/tokens"
@@ -518,11 +545,7 @@ function ImageGenerationCard() {
                 >
                   huggingface.co/settings/tokens <ExternalLink className="size-3" />
                 </a>
-                , then <code className={codeCls}>hf auth login</code>.
-              </li>
-              <li>
-                Copy <code className={codeCls}>image-generation.config.example.json</code> →{' '}
-                <code className={codeCls}>image-generation.config.json</code>.
+                {' '}— the Apache-2.0 FLUX defaults need no token.
               </li>
             </ol>
           </div>

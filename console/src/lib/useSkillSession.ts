@@ -27,7 +27,7 @@ export function useSkillSession(opts: {
   }, [opts.onMessage])
 
   const open = useCallback(
-    (initialInput?: string) => {
+    (initialInput?: string, model?: string) => {
       // Guard against a double-open; close any prior socket first.
       settledRef.current = true // prior socket's close is expected
       wsRef.current?.close()
@@ -40,7 +40,7 @@ export function useSkillSession(opts: {
       // both opens the session and seeds it. The engine mints the id and returns
       // it on `ready`.
       ws.onopen = () =>
-        ws.send(JSON.stringify({ type: 'start', skillName: opts.skillName, initialInput }))
+        ws.send(JSON.stringify({ type: 'start', skillName: opts.skillName, initialInput, model }))
 
       ws.onmessage = (e) => {
         let msg: unknown

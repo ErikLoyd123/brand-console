@@ -1,0 +1,18 @@
+{
+  "_readme": "Local generative-image backend for the imagery skill. Copy this to image-generation.config.json (gitignored) and edit. No API key, nothing leaves your machine. Default backend 'mflux' is fully headless (no app): FLUX.1 [schnell] via MLX, installed with `uv tool install mflux`. Alternate 'drawthings' drives the Draw Things app's local API to reuse a model already downloaded there.",
+  "backend": "mflux",
+  "steps": 4,
+  "width": 1024,
+  "height": 1024,
+  "mflux": {
+    "_help": "Install with `uv tool install mflux`. First run downloads FLUX.1 [schnell] weights (~24 GB) to ~/.cache/huggingface. 'modelPath' can point mflux at a local Hugging Face weights dir (or a pre-quantized mflux repo) to control what's loaded; 'quantize' (4/8) trades quality for lower memory.",
+    "model": "schnell",
+    "modelPath": null,
+    "quantize": null
+  },
+  "drawThings": {
+    "_help": "Alternate backend. Enable in Draw Things: Advanced -> API Server -> HTTP, port 7860, localhost, with FLUX.1 [schnell] selected. 'model' null = use whatever the app currently has selected.",
+    "apiUrl": "http://localhost:7860",
+    "model": null
+  }
+}

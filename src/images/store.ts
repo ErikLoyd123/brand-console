@@ -15,7 +15,18 @@ import { REPO_ROOT } from '../profile/loader';
 
 export const IMAGES_ROOT = resolve(REPO_ROOT, 'data', 'images');
 
-export type ImageSource = 'composed' | 'screenshot' | 'unsplash' | 'upload';
+// Transient candidate previews the imagery skill writes while it generates —
+// data/images/previews/<ideaId>/<name>.png. No DB row: the console's Images strip
+// lists the folder live during a session so the owner watches candidates arrive,
+// and the skill removes the folder once a pick is attached. (No collision with the
+// per-profile attachment folders: profile ids are nanoids, never "previews".)
+export const PREVIEWS_ROOT = resolve(IMAGES_ROOT, 'previews');
+
+export function previewDirForIdea(ideaId: string): string {
+  return resolve(PREVIEWS_ROOT, ideaId);
+}
+
+export type ImageSource = 'composed' | 'screenshot' | 'unsplash' | 'upload' | 'generated';
 
 export type ImageRow = typeof images.$inferSelect;
 

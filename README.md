@@ -69,6 +69,16 @@ Then open **http://localhost:3001**. Everything else happens in the console:
 No `.env` is needed to get started — it's only for LinkedIn OAuth keys or a
 non-standard `claude` path (see `.env.example`).
 
+Optional (Apple Silicon): the imagery skill can generate **images locally** — photoreal or
+illustrated, any style (FLUX.1 [schnell] — no API key, nothing leaves your machine). The
+`setup` skill offers this once during onboarding (install / skip / don't-ask-again). One-time
+setup: `make image-gen` (installs `mflux` + the `hf` CLI), then **accept the FLUX.1 [schnell]
+license on Hugging Face** (it's Apache-2.0 but gated) and authenticate with a free HF read
+token (`hf auth login`) — or reuse a model you already have in Draw Things. Full walkthrough,
+including the gated-repo and Hugging Face "Xet" download gotchas, is under **Local image
+generation** in the console Docs (or `image-generation.config.example.json`). Skip it and the
+imagery skill still offers diagrams, data figures, screenshots, and Unsplash.
+
 For the full map of what lives where and how the pieces fit, open **Docs** in the
 console — start with *How it fits together*.
 

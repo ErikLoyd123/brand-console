@@ -1,19 +1,31 @@
 import { useCallback, useEffect, useState, type ChangeEvent } from 'react'
-import { api, imageFileUrl, type ImageAttachment, type ImageSource } from '../lib/api'
+import {
+  api,
+  imageFileUrl,
+  imagePreviewUrl,
+  type ImageAttachment,
+  type ImagePreview,
+  type ImageSource,
+} from '../lib/api'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
-import { Check, Image as ImageIcon, Sparkles, Trash2, X } from 'lucide-react'
+import { Check, Image as ImageIcon, Loader2, Sparkles, Trash2, X } from 'lucide-react'
 
 // The images riding with one queue idea — shown on its card in the review phase.
 // Self-describing per the provenance rule: each thumbnail names how it was made
 // (imagery skill sources or a hand upload), Unsplash picks carry their photographer
 // credit, and the strip says where the files live and what Publish does with them.
+// While an imagery session runs for this idea (`working`), the strip polls both the
+// attachments and the session's unattached candidates (data/images/previews/<ideaId>/)
+// so generated images appear live — local generation takes minutes, and without this
+// the session would look stalled.
 
 const SOURCE_LABEL: Record<ImageSource, string> = {
   composed: 'AI graphic',
   screenshot: 'Screenshot',
   unsplash: 'Unsplash',
   upload: 'Upload',
+  generated: 'AI image',
 }
 
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024
@@ -35,14 +47,19 @@ export function ImageStrip({
   ideaId,
   onChanged,
   onImageAI,
+  working = false,
 }: {
   ideaId: string
   // Parent hook for anything that lists images elsewhere (e.g. the publish modal).
   onChanged?: (images: ImageAttachment[]) => void
   // Launches the AI imagery session for this idea (the card's Image with AI action).
   onImageAI?: () => void
+  // True while an imagery session runs for this idea — turns on live polling and
+  // the "generation takes a while" status so the wait never reads as broken.
+  working?: boolean
 }) {
   const [images, setImages] = useState<ImageAttachment[]>([])
+  const [previews, setPreviews] = useState<ImagePreview[]>([])
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [confirmingDelete, setConfirmingDelete] = useState<string | null>(null)
@@ -66,9 +83,28 @@ export function ImageStrip({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ideaId])
 
+  // Candidates are transient session output — a fetch failure just means "none",
+  // never an error banner.
+  const reloadPreviews = useCallback(() => {
+    api
+      .getImagePreviews(ideaId)
+      .then(setPreviews)
+      .catch(() => setPreviews([]))
+  }, [ideaId])
+
+  // One effect covers mount, live polling during an imagery session (attachments
+  // and candidates both move while the terminal session generates, and a run can
+  // take minutes), and a final refresh when `working` flips off.
   useEffect(() => {
     reload()
-  }, [reload])
+    reloadPreviews()
+    if (!working) return
+    const timer = setInterval(() => {
+      reload()
+      reloadPreviews()
+    }, 4000)
+    return () => clearInterval(timer)
+  }, [working, reload, reloadPreviews])
 
   async function onFileSelected(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -127,7 +163,7 @@ export function ImageStrip({
       <div className="flex flex-wrap items-center justify-between gap-2">
         <span
           className="font-mono text-[11px] font-medium uppercase tracking-wide text-text-subtle"
-          title="Stored in the database with files under data/images/. Produced by the imagery skill (AI graphic, annotated screenshot, Unsplash) or uploaded here. Publish ships them: LinkedIn uploads the image, web export bundles it beside the markdown."
+          title="Stored in the database with files under data/images/. Produced by the imagery skill (AI image generated locally, AI graphic, annotated screenshot, Unsplash) or uploaded here. Publish ships them: LinkedIn uploads the image, web export bundles it beside the markdown."
         >
           Images{images.length > 0 ? ` · ${images.length}` : ''}
         </span>
@@ -148,11 +184,52 @@ export function ImageStrip({
         </div>
       </div>
 
-      {images.length === 0 && !pendingFile && (
+      {working && (
+        <div className="flex items-start gap-2 rounded-md bg-surface px-3 py-2">
+          <Loader2 className="mt-0.5 size-3.5 shrink-0 animate-spin text-primary" />
+          <p className="text-xs text-text-muted">
+            <span className="font-medium text-text">Imagery session running.</span> Candidates
+            land here as they finish — a generated image takes a couple of minutes, and the very
+            first run also downloads the model (one time, ~24 GB), which takes much longer. Pick
+            and tweak in the session above; nothing attaches until you choose.
+          </p>
+        </div>
+      )}
+
+      {previews.length > 0 && (
+        <div className="flex flex-col gap-1.5">
+          <span
+            className="font-mono text-[10px] font-medium uppercase tracking-wide text-text-subtle"
+            title="Fresh candidates from the imagery session — files under data/images/previews/, not attached to the piece. Pick one in the session; the rest are cleaned up."
+          >
+            Candidates · not attached yet
+          </span>
+          <div className="flex flex-wrap gap-3">
+            {previews.map((p) => (
+              <a
+                key={p.name}
+                href={imagePreviewUrl(ideaId, p.name)}
+                target="_blank"
+                rel="noreferrer"
+                title={`${p.name} — open full size`}
+              >
+                <img
+                  src={`${imagePreviewUrl(ideaId, p.name)}?t=${p.mtimeMs}`}
+                  alt={`Candidate ${p.name}`}
+                  className="h-24 w-40 rounded-md border border-dashed border-border object-cover opacity-90"
+                />
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {images.length === 0 && previews.length === 0 && !pendingFile && !working && (
         <p className="text-xs text-text-muted">
           No images yet. <span className="font-medium">Image with AI</span> makes one for this
-          piece — a graphic in your brand's look, an annotated screenshot of a live page, or a
-          stock photo — or upload your own. Publish ships whatever is attached.
+          piece — a generated image (photoreal or illustrated, made locally), a graphic in your
+          brand's look, an annotated screenshot of a live page, or a stock photo — or upload
+          your own. Publish ships whatever is attached.
         </p>
       )}
 
@@ -171,7 +248,10 @@ export function ImageStrip({
                 <span className="truncate font-mono text-[10px] uppercase tracking-wide text-text-subtle" title={
                   img.source === 'unsplash' && typeof img.params.attribution === 'string'
                     ? String(img.params.attribution)
-                    : `${SOURCE_LABEL[img.source]} · ${img.width}x${img.height}`
+                    : img.source === 'generated'
+                      // Provenance: name the local model that made it (never a cloud API).
+                      ? `Generated locally by ${String(img.params.model ?? img.params.generator ?? 'the local model')}${img.params.seed != null ? ` · seed ${String(img.params.seed)}` : ''} · ${img.width}x${img.height}`
+                      : `${SOURCE_LABEL[img.source]} · ${img.width}x${img.height}`
                 }>
                   {SOURCE_LABEL[img.source]}
                   {img.source === 'unsplash' && typeof img.params.photographer === 'string'

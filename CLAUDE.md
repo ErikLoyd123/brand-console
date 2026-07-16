@@ -17,14 +17,23 @@ operated through a local **brand-console** web UI.
   `src/db/schema.ts`; client: `src/db/client.ts`; migrations: `src/db/migrate.ts`.
 - **Ingest** — discovery/capture scripts under `src/ingest/`
   (`discover-rss.ts`, `capture.ts`, `add-feed.ts`, `manage-feed.ts`).
+- **Imagery** — image-producer CLIs under `src/images/` (composed render, screenshot
+  capture/annotate, Unsplash, scene composite, and local generation: `generate.ts` runs
+  FLUX.1 [schnell] through headless `mflux` by default or the Draw Things app API,
+  selected in gitignored `image-generation.config.json` — see the `.example`; optional,
+  offered once by `setup` with a persisted defer in `app_settings.image_gen_setup`).
+  Every producer stores through `src/images/store.ts` into the `images` table + gitignored
+  `data/images/`; transient generation candidates live under
+  `data/images/previews/<ideaId>/` and surface live on the queue card's Images strip.
 - **Content engine** — skills in `.claude/skills/<name>/SKILL.md`
   (`spark`, `discovery`, `queue`, `feeds`, `pillars`,
-  `register`, `tags`, `voice`, `setup`, `voice-card`) and agents in
+  `register`, `tags`, `voice`, `setup`, `voice-card`, `imagery`, `brand`) and agents in
   `.claude/agents/<name>.md` (`content-reviewer`, `discover`). Shared, non-invokable
   skill references (no `name:` frontmatter, linked not run) live directly under
   `.claude/skills/`: `onboarding-gate.md`, `content-doctrine.md`, and the
   `*-procedure.md` files the router skills dispatch to (`develop`/`draft`/`revise` for
-  posts, `article-draft` for long-form web pieces written as one markdown document). The
+  posts, `article-draft` for long-form web pieces written as one markdown document,
+  `imagery` for putting an image on a queue card). The
   pipeline is capture → **queue (the review phase — every idea carries its full written
   piece)** → published; spark/discovery write the full piece in the same run, and Publish
   on a queue card ships it (LinkedIn API, Reddit copy-paste, web = markdown export). The

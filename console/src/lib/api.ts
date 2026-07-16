@@ -442,10 +442,11 @@ export interface ArticlePatch {
 }
 
 // An image attached to a queue idea (the images table). Produced by the imagery
-// skill (composed graphic / annotated screenshot / Unsplash pick) or uploaded here;
+// skill (generated image / composed graphic / annotated screenshot / Unsplash pick)
+// or uploaded here;
 // the file itself lives under gitignored data/images/ and is served by
 // GET /api/images/:id/file. `source` + `params` are the provenance the card shows.
-export type ImageSource = 'composed' | 'screenshot' | 'unsplash' | 'upload'
+export type ImageSource = 'composed' | 'screenshot' | 'unsplash' | 'upload' | 'generated'
 export interface ImageAttachment {
   id: string
   ideaId: string
@@ -461,6 +462,19 @@ export interface ImageAttachment {
 // Preview URL for an attached image — same-origin, proxied like every API call.
 export function imageFileUrl(id: string): string {
   return `/api/images/${id}/file`
+}
+
+// A transient candidate the imagery skill has generated but not attached yet — a
+// file under data/images/previews/<ideaId>/, no DB row. The Images strip polls
+// these while an imagery session runs so candidates appear as they finish; the
+// skill removes them once a pick is attached.
+export interface ImagePreview {
+  name: string
+  mtimeMs: number
+}
+
+export function imagePreviewUrl(ideaId: string, name: string): string {
+  return `/api/images/previews/${encodeURIComponent(ideaId)}/${encodeURIComponent(name)}`
 }
 
 // The active profile's brand look (GET /api/brand) — the gitignored
@@ -486,12 +500,25 @@ export function brandAssetUrl(relPath: string): string {
   return `/api/brand/asset?path=${encodeURIComponent(relPath)}`
 }
 
+// Local image generation status: which backend is configured and whether
+// it's actually available (mflux installed / Draw Things API reachable). Generation
+// is local and key-free, so this is just capability status, not a secret.
+export interface GeneratorStatus {
+  backend: 'mflux' | 'drawthings' | string
+  configured: boolean
+}
+
 export const api = {
   // Queue: server returns items sorted by score desc.
   getQueue: () => http<IdeaQueueItem[]>('/queue'),
 
   // Images attached to a queue idea (see ImageAttachment above).
   getImages: (ideaId: string) => http<ImageAttachment[]>(`/images?ideaId=${encodeURIComponent(ideaId)}`),
+  // Unattached candidates from a running imagery session (see ImagePreview above).
+  getImagePreviews: (ideaId: string) =>
+    http<ImagePreview[]>(`/images/previews?ideaId=${encodeURIComponent(ideaId)}`),
+  // Is local image generation set up? (backend + reachable/installed)
+  getGeneratorStatus: () => http<GeneratorStatus>('/images/generator-status'),
   uploadImage: (ideaId: string, dataBase64: string, mimeType: string, alt: string) =>
     http<ImageAttachment>('/images/upload', {
       method: 'POST',

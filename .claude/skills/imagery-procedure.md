@@ -11,8 +11,17 @@ the owner's.
 
 **The owner picks the image.** Like the take, the visual is theirs: propose concepts,
 show candidates, let them choose or redirect. Never attach an image they haven't seen —
-concepts are described in a sentence, but a produced image (composed/screenshot) is shown
-as the image itself before it attaches, and Unsplash picks are listed with previews.
+concepts are described in a sentence, but a produced image is shown as the image itself
+before it attaches, and Unsplash picks are listed with previews.
+
+## THE RULE: supporting visuals, not covers
+
+**The image is the content, not a cover for it.** A chart, a diagram, a photo, a
+screenshot — the thing itself, sitting *next to* the post. The post's text is already the
+headline; an image that restates that headline in big type (a poster, a title card, a
+quote in giant letters) is the failure mode. Every type below is a *supporting visual*.
+When you catch yourself typesetting the piece's title or a lone number as the whole image,
+stop — that's a book cover, not a supporting visual.
 
 ## 0. Read the idea and its piece
 
@@ -24,233 +33,258 @@ topic in general:
 npx tsx -e "import('./src/db/client.js').then(async ({db})=>{const {ideaQueueItems,drafts,articles}=await import('./src/db/schema.js');const {eq,desc}=await import('drizzle-orm');const idea=db.select().from(ideaQueueItems).where(eq(ideaQueueItems.id,process.argv[1])).get();const draft=idea?db.select().from(drafts).where(eq(drafts.ideaId,idea.id)).orderBy(desc(drafts.createdAt)).get():null;const article=idea?db.select().from(articles).where(eq(articles.ideaId,idea.id)).get():null;console.log(JSON.stringify({idea,draft,article},null,2))})" "<ideaId>"
 ```
 
-Also list what's already attached (`GET http://localhost:5174/api/images?ideaId=<id>` or
-the same query via tsx) so you extend, not duplicate.
+Also list what's already attached (`GET http://localhost:5174/api/images?ideaId=<id>`) so
+you extend, not duplicate.
 
 ## 1. Load the brand guidelines
 
-Read the active profile's `brand/` folder — `brand.yaml` for the explicit rules,
-**every image in `brand/refs/`** (view them with the Read tool; they are the "make it feel
-like this" examples), and **every brand document** (`docPaths` — any `.md`/`.html` the
-owner dropped in `brand/`: a company brand book, tone guide, or messaging doc; read them
-in full). Everything you produce must sit inside this look and tone: the palette, the
-fonts, the style notes, the mood of the refs, the rules in the docs. (For the *writing*,
-the voice card stays the authority — brand docs inform imagery and visual judgment here.)
-When the folder is missing, the neutral default applies — say so, and mention that the
-`brand` skill sets it up (or by hand in `brand/`; see `profile.example/brand/` for the
-documented shape).
+Read the active profile's `brand/` folder — `brand.yaml`, **every image in `brand/refs/`**,
+and **every brand document**. Everything you produce sits inside this look and tone. When
+the folder is missing, the neutral default applies — say so, and mention the `brand` skill
+sets it up.
 
 ```bash
 npx tsx -e "import('./src/profile/brand.js').then(m => console.log(JSON.stringify(m.loadBrand(), null, 2)))"
 ```
 
-## 2. Propose, let the owner pick
+## 2. Propose from the six-type menu
 
-**The image's job is to depict what the piece says** — its mechanism, its comparison, its
-flow, its tension — not to restate its words in big type. A card that just typesets a
-number or a title is the failure mode, not a deliverable. Brand is the *language* the
-image speaks (palette, type, spacing rules), never the *subject*: no logos on content
-images unless the owner asks, and never a brand-look card standing in for an idea.
+An image does one of a few **jobs** for a piece. Read the piece, then propose the 1-3 types
+that genuinely fit *this* argument — each in one plain sentence saying what the viewer sees
+and how it serves the piece (not the topic in general). **Always mark one as recommended,
+with a one-line why** — a menu with no point of view makes the owner do the thinking; the
+recommendation is advice, never a default that self-selects. One short ask; the owner picks
+or redirects. If they already asked for something specific, skip the menu and do it.
 
-From the piece and the platform, propose 1-3 image concepts. For each, say in one plain
-sentence **what the viewer would see and what it explains** ("a diagram of the instance
-seeing a local disk while the volume lives across a storage network"). Sources:
+Two axes: the **type** is the job the image does; the **treatment** is the look it wears
+(editorial, terminal, hand-drawn, brand-styled…). Pick the type from the piece's job, and
+the treatment from the brand look and deliberate variety, so successive posts don't all
+look the same.
 
-- **Bespoke graphic (the default for composed images)** — a one-off diagram, comparison,
-  flow, or annotated concept, authored as HTML/CSS in the brand's language and rendered
-  at 2x. This is the workhorse: an explainer gets its mechanism drawn, a comparison gets
-  its options side by side, a framework gets its decision path.
-- **Annotated screenshot** — when the piece points at something real on a live page
-  (a product surface, a dashboard, a docs page): capture + highlight box / click ripple /
-  arrow, privacy-blur anything personal. The scroll-composite variant stitches several
-  scroll stops into one tall image for "here's the whole flow" moments.
-- **Quick template card** (`quote` / `stat` / `headline`) — only when a single line or
-  number genuinely IS the story (a pull-quote for a LinkedIn post). Never the lead
-  concept for an article.
-- **Unsplash photo** — when the piece wants atmosphere, not information. Requires
-  `UNSPLASH_ACCESS_KEY` in `.env` (say so if unconfigured, and continue with the other
-  sources).
-- **Curate from an example** — when the owner points at a reference ("like this")
-  mid-run: view it, extract what defines it (palette, composition, mood), apply that
-  through one of the sources above, and offer to save it into `brand/refs/` so future runs
-  match it too.
+| Type | The job it does | Producer |
+|------|-----------------|----------|
+| **Generated image** | Atmosphere, a real-world moment, or a stylized visual metaphor — photoreal *or* illustrated, any treatment. Not precise information. | `generate-image.ts` (local FLUX) |
+| **Explainer diagram** | Teach structure — a flow, a decision path, a comparison. | `render-image.ts` (composed) |
+| **Data figure** | One clean stat/proportion/trend as a bare figure — bar, dot plot, donut, split bar. | `render-image.ts` (composed) |
+| **Comparison table** | A tidy side-by-side of two sets. | `render-image.ts` (composed) |
+| **Annotated screenshot** | Point at something real on a live page. | `capture-image.ts` + `annotate-image.ts` |
+| **Unsplash photo** | Real photography for pure atmosphere (needs `UNSPLASH_ACCESS_KEY`). | `unsplash-image.ts` |
 
-One short ask; the owner picks or redirects. If they asked for something specific already,
-skip the menu and do that.
+The composed types (diagram / figure / table) are **bare figures** — a small functional
+title at most, no slogan, no ornament, no headline. A generated scene can be upgraded
+with a **scene + UI composite** when the piece wants a legible screen in the shot (see
+below).
 
-## 3. Produce — per source
+**Check availability before proposing.** The generated type only goes on the menu when its
+backend is actually usable (and Unsplash only when its key is set) — check first, so the menu
+never offers something that will fail:
 
-All producers are payload-file CLIs (multi-line text never fights shell escaping); each
-prints the stored image row as JSON. **Alt text is mandatory everywhere** — write what the
-image shows, plainly, as part of producing it.
+```bash
+npx tsx -e "import('./src/images/generate.js').then(async m => { const c = m.loadGeneratorConfig(); console.log(JSON.stringify({ backend: c.backend, configured: await m.generatorConfigured(c) })) })"
+```
 
-### Bespoke graphic — author, look, iterate (the default composed path)
+If the generator is **not** configured, read the one-time opt-out before saying anything:
 
-Design a one-off HTML/CSS document that **draws the piece's idea**: boxes and arrows for
-a mechanism, side-by-side panels for a comparison, a stepped path for a framework. Author
-it like a designer working in the brand's system — the palette and fonts from step 1 as
-CSS values, structure in the neutral tones, the primary color reserved for the thing the
-viewer should look at, style-notes rules obeyed (for this profile that means things like
-borderless surfaces and no decorative color). Inline everything; no external fetches.
+```bash
+npx tsx -e "import('./src/db/client.js').then(async ({db})=>{const {appSettings}=await import('./src/db/schema.js');const {eq}=await import('drizzle-orm');const r=db.select().from(appSettings).where(eq(appSettings.key,'image_gen_setup')).get();console.log(r?.value ?? 'unset')})"
+```
 
-1. **Author** the markup into a file (never inline JSON — HTML fights JSON escaping):
+- `deferred` → leave the generated type off the menu silently (at most one line: "local
+  generation is switched off — say the word and I'll set it up").
+- anything else → offer it **once**, alongside the menu, in one short ask: set it up now
+  (`make image-gen`, then the two one-time Hugging Face steps — Docs → Setup → *Local image
+  generation*), skip it this run, or **don't ask again**. On "don't ask again", persist it:
+
+```bash
+npx tsx -e "import('./src/db/client.js').then(async ({db})=>{const {appSettings}=await import('./src/db/schema.js');db.insert(appSettings).values({key:'image_gen_setup',value:'deferred'}).onConflictDoUpdate({target:appSettings.key,set:{value:'deferred'}}).run();console.log('image_gen_setup=deferred')})"
+```
+
+Never block the run on this — every other type keeps working regardless of the answer.
+
+## 3. Produce — per type
+
+All producers are payload-file CLIs; each prints the stored image row as JSON. **Alt text
+is mandatory everywhere** — write what the image shows, plainly.
+
+### Generated image — local FLUX (the generative path)
+
+`generate-image.ts` runs FLUX.1 [schnell] locally — no key, no cloud. The backend is set in
+`image-generation.config.json`: headless **`mflux`** by default (`uv tool install mflux`,
+no app), or **`drawthings`** to drive the Draw Things app's local API instead. (Availability
+and the install/defer offer are handled in step 2 — by the time you're here the backend works.)
+
+**Not everything is photoreal.** One model does every treatment: photoreal photography,
+editorial illustration, watercolor, flat vector-style, isometric 3D, collage. Pick treatments
+from the brand look and deliberate variety, exactly like the composed types.
+
+**Offer prompt candidates; the owner picks.** Author **2–3 candidate prompts from the piece's
+actual argument** — not its topic in general — each in a *different* style or angle, and put
+them to the owner as one short ask: for each, a plain sentence of what the viewer would see,
+then the prompt itself. **Mark one as recommended and say why in a line** (fit with the
+argument, the brand look, variety against recent images) — the owner still picks freely.
+Prompts are natural descriptive sentences (not keyword soup): subject, setting, lighting or
+materials, mood, treatment. FLUX **garbles text**, so never rely on legible words in the
+image. The owner picks one, edits one, or redirects.
+
+**Generate in the background; previews land on the card.** A generation takes roughly one to
+a few minutes per image — and the **first-ever run also downloads the ~24 GB weights, which
+can take much longer**. Two hard rules:
+
+- **Never run generation as a plain foreground command** — the default shell timeout will
+  kill it mid-run. Launch it in the background, keep talking, and report as each candidate
+  lands. Before starting, tell the owner the expected wait (and the one-time download, if
+  this is the first run) so silence never reads as broken.
+- **Write previews into `data/images/previews/<ideaId>/`** (create the folder first; simple
+  safe filenames like `candidate-1-seed42.png`). The console's Images strip polls that folder
+  during the session, so candidates appear on the idea's card as they finish — say so.
+
+```bash
+# One candidate: repeat with a different "seed" (and filename) for a small batch of the
+# winning prompt — output swings run-to-run, so give the owner 2-3 takes to pick from.
+mkdir -p data/images/previews/<ideaId>
+cat > .image-payload.json <<'JSON'
+{ "prompt": "<the winning prompt>", "width": 1024, "seed": 42,
+  "out": "data/images/previews/<ideaId>/candidate-1-seed42.png" }
+JSON
+npx tsx src/images/generate-image.ts .image-payload.json   # ← run in the background
+```
+
+Look at each candidate with the Read tool as it lands. When the batch is in, put the pick to
+the owner as **one gallery ask showing every candidate**: one option per candidate with that
+candidate's file path on the option's `imageFile` (they all render side by side, labeled —
+never show just one image for a three-candidate pick), **plus one explicit escape option**
+along the lines of *"None of these — start over"* (description: iterate on one candidate's
+prompt or seed, write a fresh prompt, or switch to another image type). A tweak or restart
+regenerates in the background into the same previews folder; iterate until the owner picks —
+their taste decides, not the batch. Attach the winner (same payload with `ideaId` + `alt`
+added, `out` removed):
+
+```bash
+cat > .image-payload.json <<'JSON'
+{ "ideaId": "<ideaId>", "alt": "<what the image shows>", "prompt": "<the winning prompt>", "seed": <the winning seed>, "width": 1024 }
+JSON
+npx tsx src/images/generate-image.ts .image-payload.json
+```
+
+Then **delete the previews folder** (`rm -rf data/images/previews/<ideaId>`) — also when the
+owner walks away without attaching — so stale candidates never linger on the card. The same
+end-of-run sweep removes the scratch files: payloads and working HTML are always written at
+the repo root as `.image-payload*.json` / `.image-graphic*.html` / `.image-card*.html`
+(numbered variants when candidates run in parallel — each background run needs its own
+payload file). They are gitignored, but leaving them behind is still litter — `rm -f
+.image-payload*.json .image-graphic*.html .image-card*.html` when the run ends.
+
+**If generation still fails** (the backend went away mid-session), the CLI exits with a clear
+one-line fix (install `mflux`, or enable Draw Things → Advanced → API Server, HTTP :7860).
+Relay it, offer another type, and continue — never block the run.
+
+### Scene + UI composite — legible screen in a photo
+
+When the scene should show a real, correct screen (a dashboard, a chart), let FLUX make the
+scene and stamp a crisp card onto the monitor with `compose-scene.ts` (perspective-correct,
+via the Playwright renderer — see design 03). Never eyeball corners blind:
+
+1. **Generate** the scene (above), prompted to include a clearly visible, roughly
+   front-facing monitor.
+2. **Look** at the scene preview and read the screen's **four corners** as percentages of
+   the image, order **TL, TR, BR, BL**.
+3. **Author the card** as a bare supporting-visual HTML/CSS document (a figure — not a
+   poster).
+4. **Composite and look:**
+
+```bash
+cat > .image-card.html <<'HTML'
+<!-- the crisp card: a bare figure -->
+HTML
+cat > .image-payload.json <<'JSON'
+{ "scenePath": "data/images/previews/<ideaId>/candidate-1-seed42.png", "cardHtmlFile": ".image-card.html",
+  "corners": [ {"x":12,"y":18}, {"x":48,"y":15}, {"x":50,"y":55}, {"x":14,"y":52} ],
+  "out": "data/images/previews/<ideaId>/composite-1.png" }
+JSON
+npx tsx src/images/compose-scene.ts .image-payload.json
+```
+
+Look at the result; if the card is misplaced, re-read the corners and redo (a misaligned
+overlay ships a broken image). Attach with `ideaId` + `alt`, `out` removed.
+
+### Composed supporting visual — diagram / figure / table
+
+Author a **bare figure** in HTML/CSS in the brand's language — a diagram, chart, or table
+that *is* the content. No headline slogan, no kicker/footer manifesto, no ornament: a small
+functional title at most. Render, **look at the preview with the Read tool (mandatory)**,
+fix what fails, re-render, look again. It is done only when it depicts the idea, text fits,
+the composition is balanced, and color is functional (neutrals carry structure, the primary
+marks the focal point). Then show the owner and attach.
 
 ```bash
 cat > .image-graphic.html <<'HTML'
-<!-- the bespoke document -->
+<!-- the bare figure -->
 HTML
 cat > .image-payload.json <<'JSON'
 { "htmlFile": ".image-graphic.html", "width": 1200, "out": "/tmp/graphic-preview.png" }
 JSON
 npx tsx src/images/render-image.ts .image-payload.json
+# attach: same payload with "ideaId" + "alt", "out" removed
 ```
-
-Width is CSS px (render is 2x); omit `height` to auto-fit the content — a graphic never
-ships with a dead band of empty canvas.
-
-2. **Look at the preview with the Read tool — mandatory, every time.** Judge it as a
-   designer would and fix what fails, re-render, look again. It is not done until:
-   - it **depicts** the idea — someone who hasn't read the piece learns something true
-     from the image alone;
-   - text fits: no overflow, no orphaned single words, no type crammed to an edge;
-   - the composition is balanced — no large empty regions, no elements colliding;
-   - color is functional: neutrals carry structure, the primary marks the focal point,
-     nothing tinted "for decoration";
-   - it would sit naturally next to the brand refs from step 1.
-
-3. **Show the owner the preview and ask** — approval is on the image, never on a
-   description of it. In a console/headless run, pass the preview's path on the ask
-   (`ask_user` with `imageFile: "/tmp/graphic-preview.png"`) so it renders above the
-   question; in a terminal run, tell them the path so they can open it. If they redirect,
-   revise and show again.
-
-4. **Attach** once they approve — same payload with `ideaId` + `alt`, `out` removed:
-
-```bash
-cat > .image-payload.json <<'JSON'
-{ "ideaId": "<ideaId>", "alt": "<what the graphic shows>", "htmlFile": ".image-graphic.html", "width": 1200 }
-JSON
-npx tsx src/images/render-image.ts .image-payload.json
-rm .image-payload.json .image-graphic.html
-```
-
-### Quick template card (pull-quote moments only)
-
-`compose-image.ts` renders three fixed cards: `quote` (text, attribution) · `stat`
-(value, label, context) · `headline` (kicker, title, subtitle) — payload
-`{ "ideaId", "template", "inputs", "alt" }`, default canvas 1600x900. Reach for one only
-when a single line or number is genuinely the story; an article's lead image is never a
-template card. **No logo unless the owner asks**: omitted means none; `"logo": "default"`
-composites brand.yaml's pick; a brand-relative path (e.g. `logos/logo_reversed.png` on a
-dark card) picks a variant.
 
 ### Annotated screenshot — the look-then-annotate loop
 
-Never eyeball annotation coordinates blind. Three steps:
-
-1. **Preview** — capture without storing (`"out"` mode). Deep options when needed:
-   `viewport` (default 1600x1000), `deviceScaleFactor` (default 2 — keep it),
-   `fullPage`, `clip`, `hideSelectors` (strip dev badges/banners), `waitForSelector`,
-   `waitMs`, `scrollTo` (y px or a selector). Scroll-composite: `stitchStops` (array of
-   option overrides, one per stop) + `stitchGap`.
-
-```bash
-cat > .image-payload.json <<'JSON'
-{ "url": "<page>", "out": "/tmp/preview.png" }
-JSON
-npx tsx src/images/capture-image.ts .image-payload.json
-```
-
-2. **Look** — view the preview PNG with the Read tool and measure where the marks go, in
-   **percent** of the image (`unit: "percent"` survives scale changes).
-
-3. **Annotate and store** — bake the marks and attach:
-
-```bash
-cat > .image-payload.json <<'JSON'
-{
-  "ideaId": "<ideaId>",
-  "file": "/tmp/preview.png",
-  "url": "<page>",
-  "alt": "<what the screenshot shows>",
-  "marks": [
-    { "kind": "box", "unit": "percent", "x": 24, "y": 25, "w": 52, "h": 22 },
-    { "kind": "blur", "unit": "percent", "x": 10, "y": 6, "w": 20, "h": 4 }
-  ]
-}
-JSON
-npx tsx src/images/annotate-image.ts .image-payload.json
-rm .image-payload.json
-```
-
-Mark kinds: `box` (rounded highlight rect), `click` (cursor + ripple on a control),
-`arrow` (`x,y` tail → `x2,y2` head), `blur` (privacy — **always blur names, emails,
-account ids, anything personal that isn't the owner's to publish**). Color defaults to the
-brand primary. A capture with no marks needed can skip the loop and run
-`capture-image.ts` with `ideaId`/`alt`/`marks` directly.
-
-4. **Verify** — view the stored file (its row's `path` under `data/images/`) once; a
-   misplaced box ships misinformation. Delete and redo if wrong
-   (`DELETE /api/images/<id>`).
+Never eyeball annotation coordinates blind. Preview (`capture-image.ts` with `out`), look at
+the PNG and measure marks in **percent** (`unit: "percent"`), then annotate and store
+(`annotate-image.ts`). Mark kinds: `box` · `click` · `arrow` · `blur` (**always blur names,
+emails, account ids, anything personal that isn't the owner's to publish**). Verify the
+stored file once; a misplaced box ships misinformation.
 
 ### Unsplash photo
 
-```bash
-cat > .image-payload.json <<'JSON'
-{ "query": "<search terms>", "orientation": "landscape" }
-JSON
-npx tsx src/images/unsplash-image.ts .image-payload.json
-```
-
-Show the owner the top candidates (photographer + description + preview URL), let them
-pick, then attach with `{ "ideaId": "…", "photoId": "…", "alt": "…" }` through the same
-CLI. Attribution (photographer, page URL) is recorded on the row automatically — for a
-web article, credit the photographer in the caption or nearby text.
+`unsplash-image.ts`: `{ "query": "…", "orientation": "landscape" }` searches; show the top
+candidates (photographer + description + preview URL); attach the pick with
+`{ "ideaId", "photoId", "alt" }`. Attribution is recorded automatically. Requires
+`UNSPLASH_ACCESS_KEY`; if unset, say so and continue with the other types.
 
 ## 4. Place it in the piece
 
-Where an image *goes* depends on the lane:
-
-- **LinkedIn post** — there is no inline placement: LinkedIn attaches images below the
-  post text. The Publish modal offers every card image as a pick, and picking several
-  makes a multi-photo post. Nothing to write into the draft.
-- **Reddit post** — copy-paste channel: the owner downloads the image from the card's
-  strip and attaches it on Reddit themselves. Nothing to write into the draft.
-- **Web article** — images live **inline in the markdown body**. After storing, agree
-  with the owner where each one sits (propose a spot — usually right after the section
-  it illustrates, or above the first heading as a hero), then insert a reference at that
-  spot and save the body through the article CLI:
-
-  ```markdown
-  ![<the image's alt text>](image:<imageId>)
-  ```
-
-  Write the body back with `npx tsx src/articles/update-article.ts <payload.json>`
-  (`{ "id": "<articleId>", "body": "<body with the ref inserted>" }`). The
-  `image:<imageId>` form is canonical — export rewrites it to the bundled file's
-  relative path (`images/<slug>/<file>`). Several images means several refs, each where
-  it belongs. An attached image with no ref still exports (bundled + listed in the
-  frontmatter) — that is the right shape for a hero the consuming site places itself;
-  say which images are inline and which are frontmatter-only when reporting.
+- **LinkedIn post** — no inline placement; the Publish modal offers every card image as a
+  pick (several makes a multi-photo post). Nothing to write into the draft.
+- **Reddit post** — copy-paste channel: the owner downloads the image from the card's strip
+  and attaches it on Reddit. Nothing to write into the draft.
+- **Web article** — images live **inline in the markdown body**. Agree where each sits,
+  insert `![<alt>](image:<imageId>)` at that spot, and save the body with
+  `npx tsx src/articles/update-article.ts <payload.json>`. Export rewrites `image:<id>` to
+  the bundled file path. An attached image with no ref still exports (frontmatter-only —
+  right for a hero the site places itself); say which are inline and which are
+  frontmatter-only when reporting.
 
 ## 5. Report and stop
 
-Report what was attached (source, dimensions, alt text), where it was placed (inline
-spot for a web article; "offered at Publish" for LinkedIn; "download from the strip" for
-Reddit), and that it shows on the idea's **Queue card**, where the owner can review or
-delete it. Publish ships it with the piece — the owner's click, never this procedure's.
+Report what was attached (type, dimensions, alt text), where it was placed, and that it
+shows on the idea's **Queue card**, where the owner can review or delete it. Publish ships
+it with the piece — the owner's click, never this procedure's.
 
 ## Rules
 
-- **The image depicts the piece's idea; brand is its language, not its subject.** No
-  typeset-a-word cards as lead images, no logos on content images unless asked.
-- **Every render gets looked at before it attaches** — the step-2 checklist is the gate;
-  a graphic that fails it gets fixed, not shipped.
+- **The image depicts the piece's idea; it is a supporting visual, never a cover.** No
+  typeset-a-headline cards, no lone-number posters, no logos on content images unless asked.
+- **Every render gets looked at before it attaches** — composed figures, composites, and
+  screenshots alike; a render that fails the eye gets fixed, not shipped.
+- **FLUX garbles text and swings run-to-run** — never depend on legible words in a raw
+  scene; generate a batch of seeds and let the owner pick the best. And FLUX is not only
+  photoreal — propose illustrated/stylized treatments too, per the brand look and variety.
+- **Generation runs in the background, never foreground into the default shell timeout,**
+  with previews written to `data/images/previews/<ideaId>/` so they appear live on the
+  Queue card; tell the owner the expected wait up front, and delete the folder once a pick
+  is attached (or the owner moves on).
+- **Graceful degradation.** Source availability is checked in step 2, before the menu. A
+  missing generator triggers the one-time set-up-or-defer offer (persisted as
+  `image_gen_setup=deferred` in app settings — deferred means omit silently); a missing
+  `UNSPLASH_ACCESS_KEY` just drops the stock type with a one-line mention. Never block.
 - Alt text on every image, no exceptions.
 - Brand guidelines load before anything is produced; refs get viewed, not skipped.
-- deviceScaleFactor 2 and PNG intermediates; single compression pass; never upscale.
+- deviceScaleFactor 2 and PNG intermediates for composed renders; never upscale a photo.
 - Blur anything personal in a screenshot that isn't the owner's to publish.
-- The owner picks the image; candidates are shown, never silently attached — and
-  "shown" means the actual image: in a console/headless run, put the file's path on the
-  ask (`ask_user`'s `imageFile`) so it renders with the question.
+- The owner picks the image; candidates are shown, never silently attached — and "shown"
+  means the actual image: a single image rides the ask's `imageFile`; a batch puts each
+  candidate's path on its own option's `imageFile` so **all of them** render as a labeled
+  gallery. Every batch ask carries a "none of these — start over" escape (iterate on a
+  candidate, new prompt, or different type).
 - Never publishes, never edits the piece's text (that's the draft/revise procedures).

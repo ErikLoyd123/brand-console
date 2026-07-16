@@ -7,7 +7,8 @@
 // all of them meet in the same images table + data/images/ files.
 
 import { Router } from 'express';
-import { existsSync } from 'node:fs';
+import { existsSync, readdirSync, statSync } from 'node:fs';
+import { join } from 'node:path';
 import sharp from 'sharp';
 import { eq } from 'drizzle-orm';
 import { db } from '../../db/client';
@@ -17,10 +18,12 @@ import {
   getImage,
   imageAbsPath,
   listImagesForIdea,
+  previewDirForIdea,
   requireIdea,
   storeImage,
 } from '../../images/store';
 import { downloadUnsplashPhoto, searchUnsplash, unsplashConfigured } from '../../images/unsplash';
+import { generatorConfigured, loadGeneratorConfig } from '../../images/generate';
 
 const router = Router();
 
@@ -36,6 +39,59 @@ router.get('/', (req, res) => {
   const ideaId = req.query.ideaId as string | undefined;
   if (!ideaId) return res.status(400).json({ error: 'ideaId query param is required' });
   res.json(listImagesForIdea(ideaId));
+});
+
+// GET /api/images/generator-status — whether local image generation is set up:
+// the configured backend and whether it's actually available (mflux installed, or
+// the Draw Things API reachable). No secret is involved — generation is local and
+// key-free. Lets the console surface setup state + the how-to. Registered before the
+// /:id routes; a single, literal path so it never shadows them.
+router.get('/generator-status', async (_req, res) => {
+  try {
+    const config = loadGeneratorConfig();
+    const configured = await generatorConfigured(config);
+    res.json({ backend: config.backend, configured });
+  } catch (e) {
+    res.status(500).json({ error: (e as Error).message });
+  }
+});
+
+// Candidate previews: transient PNGs the imagery skill writes under
+// data/images/previews/<ideaId>/ while it generates, so the card's Images strip can
+// show candidates live instead of the session looking stalled. No DB rows — the
+// folder IS the state; the skill deletes it after the owner's pick is attached.
+// Both path params are validated to one safe filename segment (no separators, no
+// dotfiles), so nothing outside the previews tree is ever listed or served.
+const SAFE_SEGMENT = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
+
+// GET /api/images/previews?ideaId=… — the candidates so far, oldest first.
+router.get('/previews', (req, res) => {
+  const ideaId = req.query.ideaId as string | undefined;
+  if (!ideaId || !SAFE_SEGMENT.test(ideaId)) {
+    return res.status(400).json({ error: 'a valid ideaId query param is required' });
+  }
+  const dir = previewDirForIdea(ideaId);
+  if (!existsSync(dir)) return res.json([]);
+  const rows = readdirSync(dir)
+    .filter((name) => SAFE_SEGMENT.test(name) && /\.(png|jpe?g|webp)$/i.test(name))
+    .map((name) => ({ name, mtimeMs: statSync(join(dir, name)).mtimeMs }))
+    .sort((a, b) => a.mtimeMs - b.mtimeMs);
+  res.json(rows);
+});
+
+// GET /api/images/previews/:ideaId/:name — one candidate's bytes.
+router.get('/previews/:ideaId/:name', (req, res) => {
+  const { ideaId, name } = req.params;
+  if (!SAFE_SEGMENT.test(ideaId) || !SAFE_SEGMENT.test(name)) {
+    return res.status(400).json({ error: 'invalid preview path' });
+  }
+  const abs = join(previewDirForIdea(ideaId), name);
+  if (!existsSync(abs)) return res.status(404).json({ error: 'preview not found' });
+  const ext = name.slice(name.lastIndexOf('.') + 1).toLowerCase();
+  res.setHeader('Content-Type', CONTENT_TYPES[ext] ?? 'application/octet-stream');
+  // Candidates are regenerated under the same folder; never let the browser cache one.
+  res.setHeader('Cache-Control', 'no-store');
+  res.sendFile(abs);
 });
 
 // GET /api/images/:id/file — the bytes, for previews and the publish flow.

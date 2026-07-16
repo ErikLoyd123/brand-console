@@ -35,3 +35,12 @@ docs/superpowers/
 # that path, and a hand-made profile/ holding real identity data must never be trackable.
 /profiles/
 /profile/
+
+# Imagery procedure scratch files (payloads + working HTML the producers read;
+# numbered variants appear when candidates generate in parallel)
+.image-payload*.json
+.image-graphic*.html
+.image-card*.html
+
+# Local generative-image backend config (machine-specific; see .example)
+image-generation.config.json

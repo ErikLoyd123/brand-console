@@ -28,6 +28,17 @@ const COLOR_SLOTS: { key: keyof BrandState['colors']; label: string; hint: strin
   { key: 'muted', label: 'Muted', hint: 'De-emphasized text — attributions, labels' },
 ]
 
+// Shown on the surfaces that render fallback values when this profile has no saved
+// brand — so the neutral default is never mistaken for a look the owner set.
+function DefaultBadge() {
+  return (
+    <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-surface-nested px-2.5 py-1 text-[11px] font-medium text-text-subtle">
+      <span className="size-1.5 rounded-full bg-text-subtle/60" />
+      Neutral default · not saved
+    </span>
+  )
+}
+
 // One tile in the logo grid; the card default gets the selected treatment.
 function cnLogoCard(isDefault: boolean): string {
   return [
@@ -196,6 +207,11 @@ export function BrandView() {
     )
   }
 
+  // No brand.yaml on disk for the active profile: every value below is the neutral
+  // fallback, not something the owner set. Label the populated surfaces so a bare
+  // default is never read as a saved look.
+  const usingDefaults = brand ? !brand.exists : false
+
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
@@ -239,11 +255,12 @@ export function BrandView() {
         )}
       />
 
-      {brand && !brand.exists && (
-        <p className="rounded-lg bg-surface-nested px-4 py-3 text-sm text-text-muted">
-          No brand saved yet — everything below shows the neutral default. Save the look, or
-          upload a logo, reference, or document, and{' '}
-          <code className="font-mono text-xs">{brand.brandDir}</code> is created for you.
+      {usingDefaults && brand && (
+        <p className="rounded-lg border-l-2 border-primary/40 bg-surface-nested px-4 py-3 text-sm text-text-muted">
+          <span className="font-medium text-text">No brand saved for this profile yet.</span> The
+          colors, fonts, and preview below are the neutral default every profile falls back to —
+          not values you've set. Edit any field and Save, or upload a logo, reference, or document,
+          and <code className="font-mono text-xs">{brand.brandDir}</code> is created for you.
         </p>
       )}
 
@@ -252,7 +269,12 @@ export function BrandView() {
       <section className="flex flex-col gap-3">
         <SectionHeading
           title="Preview"
-          hint="A test card rendered live from the saved brand — exactly what composed graphics will look like. Save to refresh."
+          hint={
+            usingDefaults
+              ? 'A test card in the neutral default look — nothing is saved yet. Save the look to make it this profile’s.'
+              : 'A test card rendered live from the saved brand — exactly what composed graphics will look like. Save to refresh.'
+          }
+          action={usingDefaults ? <DefaultBadge /> : undefined}
         />
         <img
           key={previewKey}
@@ -266,6 +288,7 @@ export function BrandView() {
         <SectionHeading
           title="The look"
           hint="Saved to brand.yaml in the profile's brand/ folder. Colors are hex; fonts are CSS font-family stacks rendered with system fonts."
+          action={usingDefaults ? <DefaultBadge /> : undefined}
         />
         <div className="flex flex-col gap-4 rounded-lg bg-surface p-5 shadow-sm">
           {colors && (
@@ -334,7 +357,8 @@ export function BrandView() {
           </label>
           <div className="flex items-center gap-3">
             <Button size="sm" disabled={busy} onClick={saveLook}>
-              <Check className="size-3.5" /> {busy ? 'Saving…' : 'Save look'}
+              <Check className="size-3.5" />{' '}
+              {busy ? 'Saving…' : usingDefaults ? "Save as this profile’s brand" : 'Save look'}
             </Button>
             {note && (
               <span className="inline-flex items-center gap-1 text-xs text-success-fg">

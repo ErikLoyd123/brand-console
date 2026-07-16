@@ -56,6 +56,11 @@ files; some now have console editors too.
   has formal guidelines). The **imagery** skill reads all of it before producing anything,
   so composed graphics and screenshot annotations land in *your* palette and follow *your*
   rules, not stock ones — while the voice card stays the authority for the writing itself.
+  The imagery skill also makes **generated images** locally — photoreal scenes or
+  illustrations, any style (FLUX.1 [schnell] via the `mflux` CLI — no API key, nothing
+  leaves your machine; optional, offered once during setup and deferrable for good) — and
+  can composite a crisp brand card onto a generated screen so on-screen text is legible.
+  Images are supporting visuals — a chart, a photo, a diagram — never title covers.
   Optional — without it a neutral default applies. Three ways to set it up: the **Brand**
   page in the console (color pickers, font fields, style notes, logo/reference/document
   uploads, and a live test card), the **brand** skill (which can derive a palette from
@@ -105,12 +110,17 @@ are stored in the local database.
   **deletes the idea and everything downstream** (with a confirm); it's refused once anything
   shipped, since the Published archive references it.
 - **Images on a card** — each queue card has an **Images** strip: what's attached, where
-  each image came from (AI graphic / screenshot / Unsplash with photographer credit /
-  upload), an **Image with AI** button, and a hand-upload affordance (alt text required).
-  Image with AI proposes concepts for the piece and produces one — a brand-styled composed
-  graphic, an annotated screenshot of a live page (boxes, arrows, click marks, privacy
-  blurs, scroll composites), or a stock photo (needs `UNSPLASH_ACCESS_KEY` in `.env`) —
-  rows live in the database, files under `data/images/`. **Where images go:** a LinkedIn
+  each image came from (AI image / AI graphic / screenshot / Unsplash with photographer
+  credit / upload), an **Image with AI** button, and a hand-upload affordance (alt text
+  required). Image with AI proposes the image types that fit the piece and produces one — a
+  locally generated image in any style, photoreal or illustrated (FLUX via `mflux`, no key;
+  the skill proposes candidate prompts from your piece), a bare composed graphic
+  (diagram / data figure / comparison table), an annotated screenshot of a live page (boxes,
+  arrows, click marks, privacy blurs, scroll composites), or a stock photo (needs
+  `UNSPLASH_ACCESS_KEY` in `.env`) —
+  rows live in the database, files under `data/images/`. Generation runs take minutes, so
+  they run in the background and **candidates appear live on the strip** ("not attached
+  yet") while the session works — nothing attaches until you pick. **Where images go:** a LinkedIn
   image sits below the post text — the publish modal offers the card's images as picks,
   and picking several makes a multi-photo post; a web article places images **inline in
   the markdown** as `![alt](image:<id>)` references (the AI inserts them where you agree,
@@ -172,6 +182,10 @@ run right from the Voice page (or any terminal):
      `voice-card.md` (raw answers saved to `interview.md`).
    - **Stage B — the knob-walk.** Plain-language questions that fill `identity.yaml`:
      pillars, feeds, products, CTA policy, and your **platforms + tones**.
+   - **Stage C — optional: local image generation.** One question at the end: set up the
+     local image model (see the *Local image generation* doc), skip for now, or **"don't
+     ask again"** — a defer that sticks, so you're never nagged. Existing installs get the
+     same one-time offer on their next setup run.
    You can run either stage alone to update, any time. It never wipes what's there.
 2. **The onboarding gate.** Every content skill checks your profile before it runs. If
    something it needs is missing, it says so plainly and **offers to run `setup`** for the
@@ -211,7 +225,8 @@ the console is where you then run the pipeline day to day.**
 | Queue (ideas + full content) | — | ✅ the review phase: seed, points, content editor, AI write/revise, Publish | ✅ | Console-owned; every idea carries its full written piece (post fields, or a web article's markdown body) on the card |
 | Article SEO fields | — | ✅ edit (on the web idea's queue card) | ✅ | Target keyword / search intent captured at intake; meta / slug filled at write time; all feed the export frontmatter |
 | Web publish (= export) | — | ✅ Publish on the queue card | ✅ | Writes `data/exports/<profile>/<slug>.md` (gitignored) and moves the piece to Published; the file is the shipped artifact — attached images are bundled beside it |
-| Images on a card | — | ✅ Images strip (view / upload / delete) + LinkedIn publish pick | ✅ (`images`) | Produced by the `imagery` skill (composed graphic / annotated screenshot / Unsplash) or uploaded; files in `data/images/`; alt text required |
+| Images on a card | — | ✅ Images strip (view / upload / delete) + LinkedIn publish pick | ✅ (`images`) | Produced by the `imagery` skill (generated image / composed graphic / annotated screenshot / Unsplash) or uploaded; files in `data/images/`; alt text required; unattached generation candidates show live on the strip during a session |
+| Local image generation | ✅ (`image-generation.config.json`, gitignored) | 👁 status on Connections (+ setup steps) | ✅ defer flag (`app_settings`) | Optional, Apple Silicon; offered once by `setup` (install / skip / don't-ask-again); `make image-gen` installs; without it the generated type is left off the menu |
 | Brand look (imagery) | ✅ (`profiles/<slug>/brand/`) | ✅ Brand page (form + uploads + live preview / AI `brand` skill) | — | `brand.yaml` colors/fonts/logo/style notes + `refs/` example images + optional `.md`/`.html` brand docs (brand book, tone guide); read by `imagery`; optional (neutral default) |
 | Profiles / active profile | ✅ (`profiles/<slug>/`, via `setup`) | ✅ switcher | ✅ setting | Disk holds each profile; the sidebar switcher sets the active one and re-scopes the console |
 | Scheduled / published | — | ✅ | ✅ | Console-owned |

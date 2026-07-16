@@ -11,7 +11,7 @@ SHELL := /bin/bash
 API_PORT := 5174
 WEB_PORT := 3001
 
-.PHONY: help install dev api console discover typecheck build db-migrate db-generate profile-check pillars stop
+.PHONY: help install dev api console discover typecheck build db-migrate db-generate profile-check pillars stop image-gen
 
 help: ## List available targets
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -37,6 +37,22 @@ console: ## Run the Vite console only (:3001)
 
 discover: ## Refresh the idea queue (RSS engine)
 	npx tsx src/ingest/discover-rss.ts
+
+image-gen: ## Optional: set up local AI image generation (installs mflux, prints HF steps)
+	@command -v uv >/dev/null || { echo "uv is required first — https://docs.astral.sh/uv/"; exit 1; }
+	uv tool install mflux
+	uv tool install huggingface_hub
+	@echo ""
+	@echo "  ✓ mflux + hf installed. Two one-time steps left:"
+	@echo ""
+	@echo "  1. Accept the FLUX.1 [schnell] license (free — Apache-2.0, but gated):"
+	@echo "       open https://huggingface.co/black-forest-labs/FLUX.1-schnell"
+	@echo "       and click 'Agree and access repository'"
+	@echo "  2. Create a READ token at https://huggingface.co/settings/tokens, then:"
+	@echo "       hf auth login"
+	@echo ""
+	@echo "  Then: cp image-generation.config.example.json image-generation.config.json"
+	@echo "  The first image downloads the weights (~24 GB) once. See Docs → Setup → Local image generation."
 
 typecheck: ## Typecheck the API and the console
 	npx tsc --noEmit

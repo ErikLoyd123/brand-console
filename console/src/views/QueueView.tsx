@@ -65,8 +65,9 @@ const REVIEW_HINTS = [
 const IMAGE_HINTS = [
   'Reading the piece',
   'Loading your brand guidelines',
-  'Proposing image concepts',
-  'Producing the image',
+  'Checking which image sources are available',
+  'Proposing concepts and prompts',
+  'Generating — takes a couple of minutes per image',
 ]
 
 // The filter bar spans every platform's roster, not just one — a Reddit-sourced idea
@@ -453,6 +454,7 @@ function QueueRow({
   onDraft,
   onReview,
   onImage,
+  imageWorking = false,
   highlight = false,
 }: {
   item: IdeaQueueItem
@@ -464,6 +466,8 @@ function QueueRow({
   onDraft: () => void
   onReview: () => void
   onImage: () => void
+  // True while this idea's imagery session runs (live candidate polling on the strip).
+  imageWorking?: boolean
   highlight?: boolean
 }) {
   const [seed, setSeed] = useState(item.seed ?? '')
@@ -815,7 +819,12 @@ function QueueRow({
             onRevise={onDraft}
             onReview={onReview}
           />
-          <ImageStrip ideaId={item.id} onChanged={setCardImages} onImageAI={onImage} />
+          <ImageStrip
+            ideaId={item.id}
+            onChanged={setCardImages}
+            onImageAI={onImage}
+            working={imageWorking}
+          />
           {!(item.platform === 'web' ? item.article?.body?.trim() : item.draft) && (
             <div className="flex items-center gap-3">
               <Button size="sm" onClick={onDraft}>
@@ -896,8 +905,13 @@ export function QueueView() {
   const [mode, setMode] = useState<'develop' | 'draft' | 'review' | 'image'>('develop')
   const [surfaceInput, setSurfaceInput] = useState<string | undefined>(undefined)
   const [surfaceKey, setSurfaceKey] = useState(0)
+  // Which idea has a live imagery session — its card's Images strip polls for
+  // candidates and shows the "generation takes a while" state. Set by imageItem;
+  // cleared when any non-image session replaces the surface.
+  const [imageIdeaId, setImageIdeaId] = useState<string | null>(null)
   const surfaceRef = useRef<HTMLDivElement>(null)
   function runQueue(nextMode: 'develop' | 'draft' | 'review' | 'image', input: string) {
+    if (nextMode !== 'image') setImageIdeaId(null)
     setMode(nextMode)
     setSurfaceInput(input)
     setSurfaceKey((k) => k + 1)
@@ -949,14 +963,22 @@ export function QueueView() {
   }
   function imageItem(item: IdeaQueueItem) {
     const kind = item.platform === 'web' ? 'article' : 'post'
+    setImageIdeaId(item.id)
     runQueue(
       'image',
       `Add an image to the queue item whose id is ${item.id} (angle: "${item.proposedAngle}"). ` +
         `Do not ask which item — use this one. Follow the imagery procedure: read the ${kind} ` +
-        `and my brand guidelines first, open by proposing 1-3 image concepts in plain words ` +
-        `(composed graphic, annotated screenshot, or stock photo) and let me pick before ` +
-        `producing anything. For a web article, after attaching, also agree where it sits in ` +
-        `the body and insert the markdown reference there.` +
+        `and my brand guidelines first, check which image sources are available (including the ` +
+        `local generator), then open by proposing 1-3 image concepts in plain words across the ` +
+        `types that fit (generated image — photoreal or illustrated, composed graphic, ` +
+        `annotated screenshot, or stock photo), mark one as your recommendation with a ` +
+        `one-line why, and let me pick before producing anything. For a generated image, ` +
+        `offer 2-3 candidate prompts in different styles (again with one recommended), run ` +
+        `generation in the background per the procedure, and tell me roughly how long it ` +
+        `will take — ` +
+        `candidates appear on the card's Images strip as they finish. For a web article, after ` +
+        `attaching, also agree where it sits in the body and insert the markdown reference ` +
+        `there.` +
         itemContext(item),
     )
   }
@@ -1143,6 +1165,7 @@ export function QueueView() {
               onDraft={() => draftItem(item)}
               onReview={() => reviewItem(item)}
               onImage={() => imageItem(item)}
+              imageWorking={imageIdeaId === item.id}
               highlight={item.id === highlightId}
             />
           ))}

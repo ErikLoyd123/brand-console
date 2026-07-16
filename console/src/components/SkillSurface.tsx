@@ -506,6 +506,9 @@ function AskChoiceTurn({
 }) {
   const [picked, setPicked] = useState<string[]>([])
   const [freeText, setFreeText] = useState('')
+  // Options that ARE images (a generated-candidate batch) render as a labeled
+  // gallery above the buttons; clicking a figure answers with that option.
+  const galleryOptions = turn.options.filter((o) => o.image)
   return (
     <div className="flex flex-col gap-3">
       {/* Through the shared renderer: a skill's prompt may carry markdown, which
@@ -514,6 +517,31 @@ function AskChoiceTurn({
         <Markdown variant="prompt">{turn.prompt}</Markdown>
       </div>
       {turn.image && <AskImageFigure image={turn.image} />}
+      {galleryOptions.length > 0 && (
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {galleryOptions.map((o) => (
+            <button
+              key={o.label}
+              type="button"
+              onClick={() =>
+                turn.multiSelect ? toggle(o.label, picked, setPicked) : onChoice([o.label])
+              }
+              className={cn(
+                'flex flex-col gap-1.5 rounded-lg border border-border bg-surface-sunken p-2 text-left transition-shadow hover:shadow-control-hover focus-visible:ring-2 focus-visible:ring-primary/40',
+                turn.multiSelect && picked.includes(o.label) && 'ring-2 ring-primary/60',
+              )}
+              title={o.description}
+            >
+              <img
+                src={o.image!.src}
+                alt={o.image!.alt ?? o.label}
+                className="max-h-64 w-full rounded-md object-contain"
+              />
+              <span className="text-xs font-medium text-text">{o.label}</span>
+            </button>
+          ))}
+        </div>
+      )}
       <div className="flex flex-col gap-2">
         {turn.options.map((o) => (
           <Button

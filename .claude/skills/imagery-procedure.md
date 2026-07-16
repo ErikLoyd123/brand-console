@@ -72,6 +72,16 @@ with a one-line why** — a menu with no point of view makes the owner do the th
 recommendation is advice, never a default that self-selects. One short ask; the owner picks
 or redirects. If they already asked for something specific, skip the menu and do it.
 
+**A web article gets an image *plan*, not a single image.** Long-form pieces carry several
+images inline, so before the type menu, read the article's sections and ask **how many
+images it should carry and where** — one line per proposed image naming the section it
+supports and what the viewer would see, **with a recommended count and why** ("six
+sections; I recommend three — the storage-types comparison, the pricing walk, and the
+defaults trap"). The owner sets the plan (more, fewer, different spots — all fine). Every
+planned image then runs through the type/candidate flow below, **and each one gets at
+least two candidates to pick between.** A post normally takes one image; several on one
+idea is fine when asked.
+
 Two axes: the **type** is the job the image does; the **treatment** is the look it wears
 (editorial, terminal, hand-drawn, brand-styled…). Pick the type from the piece's job, and
 the treatment from the brand look and deliberate variety, so successive posts don't all
@@ -149,7 +159,8 @@ can take much longer**. Two hard rules:
 - **Never run generation as a plain foreground command** — the default shell timeout will
   kill it mid-run. Launch it in the background, keep talking, and report as each candidate
   lands. Before starting, tell the owner the expected wait (and the one-time download, if
-  this is the first run) so silence never reads as broken.
+  this is the first run) so silence never reads as broken — and scale the estimate to the
+  wave: a three-image plan at two candidates each is six generations, say that math.
 - **Write previews into `data/images/previews/<ideaId>/`** (create the folder first; simple
   safe filenames like `candidate-1-seed42.png`). The console's Images strip polls that folder
   during the session, so candidates appear on the idea's card as they finish — say so.
@@ -172,8 +183,17 @@ never show just one image for a three-candidate pick), **plus one explicit escap
 along the lines of *"None of these — start over"* (description: iterate on one candidate's
 prompt or seed, write a fresh prompt, or switch to another image type). A tweak or restart
 regenerates in the background into the same previews folder; iterate until the owner picks —
-their taste decides, not the batch. Attach the winner (same payload with `ideaId` + `alt`
-added, `out` removed):
+their taste decides, not the batch.
+
+**Multi-image plans pick per slot, never across slots.** When the plan has several images
+(a web article), launch **every slot's candidates in one background wave** — name the
+previews by slot (`slot1-a.png`, `slot1-b.png`, `slot2-a.png`, …) so the card's strip reads
+sensibly — then run **one gallery ask per planned image**, in article order, each showing
+only that slot's candidates (its two-plus takes side by side, plus the same start-over
+escape, naming the section it's for). Ask as each slot's batch completes rather than
+holding everything for the slowest; three planned images means three picks of two, never
+one six-way pick. Attach each winner as its slot resolves. Attach a winner (same payload
+with `ideaId` + `alt` added, `out` removed):
 
 ```bash
 cat > .image-payload.json <<'JSON'

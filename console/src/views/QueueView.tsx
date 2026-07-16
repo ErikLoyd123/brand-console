@@ -964,21 +964,32 @@ export function QueueView() {
   function imageItem(item: IdeaQueueItem) {
     const kind = item.platform === 'web' ? 'article' : 'post'
     setImageIdeaId(item.id)
+    // Articles carry several inline images, so their session opens with an image
+    // PLAN (count + placements, recommended) and picks per slot; a post is one image.
+    const planDirective =
+      kind === 'article'
+        ? `This is a long-form article, so follow the procedure's image-plan flow: first ` +
+          `propose how many images it should carry and where (one line per image naming ` +
+          `the section it supports, with a recommended count and why), let me set the ` +
+          `plan, then generate at least 2 candidates per planned image in one background ` +
+          `wave and have me pick per image — three planned images means three picks of ` +
+          `two, never one big pool. After each pick, agree where it sits in the body and ` +
+          `insert the markdown reference there.`
+        : `After attaching, you're done — a post's image rides the card, nothing to place ` +
+          `inline.`
     runQueue(
       'image',
-      `Add an image to the queue item whose id is ${item.id} (angle: "${item.proposedAngle}"). ` +
+      `Add images to the queue item whose id is ${item.id} (angle: "${item.proposedAngle}"). ` +
         `Do not ask which item — use this one. Follow the imagery procedure: read the ${kind} ` +
         `and my brand guidelines first, check which image sources are available (including the ` +
-        `local generator), then open by proposing 1-3 image concepts in plain words across the ` +
+        `local generator), then open by proposing image concepts in plain words across the ` +
         `types that fit (generated image — photoreal or illustrated, composed graphic, ` +
         `annotated screenshot, or stock photo), mark one as your recommendation with a ` +
-        `one-line why, and let me pick before producing anything. For a generated image, ` +
+        `one-line why, and let me pick before producing anything. For generated images, ` +
         `offer 2-3 candidate prompts in different styles (again with one recommended), run ` +
         `generation in the background per the procedure, and tell me roughly how long it ` +
-        `will take — ` +
-        `candidates appear on the card's Images strip as they finish. For a web article, after ` +
-        `attaching, also agree where it sits in the body and insert the markdown reference ` +
-        `there.` +
+        `will take — candidates appear on the card's Images strip as they finish. ` +
+        planDirective +
         itemContext(item),
     )
   }

@@ -1059,7 +1059,13 @@ export function QueueView() {
               : { linkLabel: 'Show in Queue', resetLabel: 'Done' }
           }
           onProgress={reload}
-          onResult={reload}
+          onResult={() => {
+            // The session is done — stop the strip's "imagery session running"
+            // state; flipping it off also triggers one final images+candidates
+            // refresh so the strip lands on the finished state.
+            setImageIdeaId(null)
+            reload()
+          }}
           onPlainSubmit={() => {
             /* No plain path — the rows below are the floor; aiOnly never calls this. */
           }}

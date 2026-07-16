@@ -96,27 +96,99 @@ Two axes: the **type** is the job the image does; the **treatment** is the look 
 the treatment from the brand look and deliberate variety, so successive posts don't all
 look the same.
 
-| Type | The job it does | Producer |
-|------|-----------------|----------|
-| **Generated image** | Atmosphere, a real-world moment, or a stylized visual metaphor — photoreal *or* illustrated, any treatment. Not precise information. | `generate-image.ts` (local model) |
-| **Explainer diagram** | Teach structure — a flow, a decision path, a comparison. | `render-image.ts` (composed) |
-| **Data figure** | One clean stat/proportion/trend as a bare figure — bar, dot plot, donut, split bar. | `render-image.ts` (composed) |
-| **Comparison table** | A tidy side-by-side of two sets. | `render-image.ts` (composed) |
-| **Annotated screenshot** | Point at something real on a live page. | `capture-image.ts` + `annotate-image.ts` |
-| **Unsplash photo** | Real photography for pure atmosphere (needs `UNSPLASH_ACCESS_KEY`). | `unsplash-image.ts` |
+The roster and the scores live in code — `src/images/recommend.ts` (`IMAGE_TYPES`) is the
+source of truth and what the CLI reports. This table is a summary for orientation; **read
+the live scores from the CLI**, which knows what's installed. Where they differ, code wins.
+
+Scores are out of 10 (`—` = doesn't apply to that type):
+
+| Type | Reads? | The job it does | FLUX.2 | FLUX.1 | Claude | Unsplash |
+|------|--------|-----------------|:------:|:------:|:------:|:--------:|
+| **Generated photo** | no | A real-world moment, person, place, or object. Photoreal. | **8** | 7 | 1 | 7 |
+| **Abstract metaphor** | no | A mood or concept with no text — drift, pressure, scale, momentum. | **9** | 6 | 5 | 4 |
+| **Illustration** | no | A stylized drawing — flat vector, or textured/painterly. | 7 | 6 | **8** | 2 |
+| **Explainer diagram** | **yes** | Teach structure — a flow, a decision path, a comparison. | 3 | 4 | **10** | — |
+| **Data figure** | **yes** | One clean stat/proportion/trend as a bare figure. | 1 | 1 | **10** | — |
+| **Comparison table** | **yes** | A tidy side-by-side of two sets. | 1 | 1 | **10** | — |
+| **Quote card** | **yes** | A sentence rendered exactly — a pull quote or a big number. | 2 | 2 | **10** | — |
+| **Annotated screenshot** | **yes** | Point at something real on a live page. | — | — | — | — |
+| **Unsplash photo** | no | Real photography for pure atmosphere (needs `UNSPLASH_ACCESS_KEY`). | — | — | — | **8** |
+
+Read the columns, not just the bolded winner: **the gaps are the point.** Where a row is
+10-vs-1 (data figure, comparison table) there is nothing to weigh — using diffusion there
+produces a *wrong* figure, not a rough one. Where a row is close (illustration 8/7/6,
+abstract 9/6/5) it's a genuine judgment call and the treatment decides it.
+
+**Abstract metaphor is diffusion's strongest category** — no text to get wrong. Reach for it
+when the piece wants a feeling rather than a fact; it's usually the best a post can do when
+there's nothing concrete to photograph.
+
+**Illustration is the one genuinely contested type.** Flat vector is Claude's — it holds an
+idea together across the canvas and typesets any incidental label. Texture is diffusion's —
+CSS has no grain or paint. Pick by whether the value is *the concept* or *the surface*
+(Claude drops to ~3 the moment you want grain).
 
 The composed types (diagram / figure / table) are **bare figures** — a small functional
 title at most, no slogan, no ornament, no headline. A generated scene can be upgraded
 with a **scene + UI composite** when the piece wants a legible screen in the shot (see
 below).
 
-**Check availability before proposing.** The generated type only goes on the menu when its
-backend is actually usable (and Unsplash only when its key is set) — check first, so the menu
-never offers something that will fail:
+**Ask what to use before proposing — never guess.** One command answers both "what does this
+machine actually have?" and "which model is right for each type?", already reconciled:
 
 ```bash
-npx tsx -e "import('./src/images/generate.js').then(async m => { const c = m.loadGeneratorConfig(); const models = {}; for (const n of Object.keys(c.models)) models[n] = { available: await m.generatorConfigured(c, n), weightsCached: m.modelWeightsCached(c.models[n]) }; console.log(JSON.stringify({ default: c.default, configured: models[c.default]?.available ?? false, models })) })"
+npx tsx src/images/recommend.ts              # every type + live availability
+npx tsx src/images/recommend.ts data-figure  # one type
 ```
+
+It returns a **scored matrix**, not a verdict — every (type, model) pair carries a **1-10
+score** and a one-line reason, so you can reason instead of obey. Per type:
+
+- `options[]` — every producer that could make this type, **best score first**, each with
+  `score` (1-10, or `null` = a model we've never measured, so say you don't know),
+  `band` (excellent / good / workable / poor), `note` (**say it out loud — don't
+  paraphrase**), `installed`, `willDownload`, and `discouraged`.
+- `recommended` — the best-scoring **installed** option. Default to it.
+- `bestPossible` — the best option that exists at all; `degraded` is true when the two differ.
+- `guidance` — one line you can say verbatim.
+
+**Nothing here refuses on the owner's behalf, and neither do you.** A `discouraged` option
+(score ≤ 3) is still an option: if they want Claude to make a photo, make it — and say
+plainly that it scores 1/10 and why *before* you do ("Claude can't photograph; you'll get
+an uncanny vector figure with mitten hands. Want me to anyway?"). Advise, then comply. The
+score is the argument; the owner is the decision.
+
+The bands: **9-10** the right tool · **7-8** solid, minor compromises · **4-6** works with
+visible weaknesses · **1-3** will disappoint, don't use it unless you mean to.
+
+**The rule it encodes**, so you can sanity-check its answers rather than trust them blindly:
+
+> **Diffusion cannot spell. Claude cannot photograph.**
+
+That's why the scores are shaped the way they are: **read-it types score Claude 10 and
+diffusion 1-4** (a chart whose axis reads "1500, 500, 400, 500" is worse than no chart, and
+no amount of re-prompting fixes it), while **photoreal scores Claude 1 and diffusion 7-8**.
+Neither failure is a near miss; they're different tools. (The evidence is Docs → *Choosing
+an image model* and System → *Image models* in the console — real renders, same prompt.)
+
+**Say the pick, the score, and the why in one line when you propose the type** — "Data
+figure, made by Claude — 10/10, so the axis is truthful". Never silently pick a model.
+
+**When `degraded` is true, say why in the same breath** — "you don't have FLUX.2 installed
+(8/10 here), so I'd use FLUX.1 at 7/10" — and offer `make image-model MODEL=<name>` as the
+fix. Never quietly downgrade.
+
+**When `recommended` is `discouraged`** the type is still on the menu — say the score and
+the failure mode first, and let them choose: "the best you have for a photo is Claude at
+1/10; it cannot photograph and you'll get an uncanny vector figure. I'd install FLUX.2
+first, but I'll do it now if you want."
+
+**When `score` is `null`** it's a model we've never measured. Say exactly that — don't imply
+a verdict we never earned.
+
+Claude figures need **no install and no key** — the composed path is this session authoring
+HTML that Chromium rasterizes locally. A read-it type is therefore always available, even on
+a fresh clone with nothing downloaded. Only the pictorial types depend on what's installed.
 
 A model that is `available` but `weightsCached: false` still works — its first generation
 just starts with the one-time multi-GB weights download. Say that plainly **before**

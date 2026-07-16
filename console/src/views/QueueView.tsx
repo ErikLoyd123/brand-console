@@ -998,11 +998,24 @@ export function QueueView() {
           `markdown reference there.`
         : `After attaching, you're done — a post's image rides the card, nothing to place ` +
           `inline.`
-    // The card's model picker already chose the producer, so the session skips the
-    // type menu entirely: local = generated images from the named on-machine model
-    // entry; claude = composed figures authored in the brand's language.
+    // The card's model picker decides how much the session gets to choose. 'auto' (the
+    // default) pins nothing: the session runs the type menu and picks the model per type
+    // from src/images/recommend.ts, which already reconciles the right model for the job
+    // against what's installed here. 'local'/'claude' are the override — they pin the
+    // producer and skip the type menu entirely.
     const engineDirective =
-      engine.kind === 'local'
+      engine.kind === 'auto'
+        ? `I did NOT pre-pick a producer — pick the best one for each image yourself. Run ` +
+          `\`npx tsx src/images/recommend.ts\` FIRST: it scores every model 1-10 for each ` +
+          `image type and knows which ones are actually installed here. Propose the type(s) ` +
+          `that fit the piece and name the model you'd use for each WITH ITS SCORE and the ` +
+          `one-line reason it gives ("data figure, Claude at 10/10, so the axis is ` +
+          `truthful") — say the pick out loud, never choose silently. If it reports ` +
+          `degraded, tell me the better model I'm missing and its score rather than quietly ` +
+          `downgrading. If the best I have is discouraged (3/10 or lower), say the score and ` +
+          `the failure mode BEFORE doing it and let me decide — advise, don't refuse. I can ` +
+          `still override you.`
+        : engine.kind === 'local'
         ? `I pre-picked the producer on the card: every image in this run is a GENERATED ` +
           `image from the local generator using the model entry "${engine.model}" from ` +
           `image-generation.config.json — pass "model": "${engine.model}" in each ` +

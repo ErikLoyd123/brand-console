@@ -211,10 +211,12 @@ export function BrandView() {
     )
   }
 
-  // No brand.yaml on disk for the active profile: every value below is the neutral
-  // fallback, not something the owner set. Label the populated surfaces so a bare
-  // default is never read as a saved look.
-  const usingDefaults = brand ? !brand.exists : false
+  // Three states, two flags. `noBrandAtAll`: nothing on disk — full empty state.
+  // `lookUnset`: no brand.yaml (even if logos/refs/docs are uploaded) — the look
+  // form/preview stay hidden behind an explicit opt-in, and every populated value
+  // is labeled as a neutral starting point, never a saved look.
+  const noBrandAtAll = brand ? !brand.exists : false
+  const lookUnset = brand ? !brand.lookSaved : false
 
   return (
     <div className="flex flex-col gap-6">
@@ -259,21 +261,35 @@ export function BrandView() {
         )}
       />
 
-      {/* No brand on disk and no editor opened: a true empty state. Nothing here
-          may read as a configured look — no filled palette, no branded preview.
-          The imagery pipeline treats this state as unbranded too (loadBrand's
-          `exists: false`): generated images take no palette from the fallback. */}
-      {usingDefaults && !editByHand && brand && (
+      {/* No look saved and no editor opened: an explicit no-look state. Nothing
+          here may read as a configured look — no filled palette, no branded
+          preview. Two variants: nothing on disk at all, or material uploaded
+          (logos/refs/docs) with the look itself still unset. The imagery pipeline
+          mirrors this (loadBrand's `lookSaved: false`): the fallback palette never
+          styles a generated image. */}
+      {lookUnset && !editByHand && brand && (
         <div className="flex flex-col items-start gap-3 rounded-lg bg-surface p-6 shadow-sm">
           <span className="font-mono text-[11px] font-medium uppercase tracking-wide text-text-subtle">
-            No brand set up
+            {noBrandAtAll ? 'No brand set up' : 'No look saved'}
           </span>
           <p className="text-sm text-text-muted">
-            This profile has no brand — and that's a valid state: images are produced
-            unbranded (no palette, fonts, or logo applied) until you create one. Set it up
-            with AI above, upload a logo / reference / document below, or start by hand —
-            saving creates <code className="font-mono text-xs">{brand.brandDir}</code> for
-            you.
+            {noBrandAtAll ? (
+              <>
+                This profile has no brand — and that's a valid state: images are produced
+                unbranded (no palette, fonts, or logo applied) until you create one. Set it
+                up with AI above, upload a logo / reference / document below, or start by
+                hand — saving creates{' '}
+                <code className="font-mono text-xs">{brand.brandDir}</code> for you.
+              </>
+            ) : (
+              <>
+                Your brand material is here (the logos, references, and documents below),
+                but the look itself — colors, fonts, style notes — isn't saved yet, so
+                composed images render with a neutral fallback palette. Run{' '}
+                <span className="font-medium text-text">Set up brand with AI</span> above
+                and it derives the look from that material, or start by hand.
+              </>
+            )}
           </p>
           <Button size="sm" variant="outline" onClick={() => setEditByHand(true)}>
             Start by hand
@@ -281,7 +297,7 @@ export function BrandView() {
         </div>
       )}
 
-      {usingDefaults && editByHand && (
+      {lookUnset && editByHand && (
         <p className="rounded-lg border-l-2 border-primary/40 bg-surface-nested px-4 py-3 text-sm text-text-muted">
           <span className="font-medium text-text">Nothing saved yet.</span> The fields below
           are seeded with neutral starting values, not a brand — adjust and{' '}
@@ -292,16 +308,16 @@ export function BrandView() {
       {/* Live test card — a real render from the saved brand, so edits are judged on
           pixels, not swatches. Hidden entirely while no brand exists and the by-hand
           editor is closed: an empty state must not exhibit a look. */}
-      {(!usingDefaults || editByHand) && (
+      {(!lookUnset || editByHand) && (
         <section className="flex flex-col gap-3">
           <SectionHeading
             title="Preview"
             hint={
-              usingDefaults
+              lookUnset
                 ? 'A test card in the neutral starting look — nothing is saved yet. Save the look to make it this profile’s.'
                 : 'A test card rendered live from the saved brand — exactly what composed graphics will look like. Save to refresh.'
             }
-            action={usingDefaults ? <DefaultBadge /> : undefined}
+            action={lookUnset ? <DefaultBadge /> : undefined}
           />
           <img
             key={previewKey}
@@ -312,12 +328,12 @@ export function BrandView() {
         </section>
       )}
 
-      {(!usingDefaults || editByHand) && (
+      {(!lookUnset || editByHand) && (
       <section className="flex flex-col gap-3">
         <SectionHeading
           title="The look"
           hint="Saved to brand.yaml in the profile's brand/ folder. Colors are hex; fonts are CSS font-family stacks rendered with system fonts."
-          action={usingDefaults ? <DefaultBadge /> : undefined}
+          action={lookUnset ? <DefaultBadge /> : undefined}
         />
         <div className="flex flex-col gap-4 rounded-lg bg-surface p-5 shadow-sm">
           {colors && (
@@ -387,7 +403,7 @@ export function BrandView() {
           <div className="flex items-center gap-3">
             <Button size="sm" disabled={busy} onClick={saveLook}>
               <Check className="size-3.5" />{' '}
-              {busy ? 'Saving…' : usingDefaults ? "Save as this profile’s brand" : 'Save look'}
+              {busy ? 'Saving…' : lookUnset ? "Save as this profile’s brand" : 'Save look'}
             </Button>
             {note && (
               <span className="inline-flex items-center gap-1 text-xs text-success-fg">

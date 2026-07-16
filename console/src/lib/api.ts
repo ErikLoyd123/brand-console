@@ -482,8 +482,11 @@ export function imagePreviewUrl(ideaId: string, name: string): string {
 // image. Edited on the Brand page (or by the `brand` skill / by hand).
 export interface BrandState {
   brandDir: string
-  // Whether brand.yaml exists yet — false means everything shown is the neutral default.
+  // Whether ANY brand material exists (brand.yaml or uploaded logos/refs/docs).
   exists: boolean
+  // Whether a look is saved (brand.yaml on disk) — false means the colors/fonts
+  // shown are the neutral fallback, even if material is uploaded.
+  lookSaved: boolean
   colors: { primary: string; accent: string; background: string; foreground: string; muted: string }
   fonts: { heading: string; body: string }
   // The card default (brand/-relative path, one of `logos`), or null for no logo.

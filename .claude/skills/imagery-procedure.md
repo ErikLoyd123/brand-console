@@ -45,18 +45,23 @@ and **every brand document**:
 npx tsx -e "import('./src/profile/brand.js').then(m => console.log(JSON.stringify(m.loadBrand(), null, 2)))"
 ```
 
-**Branch on `exists` in the output — it is the difference between a brand and a fallback:**
+**Branch on the two flags in the output — they are the difference between a brand and a
+fallback:**
 
-- **`exists: true`** — a real brand. Everything you produce sits inside this look and tone:
-  palette and fonts in composed figures, treatments and colors steering generated prompts,
-  refs and docs read in full.
-- **`exists: false`** — **no brand is set up; do not manufacture one.** The colors/fonts in
-  the output are only a neutral *rendering* fallback for composed figures (which need some
-  palette to exist) — never present them as "your brand," and **never steer a generated
-  image by them**: no fallback palette in FLUX prompts, no accent-colored borders or frames,
-  no brand-styled treatments. A generated image's style comes from the piece's argument and
-  the chosen treatment alone. Say once, plainly, that no brand is set up and the Brand page
-  (or the `brand` skill) creates one.
+- **`lookSaved: true`** — a saved look. Everything you produce sits inside it: palette and
+  fonts in composed figures, treatments and colors steering generated prompts, refs and
+  docs read in full.
+- **`lookSaved: false`** — **no look is saved; do not manufacture one.** The colors/fonts
+  in the output are only a neutral *rendering* fallback for composed figures (which need
+  some palette to exist) — never present them as "your brand," and **never steer a
+  generated image by them**: no fallback palette in FLUX prompts, no accent-colored borders
+  or frames, no brand-styled treatments. A generated image's style comes from the piece's
+  argument and the chosen treatment alone. Two sub-cases:
+  - **`exists: true`** — material is attached (logos / refs / docs) without a saved look:
+    still read the refs and docs for mood and judgment; only the fallback palette is
+    off-limits. Mention the Brand page's AI setup can derive the look from that material.
+  - **`exists: false`** — nothing at all: fully unbranded. Say once, plainly, that no brand
+    is set up and the Brand page (or the `brand` skill) creates one.
 
 ## 2. Propose from the six-type menu
 
@@ -291,8 +296,9 @@ it with the piece — the owner's click, never this procedure's.
   `UNSPLASH_ACCESS_KEY` just drops the stock type with a one-line mention. Never block.
 - Alt text on every image, no exceptions.
 - Brand guidelines load before anything is produced; refs get viewed, not skipped. And
-  `exists: false` means **unbranded**: the neutral fallback may render a composed figure,
-  but it never styles a generated prompt or gets presented as the owner's look.
+  `lookSaved: false` means **no look**: the neutral fallback may render a composed figure,
+  but it never styles a generated prompt or gets presented as the owner's look (attached
+  refs/docs remain fair game for judgment when they exist).
 - deviceScaleFactor 2 and PNG intermediates for composed renders; never upscale a photo.
 - Blur anything personal in a screenshot that isn't the owner's to publish.
 - The owner picks the image; candidates are shown, never silently attached — and "shown"

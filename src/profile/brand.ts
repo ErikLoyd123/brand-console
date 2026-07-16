@@ -45,11 +45,15 @@ export interface BrandFonts {
 }
 
 export interface BrandGuidelines {
-  // Whether ANY brand is actually set up (brand.yaml, or uploaded logos/refs/docs).
-  // False means every value below is the neutral rendering fallback, NOT the
-  // owner's look — consumers must not present or apply it as a brand (e.g. never
-  // steer a generated image's palette by it).
+  // Whether ANY brand material is set up (brand.yaml, or uploaded logos/refs/docs).
+  // False means there is no brand at all — nothing below may be presented or
+  // applied as one.
   exists: boolean;
+  // Whether a LOOK is saved (brand.yaml on disk). False while `exists` is true
+  // means material (logos/refs/docs) is attached but colors/fonts/style notes are
+  // the neutral rendering fallback, NOT the owner's — use the material, never the
+  // fallback palette (e.g. never steer a generated image's colors by it).
+  lookSaved: boolean;
   colors: BrandColors;
   fonts: BrandFonts;
   // The default logo composited onto composed cards (brand.yaml `logo:`,
@@ -75,6 +79,7 @@ export interface BrandGuidelines {
 // in brand.yaml; profile.example ships a fictional one.
 export const DEFAULT_BRAND: BrandGuidelines = {
   exists: false,
+  lookSaved: false,
   colors: {
     primary: '#2f6f9c',
     accent: '#e8a33d',
@@ -169,6 +174,7 @@ export function loadBrand(slug?: string): BrandGuidelines {
     // uploaded logo/reference/document. Bare defaults => exists: false.
     exists:
       existsSync(yamlPath) || logoPaths.length > 0 || refPaths.length > 0 || docPaths.length > 0,
+    lookSaved: existsSync(yamlPath),
     colors: {
       primary: asString(colors.primary, DEFAULT_BRAND.colors.primary),
       accent: asString(colors.accent, DEFAULT_BRAND.colors.accent),

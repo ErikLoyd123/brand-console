@@ -115,8 +115,13 @@ backend is actually usable (and Unsplash only when its key is set) — check fir
 never offers something that will fail:
 
 ```bash
-npx tsx -e "import('./src/images/generate.js').then(async m => { const c = m.loadGeneratorConfig(); const models = {}; for (const n of Object.keys(c.models)) models[n] = await m.generatorConfigured(c, n); console.log(JSON.stringify({ default: c.default, configured: models[c.default], models })) })"
+npx tsx -e "import('./src/images/generate.js').then(async m => { const c = m.loadGeneratorConfig(); const models = {}; for (const n of Object.keys(c.models)) models[n] = { available: await m.generatorConfigured(c, n), weightsCached: m.modelWeightsCached(c.models[n]) }; console.log(JSON.stringify({ default: c.default, configured: models[c.default]?.available ?? false, models })) })"
 ```
+
+A model that is `available` but `weightsCached: false` still works — its first generation
+just starts with the one-time multi-GB weights download. Say that plainly **before**
+generating with it, and offer `make image-model MODEL=<name>` (or doing the download now in
+this session) as the deliberate alternative to stumbling into it.
 
 If the generator is **not** configured, read the one-time opt-out before saying anything:
 
@@ -127,8 +132,10 @@ npx tsx -e "import('./src/db/client.js').then(async ({db})=>{const {appSettings}
 - `deferred` → leave the generated type off the menu silently (at most one line: "local
   generation is switched off — say the word and I'll set it up").
 - anything else → offer it **once**, alongside the menu, in one short ask: set it up now
-  (`make image-gen`, then the two one-time Hugging Face steps — Docs → Setup → *Local image
-  generation*), skip it this run, or **don't ask again**. On "don't ask again", persist it:
+  (`make image-model` — it installs the tools if missing and pre-downloads the chosen
+  weights; plus the one-time Hugging Face steps for gated models; Docs → Setup → *Local
+  image generation*), skip it this run, or **don't ask again**. On "don't ask again",
+  persist it:
 
 ```bash
 npx tsx -e "import('./src/db/client.js').then(async ({db})=>{const {appSettings}=await import('./src/db/schema.js');db.insert(appSettings).values({key:'image_gen_setup',value:'deferred'}).onConflictDoUpdate({target:appSettings.key,set:{value:'deferred'}}).run();console.log('image_gen_setup=deferred')})"
@@ -166,8 +173,9 @@ depend on it), so don't rely on legible words in the image. The owner picks one,
 or redirects.
 
 **Generate in the background; previews land on the card.** A generation takes roughly one to
-a few minutes per image — and a model's **first-ever run also downloads its weights
-(~13–24 GB for the FLUX defaults), which can take much longer**. Two hard rules:
+a few minutes per image — and a model whose weights were never pre-downloaded (setup's
+`make image-model`) **fetches them on its first-ever run as a failsafe (~13–24 GB for the
+FLUX defaults), which can take much longer**. Two hard rules:
 
 - **Never run generation as a plain foreground command** — the default shell timeout will
   kill it mid-run. Launch it in the background, keep talking, and report as each candidate

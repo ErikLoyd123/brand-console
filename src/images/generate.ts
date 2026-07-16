@@ -21,7 +21,8 @@
 // catchable message so the imagery skill can offer another image type instead.
 
 import { spawnSync } from 'node:child_process';
-import { existsSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
+import { homedir } from 'node:os';
 import { delimiter, join, resolve } from 'node:path';
 import sharp from 'sharp';
 import { REPO_ROOT } from '../profile/loader';
@@ -223,6 +224,37 @@ export async function generatorConfigured(
   }
 }
 
+// "Are this model's weights already on disk?" — the difference between a fast
+// first image and a surprise multi-GB download. Advisory (a heuristic over the
+// Hugging Face cache), so consumers should phrase it as guidance, not a gate:
+//   true  → weights found, first generation is fast
+//   false → tool may be installed but the first run will download weights
+//   null  → not knowable here (Draw Things manages its own models in-app)
+export function modelWeightsCached(entry: ModelConfig): boolean | null {
+  if (entry.backend !== 'mflux') return null;
+  if (entry.modelPath) return existsSync(entry.modelPath);
+  const hub = join(homedir(), '.cache', 'huggingface', 'hub');
+  const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const target = norm(entry.model);
+  try {
+    for (const dir of readdirSync(hub)) {
+      if (!dir.startsWith('models--')) continue;
+      // Cache dirs are "models--<org>--<repo>"; match against the repo name
+      // (org stripped) in either direction so both alias shapes work: a short
+      // mflux alias ("schnell") contained in the repo name, or a fuller alias
+      // ("flux2-klein-4b") containing the repo's distinctive part.
+      const repo = norm(dir.split('--').slice(2).join('--'));
+      if (!(repo.includes(target) || (repo.length >= 4 && target.includes(repo)))) continue;
+      // A snapshot with content = a completed (or at least resumable) download.
+      const snaps = join(hub, dir, 'snapshots');
+      if (existsSync(snaps) && readdirSync(snaps).length > 0) return true;
+    }
+  } catch {
+    /* no hub cache yet — nothing downloaded */
+  }
+  return false;
+}
+
 // Route to the requested model's backend.
 export async function generateImage(
   opts: GenerateOptions,
@@ -326,7 +358,7 @@ async function generateWithDrawThings(
 
 // ---- mflux backend ----
 
-function findOnPath(bin: string): string | null {
+export function findOnPath(bin: string): string | null {
   const path = process.env.PATH ?? '';
   for (const dir of path.split(delimiter)) {
     if (dir === '') continue;
@@ -342,7 +374,7 @@ function findOnPath(bin: string): string | null {
 
 // The entry's mflux CLI, constrained to mflux's own command family so a config
 // typo can never point generation at an arbitrary binary.
-function mfluxCommand(entry: MfluxModelConfig): string {
+export function mfluxCommand(entry: MfluxModelConfig): string {
   const command = entry.command ?? 'mflux-generate';
   if (!/^mflux-[a-z0-9-]+$/.test(command)) {
     throw new Error(`invalid mflux command "${command}" in image-generation.config.json`);
@@ -350,7 +382,7 @@ function mfluxCommand(entry: MfluxModelConfig): string {
   return command;
 }
 
-const MFLUX_NOT_INSTALLED = (command: string) =>
+export const MFLUX_NOT_INSTALLED = (command: string) =>
   `The selected image model runs via \`${command}\`, which isn't on PATH. Install or update ` +
   'mflux (`uv tool install mflux` / `uv tool upgrade mflux`), or pick another model in ' +
   'image-generation.config.json.';

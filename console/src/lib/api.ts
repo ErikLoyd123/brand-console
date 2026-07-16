@@ -513,6 +513,10 @@ export interface GeneratorModelStatus {
   backend: 'mflux' | 'drawthings' | string
   model: string | null
   available: boolean
+  // Whether the model's weights are already downloaded. false = usable but the
+  // first generation pays a one-time multi-GB download; null = the backend
+  // manages its own models (Draw Things); absent = an older API without the check.
+  weightsCached?: boolean | null
   default: boolean
 }
 export interface GeneratorStatus {

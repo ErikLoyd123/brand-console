@@ -26,10 +26,11 @@ It's **optional but recommended**. Without it, the imagery skill still offers it
 
 Fully headless — no app to keep open.
 
-**1. Install the tool** (needs [`uv`](https://docs.astral.sh/uv/)):
+**1. Install the tools** (needs [`uv`](https://docs.astral.sh/uv/)):
 
 ```bash
-uv tool install mflux     # or: uv tool upgrade mflux
+make image-gen            # installs mflux + the Hugging Face CLI
+# or by hand: uv tool install mflux   (upgrade: uv tool upgrade mflux)
 ```
 
 `uv` picks a compatible Python automatically. The FLUX.2 [klein] default needs **mflux ≥ 0.18** (which ships `mflux-generate-flux2`) — upgrade if yours is older.
@@ -47,7 +48,17 @@ hf auth login                      # paste the token
 cp image-generation.config.example.json image-generation.config.json
 ```
 
-**4. First run of a model downloads its weights** (one time — ~13 GB for FLUX.2 [klein], ~24 GB for FLUX.1 [schnell]) and then it's fast. The imagery skill triggers this automatically; the download runs before the first image.
+**4. Download the weights — now (recommended) or on first use.** Each model's weights download once (~13 GB for FLUX.2 [klein], ~24 GB for FLUX.1 [schnell]) into `~/.cache/huggingface`, then every image is fast. Fetch them up front so your first real image doesn't have to wait:
+
+```bash
+make image-model                          # asks which models (Enter = default, or several, or "all")
+make image-model MODEL=flux1-schnell      # non-interactive: one entry by its config name
+make image-model MODEL=all                # non-interactive: every entry
+```
+
+It even installs mflux + the `hf` CLI first if they're missing (so on a fresh machine with `uv`, this one command is the whole setup), and each model ends with a tiny test render — a clean finish proves the whole install works. Skipping this is safe — it's the failsafe path: the first generated image triggers the same one-time download automatically before it can render, which makes that first run much longer (the skill tells you when that's happening).
+
+You can always see where you stand: the queue card's model picker marks an installed-but-not-downloaded model with **"needs download"** (and shows a warning with the exact command when you select one), and the **Connections** page's model roster shows the same per-model state.
 
 > **Gotcha, handled for you:** Hugging Face's new "Xet" download backend currently crashes on these large files — the pipeline sets `HF_HUB_DISABLE_XET=1` automatically. If you ever run an mflux command by hand, prefix it with `HF_HUB_DISABLE_XET=1`.
 
@@ -62,7 +73,7 @@ The app must be running when the skill generates. (Note: Draw Things' `.ckpt` mo
 
 ## Using it
 
-On any queue idea, the card's *Image with AI* button runs the imagery skill against the model chosen in the small picker next to it — every usable local entry is listed (the config's default pre-selected), plus **Claude · composed graphic** for figures Claude authors itself — optionally pinned to a specific Claude model (Fable, Opus, Sonnet), which sets the model for that whole imagery session. The skill proposes **2–3 candidate prompts in different styles**, written from your piece's actual argument — you pick one (or edit it), it generates a few takes, and you choose or tweak.
+On any queue idea, the card's *Image with AI* button runs the imagery skill against the model chosen in the small picker next to it — every usable local entry is listed (the config's default pre-selected), plus **Claude Fable / Opus / Sonnet** for composed graphics — figures Claude authors itself; the pick sets which Claude model runs that whole imagery session. The skill proposes **2–3 candidate prompts in different styles**, written from your piece's actual argument — you pick one (or edit it), it generates a few takes, and you choose or tweak.
 
 **It takes a few minutes — watch the card, not just the terminal.** Each image takes roughly one to a few minutes, and candidates appear live in the **Images strip on the queue card** as they finish (the strip shows a "session running" note while it works). A model's very first image also downloads its weights (one time) before it can generate, which can take a lot longer — the skill tells you when that's happening. Nothing attaches until you pick.
 

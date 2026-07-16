@@ -190,9 +190,12 @@ run right from the Voice page (or any terminal):
    - **Stage B — the knob-walk.** Plain-language questions that fill `identity.yaml`:
      pillars, feeds, products, CTA policy, and your **platforms + tones**.
    - **Stage C — optional: local image generation.** One question at the end: set up the
-     local image model (see the *Local image generation* doc), skip for now, or **"don't
-     ask again"** — a defer that sticks, so you're never nagged. Existing installs get the
-     same one-time offer on their next setup run.
+     local image model — tools plus, if you want, the model weights downloaded right then
+     so your first image is fast (see the *Local image generation* doc) — skip for now, or
+     **"don't ask again"** — a defer that sticks, so you're never nagged. Existing installs
+     get the same one-time offer on their next setup run. A first pass also leaves you one
+     pointer to the optional **brand look** (see *Your brand look*) — pointed at, never
+     walked, so setup stays short.
    You can run either stage alone to update, any time. It never wipes what's there.
 2. **The onboarding gate.** Every content skill checks your profile before it runs. If
    something it needs is missing, it says so plainly and **offers to run `setup`** for the
@@ -233,7 +236,7 @@ the console is where you then run the pipeline day to day.**
 | Article SEO fields | — | ✅ edit (on the web idea's queue card) | ✅ | Target keyword / search intent captured at intake; meta / slug filled at write time; all feed the export frontmatter |
 | Web publish (= export) | — | ✅ Publish on the queue card | ✅ | Writes `data/exports/<profile>/<slug>.md` (gitignored) and moves the piece to Published; the file is the shipped artifact — attached images are bundled beside it |
 | Images on a card | — | ✅ Images strip (view / upload / delete) + LinkedIn publish pick | ✅ (`images`) | Produced by the `imagery` skill (generated image / composed graphic / annotated screenshot / Unsplash) or uploaded; files in `data/images/`; alt text required; unattached generation candidates show live on the strip during a session and can be attached or discarded right there |
-| Local image generation | ✅ (`image-generation.config.json`, gitignored) | 👁 status on Connections (+ setup steps) | ✅ defer flag (`app_settings`) | Optional, Apple Silicon; offered once by `setup` (install / skip / don't-ask-again); `make image-gen` installs; without it the generated type is left off the menu |
+| Local image generation | ✅ (`image-generation.config.json`, gitignored) | 👁 status on Connections (+ setup steps) | ✅ defer flag (`app_settings`) | Optional, Apple Silicon; offered once by `setup` (install / skip / don't-ask-again); `make image-model` asks which models and pre-downloads their weights, installing the tools itself if needed (`make image-gen` installs just the tools; skip the download and the first image fetches the weights as a failsafe); without it the generated type is left off the menu |
 | Brand look (imagery) | ✅ (`profiles/<slug>/brand/`) | ✅ Brand page (form + uploads + live preview / AI `brand` skill) | — | `brand.yaml` colors/fonts/logo/style notes + `refs/` example images + optional `.md`/`.html` brand docs (brand book, tone guide); read by `imagery`; optional (neutral default) |
 | Profiles / active profile | ✅ (`profiles/<slug>/`, via `setup`) | ✅ switcher | ✅ setting | Disk holds each profile; the sidebar switcher sets the active one and re-scopes the console |
 | Scheduled / published | — | ✅ | ✅ | Console-owned |

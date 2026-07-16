@@ -498,7 +498,11 @@ function ImageGenerationCard() {
                     <span
                       className={cn(
                         'size-1.5 shrink-0 rounded-full',
-                        m.available ? 'bg-primary' : 'bg-text-subtle/60',
+                        !m.available
+                          ? 'bg-text-subtle/60'
+                          : m.weightsCached === false
+                            ? 'bg-warning'
+                            : 'bg-primary',
                       )}
                     />
                     <code className={codeCls}>{m.name}</code>
@@ -508,6 +512,12 @@ function ImageGenerationCard() {
                       {m.default ? ' · default' : ''}
                       {m.available ? '' : ' · unavailable'}
                     </span>
+                    {m.available && m.weightsCached === false && (
+                      <span className="text-warning-fg">
+                        weights not downloaded —{' '}
+                        <code className={codeCls}>make image-model MODEL={m.name}</code>
+                      </span>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -522,7 +532,8 @@ function ImageGenerationCard() {
             <p>Set it up once (Apple Silicon):</p>
             <ol className="ml-4 list-decimal space-y-1.5">
               <li>
-                Install the tool: <code className={codeCls}>uv tool install mflux</code> (or{' '}
+                Install the tools: <code className={codeCls}>make image-gen</code> (or by hand{' '}
+                <code className={codeCls}>uv tool install mflux</code> /{' '}
                 <code className={codeCls}>uv tool upgrade mflux</code> if it&rsquo;s older than
                 0.18 — the FLUX.2 [klein] default needs{' '}
                 <code className={codeCls}>mflux-generate-flux2</code>).
@@ -534,8 +545,14 @@ function ImageGenerationCard() {
                 without a config the default is FLUX.2 [klein] via mflux.
               </li>
               <li>
-                First generation downloads the model&rsquo;s weights (one time; ~13 GB for FLUX.2
-                [klein]). For a gated model on Hugging Face, accept its license and{' '}
+                Download the weights now: <code className={codeCls}>make image-model</code> asks
+                which models (one time; ~13 GB for FLUX.2 [klein]; live progress, ends with a
+                test render) and installs mflux itself if step 1 was skipped. Skippable — the
+                first generated image downloads them itself, it&rsquo;s just a much longer first
+                run.
+              </li>
+              <li>
+                For a gated model on Hugging Face, accept its license and{' '}
                 <code className={codeCls}>hf auth login</code> with a read token from{' '}
                 <a
                   className={linkCls}

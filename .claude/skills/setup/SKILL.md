@@ -37,9 +37,9 @@ All file references below (`voice-card.md`, `interview.md`, `identity.yaml`) liv
 
 **Always open by telling the owner where they stand.** The very first question of every run states, in one plain sentence, what already exists and what this run will do — the owner may be resuming after an interruption and must never be dropped into a mid-setup question with no context. Then route by state:
 
-- **Nothing yet** (the active profile's folder is empty or a bare skeleton — a just-created profile awaiting setup): say this is a fresh profile and setup has two parts (a voice interview, then a short settings walk), then run a full first pass, Stage A then Stage B — and close with the optional Stage C offer (local image generation) if it is neither set up nor deferred. (If no profile row exists at all, the command above says so — have the user create one from the console's sidebar switcher first, or via `POST /api/profiles`.)
+- **Nothing yet** (the active profile's folder is empty or a bare skeleton — a just-created profile awaiting setup): say this is a fresh profile and setup has two parts (a voice interview, then a short settings walk), then run a full first pass, Stage A then Stage B — and close with the optional Stage C offer (local image generation) if it is neither set up nor deferred, plus one plain pointer to the optional **brand look** (the console's Brand page, or the `brand` skill) so image styling is discoverable — point, don't walk it; the walk is the `brand` skill's job. (If no profile row exists at all, the command above says so — have the user create one from the console's sidebar switcher first, or via `POST /api/profiles`.)
 - **Partial** (some files or required fields missing per the contract above): the owner is here to **finish setup** — do not present a menu of everything setup can do. Open with the status plus a single confirm (e.g. "Your voice interview is done — all that's left is the settings file: pillars, platforms, and a few options. Pick up where we left off?" with options like *Finish setup* / *Something else*), then walk **only the missing required pieces** straight through to complete. Do not re-ask what is already answered.
-- **Complete**: nothing is required, so the opening question is a **menu**: say the profile is complete, then offer what to update — redo or refresh the voice card (Stage A), a specific `identity.yaml` field or the whole knob-walk (Stage B) — **and always scan for unconfigured optional sections to backfill**. A profile can satisfy the completeness contract yet still have never-configured optional config — most importantly the register/`platforms` axis on a profile written before that axis existed, plus `feed_groups`, `products`, `protected_relationships`, `enabled_lenses`, or a `cta_policy` left at defaults — and, app-wide rather than per-profile, **local image generation** (Stage C) when it is neither set up nor deferred. This is how an existing install learns about a newly shipped capability: the scan surfaces it once, and a defer makes the scan stay quiet about it from then on. Name what is unset and offer to backfill it; default to a Stage B direct edit for a one-field change, and offer Stage A re-distillation to refresh the voice card.
+- **Complete**: nothing is required, so the opening question is a **menu**: say the profile is complete, then offer what to update — redo or refresh the voice card (Stage A), a specific `identity.yaml` field or the whole knob-walk (Stage B) — **and always scan for unconfigured optional sections to backfill**. A profile can satisfy the completeness contract yet still have never-configured optional config — most importantly the register/`platforms` axis on a profile written before that axis existed, plus `feed_groups`, `products`, `protected_relationships`, `enabled_lenses`, or a `cta_policy` left at defaults — plus the profile's **brand look** (`profiles/<slug>/brand/`; absent means images render unbranded — offer the pointer to the Brand page or the `brand` skill, never walk it here) — and, app-wide rather than per-profile, **local image generation** (Stage C) when it is neither set up nor deferred. This is how an existing install learns about a newly shipped capability: the scan surfaces it once, and a defer makes the scan stay quiet about it from then on. Name what is unset and offer to backfill it; default to a Stage B direct edit for a one-field change, and offer Stage A re-distillation to refresh the voice card.
 
 **Backfill is not gated by completeness.** An optional section being absent is a normal thing to detect and offer to fill, not an error. Treat "this axis exists in the schema but your profile never set it" the same as any other gap: surface it plainly and offer to walk it. This is what makes `setup` universal — it is the one place to configure *any* profile field, whether first-run, newly added, or being changed.
 
@@ -201,16 +201,27 @@ npx tsx -e "import('./src/db/client.js').then(async ({db})=>{const {appSettings}
 → stay silent about it entirely; the owner opted out and re-opts in by asking (or from the
 Connections page). Otherwise, one plain question, three options:
 
-1. **Set it up now.** Walk it: `make image-gen` (installs `mflux` + the `hf` CLI via uv;
-   if mflux is already installed but older than 0.18, `uv tool upgrade mflux` — the default
-   FLUX.2 [klein] model needs `mflux-generate-flux2`); optionally
-   `cp image-generation.config.example.json image-generation.config.json` to pick models
-   (without a config the FLUX.2 [klein] default applies). A gated Hugging Face model also
-   wants its license accepted and `hf auth login` with a read token — the Apache-2.0 FLUX
-   defaults normally need none. Full walkthrough: Docs → Setup → *Local image generation*.
-   Warn that a model's first generated image downloads its weights once (~13 GB for FLUX.2
-   [klein], ~24 GB for FLUX.1 [schnell]). Verify with the status one-liner above and report
-   the result plainly.
+1. **Set it up now.** Walk it in two steps, tools then weights:
+   - **Tools:** `make image-gen` (installs `mflux` + the `hf` CLI via uv; if mflux is
+     already installed but older than 0.18, `uv tool upgrade mflux` — the default FLUX.2
+     [klein] model needs `mflux-generate-flux2`). Optionally
+     `cp image-generation.config.example.json image-generation.config.json` to pick models
+     (without a config the FLUX.2 [klein] default applies). A gated Hugging Face model also
+     wants its license accepted and `hf auth login` with a read token — the Apache-2.0 FLUX
+     defaults normally need none. Full walkthrough: Docs → Setup → *Local image generation*.
+   - **Weights (offer it, don't just warn):** the download belongs to setup, not to the
+     owner's first image. Ask which models to fetch — the default is the usual answer, but
+     name the config's entries so several or all is one answer away — then run
+     `make image-model MODEL="<names>"` (or `MODEL=all`; run bare it prompts
+     interactively, and non-interactively it fetches the default). It installs mflux + the
+     `hf` CLI itself if they're missing, streams download progress (one time; ~13 GB for
+     FLUX.2 [klein], ~24 GB for FLUX.1 [schnell]), and ends each model with a tiny test
+     render that doubles as the install check. It can take a while on a slow link, so say
+     so and run it in the background if the owner wants to keep going. If they decline,
+     name the consequence in one line: the first generated image will do the same download
+     itself as a failsafe, making that first run much longer.
+   Verify with the status one-liner above and report the result plainly, including whether
+   the weights are already fetched or still pending first use.
 2. **Not now.** Do nothing — the offer resurfaces on a later run.
 3. **Don't ask again.** Persist the opt-out, then never raise it unprompted again:
 

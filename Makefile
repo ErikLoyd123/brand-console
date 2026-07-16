@@ -11,7 +11,7 @@ SHELL := /bin/bash
 API_PORT := 5174
 WEB_PORT := 3001
 
-.PHONY: help install dev api console discover typecheck build db-migrate db-generate profile-check pillars stop image-gen
+.PHONY: help install dev api console discover typecheck build db-migrate db-generate profile-check pillars stop image-gen image-model
 
 help: ## List available targets
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -43,14 +43,22 @@ image-gen: ## Optional: set up local AI image generation (installs/updates mflux
 	uv tool install --upgrade mflux
 	uv tool install huggingface_hub
 	@echo ""
-	@echo "  ✓ mflux + hf installed. You're ready — the default model is FLUX.2 [klein]"
-	@echo "    (Apache-2.0, no Hugging Face token needed; ~13 GB downloaded on first image)."
+	@echo "  ✓ mflux + hf installed. The default model is FLUX.2 [klein]"
+	@echo "    (Apache-2.0, no Hugging Face token needed)."
+	@echo ""
+	@echo "  Next (recommended):  make image-model"
+	@echo "    asks which models, then downloads their weights now (one time; ~13 GB for the"
+	@echo "    default) so the first image doesn't have to. MODEL=all grabs every entry;"
+	@echo "    skip it and the first generation downloads them itself."
 	@echo ""
 	@echo "  Optional: cp image-generation.config.example.json image-generation.config.json"
 	@echo "    to pick models (FLUX.1 [schnell], Draw Things, or bring-your-own mflux entries)."
 	@echo "  For a GATED Hugging Face model only: accept its license on its HF page, create a"
 	@echo "    READ token at https://huggingface.co/settings/tokens, then: hf auth login"
 	@echo "  See Docs → Setup → Local image generation."
+
+image-model: ## Download image-model weights now, so first use is fast (asks which; MODEL=<entries>|all skips the ask; installs mflux itself if missing)
+	npx tsx src/images/download-model.ts $(MODEL)
 
 typecheck: ## Typecheck the API and the console
 	npx tsc --noEmit

@@ -30,11 +30,11 @@ export type ImageEngine =
   | { kind: 'claude'; claudeModel?: string }
 
 // The Claude tiers offered for composed graphics — the pick pins the whole imagery
-// session's model (it authors the figure itself). Plain "Claude" = engine default.
+// session's model (it authors the figure itself).
 const CLAUDE_TIERS: { id: string; label: string }[] = [
-  { id: 'claude-fable-5', label: 'Claude Fable · composed' },
-  { id: 'claude-opus-4-8', label: 'Claude Opus · composed' },
-  { id: 'claude-sonnet-5', label: 'Claude Sonnet · composed' },
+  { id: 'claude-fable-5', label: 'Claude Fable' },
+  { id: 'claude-opus-4-8', label: 'Claude Opus' },
+  { id: 'claude-sonnet-5', label: 'Claude Sonnet' },
 ]
 
 const SOURCE_LABEL: Record<ImageSource, string> = {
@@ -108,13 +108,19 @@ export function ImageStrip({
     ? `local:${generator!.defaultModel}`
     : usableModels.length > 0
       ? `local:${usableModels[0].name}`
-      : 'claude'
+      : `claude:${CLAUDE_TIERS[0].id}`
   const choice = choiceOverride ?? defaultChoice
   const engine: ImageEngine = choice.startsWith('local:')
     ? { kind: 'local', model: choice.slice('local:'.length) }
     : choice.startsWith('claude:')
       ? { kind: 'claude', claudeModel: choice.slice('claude:'.length) }
       : { kind: 'claude' }
+  // The selected local model when its weights aren't on disk yet — surfaced as a
+  // warning so a pick never silently commits the owner to a multi-GB first run.
+  const pendingWeights =
+    engine.kind === 'local'
+      ? usableModels.find((m) => m.name === engine.model && m.weightsCached === false)
+      : undefined
 
   const reload = useCallback(() => {
     api
@@ -274,9 +280,9 @@ export function ImageStrip({
                   <option key={m.name} value={`local:${m.name}`}>
                     Local · {m.name}
                     {m.default ? ' (default)' : ''}
+                    {m.weightsCached === false ? ' · needs download' : ''}
                   </option>
                 ))}
-                <option value="claude">Claude · composed graphic</option>
                 {CLAUDE_TIERS.map((t) => (
                   <option key={t.id} value={`claude:${t.id}`}>
                     {t.label}
@@ -305,11 +311,11 @@ export function ImageStrip({
                       this machine with the named model from{' '}
                       <code className="font-mono">image-generation.config.json</code> — photoreal
                       or illustrated, nothing leaves your Mac.{' '}
-                      <span className="font-medium text-text">Claude</span> composes the graphic
-                      itself — a diagram, figure, or table in your brand look, right for anything
-                      the reader must read; the Fable/Opus/Sonnet variants pin which Claude model
-                      runs that session. The pick is passed to the session, which skips the type
-                      menu and goes straight to candidates.{' '}
+                      <span className="font-medium text-text">Claude</span> entries compose the
+                      graphic itself — a diagram, figure, or table in your brand look, right for
+                      anything the reader must read; the pick (Fable, Opus, Sonnet) sets which
+                      Claude model runs that session. The pick is passed to the session, which
+                      skips the type menu and goes straight to candidates.{' '}
                       <a
                         href="#/connections"
                         className="font-medium text-primary-ink underline-offset-2 hover:underline"
@@ -350,6 +356,20 @@ export function ImageStrip({
           </label>
         </div>
       </div>
+
+      {pendingWeights && (
+        <p className="rounded-md bg-warning-bg px-3 py-2 text-xs text-warning-fg">
+          <span className="font-medium">
+            <code className="font-mono">{pendingWeights.name}</code> is installed but its weights
+            aren&rsquo;t downloaded yet
+          </span>{' '}
+          — its first image pays a one-time multi-GB download. Recommended: run{' '}
+          <code className="font-mono">make image-model MODEL={pendingWeights.name}</code> in a
+          terminal, or ask Claude in the{' '}
+          <span className="font-medium">Terminal</span> to set it up. Generating anyway works —
+          the session just starts with that download.
+        </p>
+      )}
 
       {working && (
         <div className="flex items-start gap-2 rounded-md bg-surface px-3 py-2">

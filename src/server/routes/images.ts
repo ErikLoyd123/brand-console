@@ -23,7 +23,12 @@ import {
   storeImage,
 } from '../../images/store';
 import { downloadUnsplashPhoto, searchUnsplash, unsplashConfigured } from '../../images/unsplash';
-import { generatorConfigured, loadGeneratorConfig, modelWeightsCached } from '../../images/generate';
+import {
+  generatorConfigured,
+  loadGeneratorConfig,
+  modelEnabled,
+  modelWeightsCached,
+} from '../../images/generate';
 
 const router = Router();
 
@@ -57,6 +62,10 @@ router.get('/generator-status', async (_req, res) => {
         backend: entry.backend,
         model: entry.model ?? null,
         available: await generatorConfigured(config, name),
+        // Owner intent, separate from availability: false = switched off in the
+        // config (`"enabled": false`), so the console hides it rather than
+        // offering something the owner has deliberately ruled out.
+        enabled: modelEnabled(entry),
         // Whether the weights are already on disk (null = the backend manages
         // its own models). Advisory: available-but-uncached means the first
         // generation pays a one-time multi-GB download.

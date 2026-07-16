@@ -1,5 +1,6 @@
 {
-  "_readme": "Local generative-image setup for the imagery skill. Copy this to image-generation.config.json (gitignored) and edit. No API key, nothing leaves your machine. `models` is a set of NAMED entries — `default` picks the one Image with AI uses, and the skill can request another by name. Bring your own model by adding an entry: any model mflux can run (one mflux CLI per family: mflux-generate, mflux-generate-flux2, mflux-generate-qwen, mflux-generate-z-image, ...) or whatever the Draw Things app has loaded. Without this file the defaults below apply (mflux, FLUX.2 [klein]).",
+  "_readme": "Generative-image setup for the imagery skill. Copy this to image-generation.config.json (gitignored) and edit. `models` is a set of NAMED entries — `default` picks the one Image with AI falls back to, though normally the skill picks the best model per image TYPE (see src/images/recommend.ts). Everything here is local and key-free EXCEPT the `gemini` backend, which is a cloud call to Google. Bring your own model by adding an entry: any model mflux can run (one mflux CLI per family: mflux-generate, mflux-generate-flux2, mflux-generate-qwen, mflux-generate-z-image, ...) or whatever the Draw Things app has loaded. Without this file the defaults below apply (mflux, FLUX.2 [klein]).",
+  "_enabled": "Any entry can carry \"enabled\": false to switch it off — it then stops being offered, recommended, or suggested anywhere (the imagery skill's menu, the console's model picker). Use it for a model you've decided against, so it goes quiet instead of nagging: a model that is merely not installed still gets mentioned ('you don't have FLUX.2, 8/10, installing it would be an upgrade'), which is useful right up until you've ruled it out. Omitted = enabled.",
   "default": "flux2-klein",
   "width": 1024,
   "height": 1024,
@@ -29,16 +30,18 @@
       "steps": 4
     },
     "nano-banana": {
-      "_help": "Google's Gemini image model, 'Nano Banana 2'. THE ONE CLOUD ENTRY: your prompt is sent to Google, unlike every other model here. Needs GEMINI_API_KEY in .env (free tier is generous but rate-limited). Nothing to download. Gemini takes an aspect ratio rather than pixel dimensions, so width/height are snapped to the nearest supported ratio; set 'aspectRatio'/'imageSize' to pin them. It accepts no seed, so runs are not reproducible.",
+      "_help": "Google's Gemini image model, 'Nano Banana 2'. THE ONE CLOUD ENTRY: your prompt is sent to Google, unlike every other model here. Needs GEMINI_API_KEY in .env — and note image generation is NOT on the API's free tier (that's text-only), so this needs billing enabled on the Google Cloud project; a key without it returns HTTP 429 with limit: 0. Nothing to download. Gemini takes an aspect ratio rather than pixel dimensions, so width/height snap to the nearest supported ratio; set 'aspectRatio'/'imageSize' to pin them. It accepts no seed, so runs are not reproducible. Shipped disabled — flip enabled to true if you have a billed key.",
       "backend": "gemini",
       "model": "gemini-3.1-flash-image",
+      "enabled": false,
       "imageSize": null,
       "aspectRatio": null
     },
     "nano-banana-pro": {
-      "_help": "Nano Banana Pro (gemini-3-pro-image) — the higher-end Gemini image model. Same cloud caveat and same key.",
+      "_help": "Nano Banana Pro (gemini-3-pro-image) — the higher-end Gemini image model. Same cloud caveat, same key, same billing requirement.",
       "backend": "gemini",
-      "model": "gemini-3-pro-image"
+      "model": "gemini-3-pro-image",
+      "enabled": false
     }
   }
 }

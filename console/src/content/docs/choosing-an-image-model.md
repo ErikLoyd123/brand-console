@@ -103,6 +103,30 @@ and the results compared side by side.
 The short version: **diffusion cannot spell, and Claude cannot photograph.** Everything
 else is detail.
 
+## Turning a model off
+
+Image with AI only ever recommends a model you actually have. But a model you *don't* have
+still gets mentioned — "you don't have FLUX.2 (8/10), installing it would be an upgrade" —
+which is useful right up until you've decided against it.
+
+To silence one for good, set `"enabled": false` on its entry in
+`image-generation.config.json`:
+
+```json
+"nano-banana": { "backend": "gemini", "model": "gemini-3.1-flash-image", "enabled": false }
+```
+
+It then disappears everywhere — the skill's menu, the card's picker, and the "you could
+install this" nudges. Remove the flag to bring it back. This is the difference between
+*"I can't use this"* (not installed — still worth a mention) and *"I don't want this"*
+(switched off — goes quiet).
+
+**Gemini / "Nano Banana" ships switched off.** It's the one cloud model here — the prompt
+leaves your machine — and it needs `GEMINI_API_KEY` plus **billing** on the Google Cloud
+project. The Gemini API's free tier is text-only, so an unbilled key returns HTTP 429 with
+`limit: 0` on every image model. It's unscored above because it hasn't been through the
+test; we'd rather leave it blank than guess.
+
 ## Caveats worth knowing
 
 - The diffusion results are at **4 steps**, the shipped default. More steps may improve

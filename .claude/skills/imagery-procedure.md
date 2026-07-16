@@ -190,6 +190,13 @@ Claude figures need **no install and no key** — the composed path is this sess
 HTML that Chromium rasterizes locally. A read-it type is therefore always available, even on
 a fresh clone with nothing downloaded. Only the pictorial types depend on what's installed.
 
+**What the CLI doesn't show you doesn't exist.** An entry with `"enabled": false` in
+`image-generation.config.json` has been deliberately ruled out by the owner, and the CLI
+drops it entirely — it is not an option, not a fallback, and not something to suggest
+installing. Don't reintroduce a model from your own knowledge because you think it'd be
+better: if it isn't in `options`, it's off the table. (The `gemini` entries ship disabled;
+they're a cloud call and need a billed key.)
+
 A model that is `available` but `weightsCached: false` still works — its first generation
 just starts with the one-time multi-GB weights download. Say that plainly **before**
 generating with it, and offer `make image-model MODEL=<name>` (or doing the download now in

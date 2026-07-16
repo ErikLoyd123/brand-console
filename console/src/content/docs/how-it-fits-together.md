@@ -60,8 +60,16 @@ files; some now have console editors too.
   illustrations, any style (a named model from `image-generation.config.json`: FLUX.2
   [klein] via the `mflux` CLI by default, FLUX.1 [schnell], Draw Things, or your own
   mflux-supported model — no API key, nothing leaves your machine; optional, offered once
-  during setup and deferrable for good) — and
-  can composite a crisp brand card onto a generated screen so on-screen text is legible.
+  during setup and deferrable for good). One backend there is *not* local: `gemini`
+  ("Nano Banana") calls Google and needs `GEMINI_API_KEY` in `.env` plus billing on the
+  Google Cloud project — it ships switched off. Any entry can carry `"enabled": false` to
+  switch it off, so a model you've ruled out stops being offered or suggested anywhere.
+  **You don't pick the model per image — the skill does**, choosing the best one for each
+  image *type* from what's actually installed, and telling you what it picked and why (the
+  card's picker can still force one). The scores behind that live in
+  `src/images/recommend.ts`; the evidence is **System → Image models** and the *Choosing an
+  image model* doc. It can also
+  composite a crisp brand card onto a generated screen so on-screen text is legible.
   Images are supporting visuals — a chart, a photo, a diagram — never title covers.
   Optional — with no brand set up, images are produced **unbranded**: no palette, fonts,
   or logo is applied (composed figures fall back to a neutral rendering default, and
@@ -236,7 +244,9 @@ the console is where you then run the pipeline day to day.**
 | Article SEO fields | — | ✅ edit (on the web idea's queue card) | ✅ | Target keyword / search intent captured at intake; meta / slug filled at write time; all feed the export frontmatter |
 | Web publish (= export) | — | ✅ Publish on the queue card | ✅ | Writes `data/exports/<profile>/<slug>.md` (gitignored) and moves the piece to Published; the file is the shipped artifact — attached images are bundled beside it |
 | Images on a card | — | ✅ Images strip (view / upload / delete) + LinkedIn publish pick | ✅ (`images`) | Produced by the `imagery` skill (generated image / composed graphic / annotated screenshot / Unsplash) or uploaded; files in `data/images/`; alt text required; unattached generation candidates show live on the strip during a session and can be attached or discarded right there |
-| Local image generation | ✅ (`image-generation.config.json`, gitignored) | 👁 status on Connections (+ setup steps) | ✅ defer flag (`app_settings`) | Optional, Apple Silicon; offered once by `setup` (install / skip / don't-ask-again); `make image-model` asks which models and pre-downloads their weights, installing the tools itself if needed (`make image-gen` installs just the tools; skip the download and the first image fetches the weights as a failsafe); without it the generated type is left off the menu |
+| Local image generation | ✅ (`image-generation.config.json`, gitignored) | 👁 status on Connections (+ setup steps) | ✅ defer flag (`app_settings`) | Optional, Apple Silicon; offered once by `setup` (install / skip / don't-ask-again); `make image-model` asks which models and pre-downloads their weights, installing the tools itself if needed (`make image-gen` installs just the tools; skip the download and the first image fetches the weights as a failsafe); without it the generated type is left off the menu. Any entry can carry `"enabled": false` to stop it being offered at all |
+| Which model makes an image | ✅ scores (code: `src/images/recommend.ts`) | ✅ override on the card's picker (default "Best for the job") + 👁 System → Image models | — | The skill picks per image *type* from what's installed and says what it chose and why; the picker's Force options override it. Scores come from the bake-off — see the *Choosing an image model* doc |
+| Gemini / "Nano Banana" images | ✅ (`image-generation.config.json` entry + `GEMINI_API_KEY` in `.env`) | 👁 appears in the picker only when enabled + keyed | — | The one **cloud** image backend — the prompt goes to Google. Ships `"enabled": false`; needs billing on the Google Cloud project (the API's free tier is text-only, so an unbilled key returns 429) |
 | Brand look (imagery) | ✅ (`profiles/<slug>/brand/`) | ✅ Brand page (form + uploads + live preview / AI `brand` skill) | — | `brand.yaml` colors/fonts/logo/style notes + `refs/` example images + optional `.md`/`.html` brand docs (brand book, tone guide); read by `imagery`; optional (neutral default) |
 | Profiles / active profile | ✅ (`profiles/<slug>/`, via `setup`) | ✅ switcher | ✅ setting | Disk holds each profile; the sidebar switcher sets the active one and re-scopes the console |
 | Scheduled / published | — | ✅ | ✅ | Console-owned |

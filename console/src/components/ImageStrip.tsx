@@ -113,7 +113,9 @@ export function ImageStrip({
   // explicit override that pins the producer and skips the type menu. Values: "auto",
   // "local:<entry name>", or "claude:<tier id>".
   const [choiceOverride, setChoiceOverride] = useState<string | null>(null)
-  const usableModels = (generator?.models ?? []).filter((m) => m.available)
+  // Offerable = usable on this machine AND not switched off in the config. `enabled`
+  // absent means on (an older API, or an entry that never set it).
+  const usableModels = (generator?.models ?? []).filter((m) => m.available && m.enabled !== false)
   const choice = choiceOverride ?? 'auto'
   const engine: ImageEngine = choice.startsWith('local:')
     ? { kind: 'local', model: choice.slice('local:'.length) }

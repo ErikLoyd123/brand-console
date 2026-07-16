@@ -30,10 +30,12 @@ import { fileURLToPath } from 'node:url';
 import {
   generatorConfigured,
   loadGeneratorConfig,
+  modelEnabled,
   modelWeightsCached,
   type GeneratorConfig,
   type ModelConfig,
 } from './generate';
+import { unsplashConfigured } from './unsplash';
 
 // ---- scoring vocabulary ----
 
@@ -285,6 +287,8 @@ export interface ModelAvailability {
   backend: string;
   model: string | null;
   available: boolean;
+  // Owner intent: false = switched off in the config, so it's offered nowhere.
+  enabled: boolean;
   weightsCached: boolean | null;
   isDefault: boolean;
   // Which measured producer this entry IS, or null when we've never tested it.
@@ -300,6 +304,7 @@ export async function readAvailability(
       backend: entry.backend,
       model: entry.model ?? null,
       available: await generatorConfigured(config, name),
+      enabled: modelEnabled(entry),
       weightsCached: modelWeightsCached(entry),
       isDefault: name === config.default,
       scoredAs: scoredModelFor(entry),
@@ -359,6 +364,10 @@ function optionsFor(type: ImageTypeMeta, inputs: RecommendInputs): Option[] {
 
   // Local diffusion entries, scored by what they actually are.
   for (const m of inputs.models) {
+    // Switched off in the config: not an option, and not something to nag about either.
+    // Dropped here rather than filtered later so it can never become `bestPossible` and
+    // trigger a "you don't have X, install it" line about a model you've ruled out.
+    if (!m.enabled) continue;
     const s = m.scoredAs ? type.scores[m.scoredAs] : undefined;
     // A model we've never measured is still offerable — we just say we don't know.
     const unknown = m.scoredAs === null;
@@ -478,7 +487,9 @@ async function main() {
   const models = await readAvailability();
   const inputs: RecommendInputs = {
     models,
-    unsplashConfigured: Boolean(process.env.UNSPLASH_ACCESS_KEY),
+    // Ask unsplash.ts rather than reading the env directly: it self-loads .env for its
+    // own key, which a plain `npx tsx` run otherwise never does.
+    unsplashConfigured: unsplashConfigured(),
   };
 
   if (wanted) {

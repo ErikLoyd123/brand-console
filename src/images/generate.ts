@@ -31,9 +31,22 @@ import { REPO_ROOT } from '../profile/loader';
 
 export type GeneratorBackend = 'drawthings' | 'mflux';
 
+// Shared by every model entry regardless of backend.
+export interface ModelCommon {
+  // false = switch this entry off: it stops being offered, recommended, or nagged about
+  // anywhere (the imagery skill's menu, the console's picker). Default true.
+  //
+  // This is the difference between "I can't use this" and "I don't want this". A model
+  // that's simply not installed still deserves a mention — "you don't have FLUX.2 (8/10),
+  // installing it would be an upgrade" is useful. But a model you've deliberately ruled
+  // out (a cloud backend you won't pay for, a local model you won't download) should go
+  // quiet rather than nag forever. Set enabled:false and it disappears.
+  enabled?: boolean;
+}
+
 // One named model the generator can run. `backend` picks the mechanism; the rest
 // is per-model tuning (a distilled model wants few steps, a base model wants more).
-export interface MfluxModelConfig {
+export interface MfluxModelConfig extends ModelCommon {
   backend: 'mflux';
   // Which mflux CLI runs this model family (mflux-generate, mflux-generate-flux2, …).
   command?: string;
@@ -50,7 +63,7 @@ export interface MfluxModelConfig {
   extraArgs?: string[];
 }
 
-export interface DrawThingsModelConfig {
+export interface DrawThingsModelConfig extends ModelCommon {
   backend: 'drawthings';
   apiUrl?: string;
   // null = whatever the app currently has selected.
@@ -62,7 +75,7 @@ export interface DrawThingsModelConfig {
 // local: the prompt goes to Google and the image comes back over the wire. It needs
 // GEMINI_API_KEY in the server-side env (never the browser) and is opt-in — absent key,
 // the entry simply reads as unavailable and the skill offers something else.
-export interface GeminiModelConfig {
+export interface GeminiModelConfig extends ModelCommon {
   backend: 'gemini';
   // e.g. gemini-3.1-flash-image (Nano Banana 2), gemini-3-pro-image (Nano Banana Pro),
   // gemini-2.5-flash-image (the original).
@@ -259,6 +272,14 @@ export async function generatorConfigured(
 
 export function geminiConfigured(): boolean {
   return typeof process.env.GEMINI_API_KEY === 'string' && process.env.GEMINI_API_KEY !== '';
+}
+
+// Owner intent, deliberately NOT folded into generatorConfigured(): "switched off" and
+// "not usable on this machine" are different facts and get different words. A disabled
+// entry is hidden from menus; an unavailable one may still be worth mentioning. Absent
+// field = on, so every existing config keeps working untouched.
+export function modelEnabled(entry: ModelConfig): boolean {
+  return entry.enabled !== false;
 }
 
 // "Are this model's weights already on disk?" — the difference between a fast

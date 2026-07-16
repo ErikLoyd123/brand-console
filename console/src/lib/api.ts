@@ -510,12 +510,17 @@ export function brandAssetUrl(relPath: string): string {
 // capability status, not a secret.
 export interface GeneratorModelStatus {
   name: string
-  backend: 'mflux' | 'drawthings' | string
+  backend: 'mflux' | 'drawthings' | 'gemini' | string
   model: string | null
   available: boolean
+  // Owner intent, distinct from `available`: false = switched off in the config
+  // (`"enabled": false`), so don't offer it at all. Absent = an older API without
+  // the field, which means on.
+  enabled?: boolean
   // Whether the model's weights are already downloaded. false = usable but the
   // first generation pays a one-time multi-GB download; null = the backend
-  // manages its own models (Draw Things); absent = an older API without the check.
+  // manages its own models (Draw Things) or has none (Gemini runs in the cloud);
+  // absent = an older API without the check.
   weightsCached?: boolean | null
   default: boolean
 }

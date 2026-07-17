@@ -22,7 +22,9 @@ import brandRouter from './routes/brand';
 import skillsRouter from './routes/skills';
 import skillSurfaceRouter from './routes/skillSurface';
 import configRouter from './routes/config';
+import terminalImagesRouter from './routes/terminalImages';
 import { attachTerminal } from './terminal';
+import { sweepTerminalImages } from './terminal-images';
 import { attachSkillSurface } from './skill-engine';
 
 const app = express();
@@ -44,6 +46,9 @@ app.use('/api/brand', brandRouter);
 app.use('/api/skills', skillsRouter);
 app.use('/api/skill-surface', skillSurfaceRouter);
 app.use('/api/config', configRouter);
+// Scratch images pasted/dropped into the terminal drawer. Shares the /api/terminal
+// prefix with the pty WebSocket, which is fine: that one only claims upgrade requests.
+app.use('/api/terminal', terminalImagesRouter);
 // profileRouter defines /pillars, /profile, /connections; overviewRouter defines
 // /overview and /pillars/stats. Both mount under /api.
 app.use('/api', profileRouter);
@@ -67,6 +72,9 @@ app.use((err: unknown, _req: Request, res: Response, next: NextFunction) => {
 const server = http.createServer(app);
 attachTerminal(server);
 attachSkillSurface(server);
+// Terminal pastes are read by claude at prompt time and worthless after; clear out
+// anything a previous run left behind.
+sweepTerminalImages();
 server.listen(5174, () => {
   console.log('brand-console API on http://localhost:5174');
 });

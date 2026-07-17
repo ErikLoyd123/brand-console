@@ -565,6 +565,14 @@ export const api = {
     http<ImageAttachment>(`/images/${id}`, { method: 'PATCH', body: JSON.stringify({ alt }) }),
   deleteImage: (id: string) => http<void>(`/images/${id}`, { method: 'DELETE' }),
 
+  // An image pasted/dropped into the terminal drawer. Unlike uploadImage these
+  // attach to nothing — the returned path is typed into the pty for claude to read.
+  uploadTerminalImage: (dataBase64: string, mimeType: string) =>
+    http<{ path: string; name: string }>('/terminal/images', {
+      method: 'POST',
+      body: JSON.stringify({ dataBase64, mimeType }),
+    }),
+
   // The active profile's brand look (the Brand page; see BrandState above).
   getBrand: () => http<BrandState>('/brand'),
   saveBrand: (patch: {

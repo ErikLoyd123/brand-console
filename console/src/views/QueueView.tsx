@@ -1017,8 +1017,10 @@ export function QueueView() {
           `still override you.`
         : engine.kind === 'local'
         ? `I pre-picked the producer on the card: every image in this run is a GENERATED ` +
-          `image from the local generator using the model entry "${engine.model}" from ` +
-          `image-generation.config.json — pass "model": "${engine.model}" in each ` +
+          `image from the generator using the model entry "${engine.model}" from ` +
+          `image-generation.config.json (check its backend before you describe it to me — ` +
+          `every entry runs on this machine except a "gemini" one, which calls Google) — ` +
+          `pass "model": "${engine.model}" in each ` +
           `generate-image payload. Skip the type menu — do not propose or switch to ` +
           `composed graphics, screenshots, or stock. Open by proposing 2-3 candidate ` +
           `prompts in different styles (photoreal or illustrated, one recommended with a ` +

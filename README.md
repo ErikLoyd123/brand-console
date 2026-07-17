@@ -78,7 +78,8 @@ The imagery skill can generate **images locally** — photoreal or illustrated, 
 no API key, nothing leaves your machine. Models are **named entries** in gitignored
 `image-generation.config.json`: FLUX.2 [klein] by default (Apache-2.0, ~13 GB), with
 FLUX.1 [schnell] (~24 GB), the Draw Things app, and **bring-your-own** — anything mflux
-can run — as further entries. The `setup` skill offers this once during onboarding
+can run — as further entries. (One optional entry is *not* local: the `gemini` backend
+sends prompts to Google, needs a billed `GEMINI_API_KEY`, and ships switched off.) The `setup` skill offers this once during onboarding
 (install / skip / don't-ask-again) and walks these same steps in-app; by hand it's:
 
 ```bash

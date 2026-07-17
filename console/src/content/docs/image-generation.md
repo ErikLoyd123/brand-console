@@ -6,6 +6,8 @@ order: 6
 
 The imagery skill can make **generated images** — a photoreal scene, an editorial illustration, a watercolor, an isometric render, any style one prompt can describe — by running an open image model **locally on your Mac**. No API key, no cloud, nothing leaves your machine, and the shipped defaults are commercial-safe (FLUX.2 [klein] and FLUX.1 [schnell], both Apache-2.0).
 
+> **One exception, and it ships switched off.** The optional `gemini` backend ("Nano Banana") is the only entry here that is *not* local: it sends your prompt to Google. It needs `GEMINI_API_KEY` in `.env` plus billing on the Google Cloud project, and every `gemini` entry in the example config carries `"enabled": false`. Everything else on this page is local and key-free. See [Choosing an image model](#/docs/choosing-an-image-model) for where it fits.
+
 It's **optional but recommended**. Without it, the imagery skill still offers its other types (diagrams, data figures, comparison tables, annotated screenshots, Unsplash) — the generated type is simply left off the menu. The `setup` skill offers this setup once during onboarding (and once to existing installs); answer **"don't ask again"** and it stays quiet for good — you can still opt back in any time from this page's steps or by asking the setup skill. Setup is a one-time thing.
 
 > Requires an **Apple Silicon** Mac (the default `mflux` backend runs on Apple's MLX). On other hardware, use the Draw Things backend below, or skip generation.

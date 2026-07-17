@@ -1,9 +1,11 @@
 // src/images/generate-image.ts
-// CLI the imagery procedure invokes for the LOCAL GENERATIVE source. The model
-// comes from image-generation.config.json's named `models` (FLUX.2 [klein] by
-// default; FLUX.1 [schnell], Draw Things, or any bring-your-own mflux entry), run
-// fully locally. No API key. Two modes, both via a JSON payload file (mirrors
-// render-image.ts / unsplash-image.ts):
+// CLI the imagery procedure invokes for the GENERATIVE source. The model comes from
+// image-generation.config.json's named `models` (FLUX.2 [klein] by default; FLUX.1
+// [schnell], Draw Things, or any bring-your-own mflux entry) — all of which run fully
+// locally with no API key. The one exception is a `gemini` entry, which calls Google and
+// needs GEMINI_API_KEY; it ships disabled. The stored row records which it was
+// (`params.cloud`), so don't assume a generated image was made on this machine.
+// Two modes, both via a JSON payload file (mirrors render-image.ts / unsplash-image.ts):
 //
 //   npx tsx src/images/generate-image.ts <payload.json>
 //

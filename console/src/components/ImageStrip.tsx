@@ -286,7 +286,10 @@ export function ImageStrip({
                 <option value="auto">Best for the job (default)</option>
                 {usableModels.map((m) => (
                   <option key={m.name} value={`local:${m.name}`}>
-                    Force · Local · {m.name}
+                    {/* Name where it runs. Every entry here is on-machine except the
+                        gemini backend, which calls Google — labelling that "Local" would
+                        misstate the one boundary this tool actually promises. */}
+                    Force · {m.backend === 'gemini' ? 'Cloud · Google' : 'Local'} · {m.name}
                     {m.weightsCached === false ? ' · needs download' : ''}
                   </option>
                 ))}
@@ -525,8 +528,13 @@ export function ImageStrip({
                   img.source === 'unsplash' && typeof img.params.attribution === 'string'
                     ? String(img.params.attribution)
                     : img.source === 'generated'
-                      // Provenance: name the local model that made it (never a cloud API).
-                      ? `Generated locally by ${String(img.params.model ?? img.params.generator ?? 'the local model')}${img.params.seed != null ? ` · seed ${String(img.params.seed)}` : ''} · ${img.width}x${img.height}`
+                      // Provenance: name the model that made it, and say WHERE it ran.
+                      // Almost every generator is on-machine, but the gemini backend is a
+                      // call to Google and records `cloud: true` — claiming that one was
+                      // "generated locally" would be a false statement about the only
+                      // boundary this tool promises. Trust the recorded flag, not the era
+                      // the code was written in.
+                      ? `${img.params.cloud === true ? 'Generated in the cloud' : 'Generated locally'} by ${String(img.params.model ?? img.params.generator ?? 'the image model')}${img.params.seed != null ? ` · seed ${String(img.params.seed)}` : ''} · ${img.width}x${img.height}`
                       : `${SOURCE_LABEL[img.source]} · ${img.width}x${img.height}`
                 }>
                   {SOURCE_LABEL[img.source]}

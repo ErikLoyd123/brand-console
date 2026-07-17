@@ -26,6 +26,7 @@ import {
   findOnPath,
   loadGeneratorConfig,
   mfluxCommand,
+  modelEnabled,
   resolveModel,
   type GeneratorConfig,
   type ModelConfig,
@@ -38,15 +39,36 @@ const SIZE_HINTS: Record<string, string> = {
 
 function describe(config: GeneratorConfig, name: string): string {
   const entry = config.models[name];
-  const bits = [entry.backend === 'mflux' ? `mflux · ${entry.model}` : 'Draw Things app'];
+  const what =
+    entry.backend === 'mflux'
+      ? `mflux · ${entry.model}`
+      : entry.backend === 'gemini'
+        ? `Google cloud · ${entry.model}`
+        : 'Draw Things app';
+  const bits = [what];
   if (SIZE_HINTS[name]) bits.push(SIZE_HINTS[name]);
   if (name === config.default) bits.push('default');
   return bits.join(' · ');
 }
 
+// Entries the owner hasn't switched off. Used for the "everything" paths (`all`, the
+// interactive list) — a model that's been ruled out shouldn't be offered or bulk-fetched.
+// Naming one explicitly still works: an explicit ask is an explicit ask.
+function enabledNames(config: GeneratorConfig): string[] {
+  return Object.keys(config.models).filter((n) => modelEnabled(config.models[n]));
+}
+
 // No names given and we have a real terminal: ask which weights to fetch.
 async function pickInteractively(config: GeneratorConfig): Promise<string[]> {
-  const names = Object.keys(config.models);
+  // Only what's switched on: a ruled-out model has no business in the menu.
+  const names = enabledNames(config);
+  if (names.length === 0) {
+    console.error(
+      'Every entry in image-generation.config.json is switched off (`"enabled": false`), so ' +
+        "there's nothing to download. Turn one back on, or name it explicitly to fetch it anyway.",
+    );
+    process.exit(1);
+  }
   console.log('Which model weights do you want to download?');
   console.log('');
   names.forEach((n, i) => console.log(`  ${i + 1}. ${n}  (${describe(config, n)})`));
@@ -188,7 +210,16 @@ async function main() {
   let requested = process.argv.slice(2).map((s) => s.trim()).filter(Boolean);
 
   if (requested.length === 1 && requested[0].toLowerCase() === 'all') {
-    requested = Object.keys(config.models);
+    // "all" means all the models you actually use — fetching multi-GB weights for an entry
+    // you switched off is exactly the nagging `enabled: false` exists to stop.
+    requested = enabledNames(config);
+    if (requested.length === 0) {
+      console.error(
+        'Every entry in image-generation.config.json is switched off (`"enabled": false`) — ' +
+          'nothing to download. Turn one back on, or name it explicitly.',
+      );
+      process.exit(1);
+    }
   } else if (requested.length === 0) {
     if (process.stdin.isTTY && process.stdout.isTTY) {
       requested = await pickInteractively(config);

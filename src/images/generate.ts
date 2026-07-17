@@ -195,7 +195,14 @@ export function loadGeneratorConfig(): GeneratorConfig {
     const models = raw.models as Record<string, ModelConfig>;
     const names = Object.keys(models);
     if (names.length === 0) return DEFAULT_CONFIG;
-    const def = typeof raw.default === 'string' && models[raw.default] ? raw.default : names[0];
+    // Fall back to the first ENABLED entry, not just the first: a config that lists a
+    // switched-off entry first (the shipped example has disabled cloud entries) and omits
+    // `default` would otherwise make a model the owner ruled out the one we reach for.
+    // An explicit `default` is honoured either way — naming it is intent, even if odd.
+    const def =
+      typeof raw.default === 'string' && models[raw.default]
+        ? raw.default
+        : (names.find((n) => modelEnabled(models[n])) ?? names[0]);
     return {
       default: def,
       width: typeof raw.width === 'number' ? raw.width : DEFAULT_CONFIG.width,

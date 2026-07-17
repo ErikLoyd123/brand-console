@@ -45,9 +45,24 @@ const PREAMBLE =
   'Follow the skill exactly.';
 
 // Answer + overall run guards so a wedged model turn or an unanswered question
-// cannot orphan a session (design: Lifecycle — lazy and ephemeral).
-const ANSWER_TIMEOUT_MS = 10 * 60 * 1000;
+// cannot orphan a session (design: Lifecycle — lazy and ephemeral). The answer
+// guard is a backstop for a genuinely abandoned tab, NOT a think-time budget: a
+// reflective interview question (e.g. setup's "what do you consider overhyped in
+// your space?") can sit on screen for many minutes while the user composes a real
+// answer, so this is generous. A live tab is kept healthy independently by the
+// WebSocket heartbeat below, and a closed tab is reaped by that heartbeat within
+// ~2 cycles — so this timeout only matters for a tab left open but walked away from.
+const ANSWER_TIMEOUT_MS = 30 * 60 * 1000;
 const RUN_TIMEOUT_MS = 15 * 60 * 1000;
+
+// WebSocket keepalive. Without it, an idle socket (a question sitting on screen
+// while the user thinks) can be silently reaped by the dev proxy, the OS, or an
+// intermediary — the answer then lands on a dead socket and the surface "resets".
+// Pinging every interval keeps the connection warm for as long as the tab is open
+// (the browser auto-pongs at the protocol level); a socket that misses a pong
+// between ticks is genuinely gone (tab closed, machine slept) and is terminated so
+// its session tears down promptly instead of lingering.
+const HEARTBEAT_MS = 30 * 1000;
 
 // When a session is torn down mid-flight (abort, disconnect, timeout), the Agent
 // SDK's control transport can throw a benign AbortError from an un-awaited internal
@@ -560,7 +575,27 @@ export function attachSkillSurface(server: Server): void {
   // /api/terminal to the terminal's, destroying anything else exactly once.
   registerUpgrade(server, '/api/skill-surface', wss);
 
+  // Keepalive sweep: ping every live socket each tick and terminate any that
+  // failed to pong since the previous tick. `alive` is per-socket state we flip
+  // false on each ping and true on each pong; a socket still false at the next
+  // tick never answered and is gone. Keeps a thinking user's idle socket warm so
+  // their answer never lands on a reaped connection (the "reset" they were hitting).
+  const alive = new WeakMap<WebSocket, boolean>();
+  const sweep = setInterval(() => {
+    for (const ws of wss.clients) {
+      if (alive.get(ws) === false) {
+        ws.terminate();
+        continue;
+      }
+      alive.set(ws, false);
+      ws.ping();
+    }
+  }, HEARTBEAT_MS);
+  wss.on('close', () => clearInterval(sweep));
+
   wss.on('connection', (ws: WebSocket) => {
+    alive.set(ws, true);
+    ws.on('pong', () => alive.set(ws, true));
     // Lazy: the socket may open on mount, but no session spawns until the client
     // sends `start`. The `start` frame both opens and seeds the run.
     const onFirst = (data: import('ws').RawData) => {

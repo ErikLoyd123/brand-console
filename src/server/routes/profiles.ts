@@ -17,7 +17,12 @@ import {
   sparks,
   tags,
 } from '../../db/schema';
-import { getActiveProfileId, profileDirBySlug } from '../../profile/loader';
+import {
+  fileExistsNonEmpty,
+  getActiveProfileId,
+  interviewPath,
+  profileDirBySlug,
+} from '../../profile/loader';
 import { checkCompleteness } from '../../profile/completeness';
 
 const router = Router();
@@ -52,11 +57,13 @@ function setActiveProfile(id: string): void {
     .run();
 }
 
-// GET /api/profiles — every profile as { id, name, kind, active, complete, missing }.
-// active marks the current active_profile_id; complete/missing are that profile's
-// completeness result — missing lists what setup still has to fill, which the Voice
-// page's setup surface renders as a checklist. This is the switcher's menu and
-// provenance source.
+// GET /api/profiles — every profile as { id, name, kind, active, complete, missing,
+// interviewStarted }. active marks the current active_profile_id; complete/missing are
+// that profile's completeness result — missing lists what setup still has to fill, which
+// the Voice page's setup surface renders as a checklist. interviewStarted says whether
+// interview.md holds any saved answers yet (setup appends after every question), so the
+// setup surface can say "resume" instead of "this profile is empty" after an interrupted
+// interview. This is the switcher's menu and provenance source.
 router.get('/profiles', (_req, res) => {
   const rows = db.select().from(profiles).all();
   // Zero profiles (fresh clone) is a valid answer here, not an error: this is the
@@ -74,6 +81,7 @@ router.get('/profiles', (_req, res) => {
         active: p.id === activeId,
         complete: completeness.complete,
         missing: completeness.missing,
+        interviewStarted: fileExistsNonEmpty(interviewPath(p.slug)),
       };
     }),
   );
@@ -94,6 +102,7 @@ router.put('/active-profile', (req, res) => {
     active: true,
     complete: completeness.complete,
     missing: completeness.missing,
+    interviewStarted: fileExistsNonEmpty(interviewPath(profile.slug)),
   });
 });
 
@@ -118,6 +127,7 @@ router.post('/profiles', (req, res) => {
     active: true,
     complete: false,
     missing: checkCompleteness(slug).missing,
+    interviewStarted: false,
   });
 });
 

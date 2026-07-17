@@ -67,9 +67,24 @@ export function band(score: number): (typeof BANDS)[number] {
 // The score at or below which we actively advise against a pick, even while doing it.
 export const DISCOURAGED_AT = 3;
 
+// Where an UNMEASURED model ranks. It keeps `score: null` in the output — we never invent
+// a measurement — but it has to sort somewhere, and "we've never tested this" must not
+// rank below "we tested this and it cannot do the job". A bring-your-own model and the
+// Draw Things entry are both unmeasured by construction (the entry names no model, or
+// names one we never ran), and sorting them under a 1/10 meant recommending Claude to
+// photograph while ignoring the working diffusion model the owner actually installed.
+//
+// 5 = the midpoint of the 'workable' band: unknown, so neither trusted nor written off.
+// It never displaces a measured 7+ (a known-good model still wins) and never beats
+// Claude's 10 on a read-it type (the doctrine holds), but it does beat a measured ≤4.
+export const UNMEASURED_PRIOR = 5;
+
 // ---- the type roster + the matrix ----
 
-export type ImageFamily = 'diffusion' | 'composed' | 'photo-library' | 'capture';
+// How the image gets made and WHERE it runs — 'diffusion' is a model on this machine,
+// 'cloud' is a model on someone else's. That distinction is the repo's whole privacy
+// story, so it lives in the family and never gets blurred into "generated".
+export type ImageFamily = 'diffusion' | 'cloud' | 'composed' | 'photo-library' | 'capture';
 
 export type ImageTypeId =
   | 'generated-photo'
@@ -281,6 +296,29 @@ export function scoredModelFor(entry: ModelConfig): ScoredModel | null {
   return IDENTITY.find((i) => i.match.test(id))?.as ?? null;
 }
 
+// Where a config entry RUNS. Every generative backend competes for the same jobs, but
+// only some of them are local — and calling the one cloud backend "Local" in a menu the
+// skill reads aloud would be a lie about the only boundary that matters here.
+export function familyFor(entry: ModelConfig): Extract<ImageFamily, 'diffusion' | 'cloud'> {
+  return entry.backend === 'gemini' ? 'cloud' : 'diffusion';
+}
+
+// The menu label. Names where the model runs, because the owner is choosing that too.
+function labelFor(name: string, family: ImageFamily): string {
+  return family === 'cloud' ? `Cloud · Google · ${name}` : `Local · ${name}`;
+}
+
+// What we say about a model we've never put through the bake-off. Honest about the gap,
+// and — for the cloud entry — about the wire.
+function unmeasuredNote(family: ImageFamily): string {
+  const base =
+    "We have no measurements on this model — it wasn't in the bake-off, so we can't score " +
+    'it. Ranked as an unknown, not as a recommendation: treat this as your call, not ours.';
+  return family === 'cloud'
+    ? `${base} It is also the one CLOUD backend: the prompt leaves this machine and goes to Google.`
+    : base;
+}
+
 export interface ModelAvailability {
   // The config key (what you pass as "model" in a generate-image payload).
   name: string;
@@ -293,6 +331,8 @@ export interface ModelAvailability {
   isDefault: boolean;
   // Which measured producer this entry IS, or null when we've never tested it.
   scoredAs: ScoredModel | null;
+  // Local model vs cloud call. Carried here so every consumer gets the same answer.
+  family: Extract<ImageFamily, 'diffusion' | 'cloud'>;
 }
 
 export async function readAvailability(
@@ -308,6 +348,7 @@ export async function readAvailability(
       weightsCached: modelWeightsCached(entry),
       isDefault: name === config.default,
       scoredAs: scoredModelFor(entry),
+      family: familyFor(entry),
     })),
   );
 }
@@ -319,10 +360,18 @@ export interface Option {
   pick: string;
   label: string;
   family: ImageFamily;
-  // 1-10, or null when this is a model we've never measured.
+  // The config entry's backend ('mflux' | 'drawthings' | 'gemini'), or null for the
+  // producers that aren't config entries (Claude, Unsplash). Drives what we tell the
+  // owner to DO when this option is the one they're missing.
+  backend: string | null;
+  // 1-10, or null when this is a model we've never measured. Null is NOT a low score —
+  // see `rank` for how it sorts.
   score: number | null;
   band: string | null;
   note: string;
+  // What we sorted on: `score` when measured, UNMEASURED_PRIOR when not. Exposed so the
+  // ordering is inspectable rather than magic — but never say it out loud as a score.
+  rank: number;
   installed: boolean;
   // True when picking this pays a one-time multi-GB weights download first.
   willDownload: boolean;
@@ -362,7 +411,7 @@ function optionsFor(type: ImageTypeMeta, inputs: RecommendInputs): Option[] {
   // otherwise an unscored BYO entry would show up as a candidate for every type.
   const diffusionApplies = 'flux2-klein' in type.scores || 'flux1-schnell' in type.scores;
 
-  // Local diffusion entries, scored by what they actually are.
+  // Generative model entries (local diffusion or the cloud one), scored by what they are.
   for (const m of inputs.models) {
     // Switched off in the config: not an option, and not something to nag about either.
     // Dropped here rather than filtered later so it can never become `bestPossible` and
@@ -371,17 +420,17 @@ function optionsFor(type: ImageTypeMeta, inputs: RecommendInputs): Option[] {
     const s = m.scoredAs ? type.scores[m.scoredAs] : undefined;
     // A model we've never measured is still offerable — we just say we don't know.
     const unknown = m.scoredAs === null;
-    if (unknown && !diffusionApplies) continue; // diffusion has no business here
+    if (unknown && !diffusionApplies) continue; // a generated image has no business here
     if (!unknown && !s) continue; // measured, but doesn't apply to this type
     out.push({
       pick: m.name,
-      label: `Local · ${m.name}`,
-      family: 'diffusion',
+      label: labelFor(m.name, m.family),
+      family: m.family,
+      backend: m.backend,
       score: s?.score ?? null,
       band: s ? band(s.score).label : null,
-      note:
-        s?.note ??
-        `We have no measurements on this model, so we can't score it — treat this as your call, not ours.`,
+      note: s?.note ?? unmeasuredNote(m.family),
+      rank: s?.score ?? UNMEASURED_PRIOR,
       installed: m.available,
       willDownload: m.weightsCached === false,
       discouraged: s ? s.score <= DISCOURAGED_AT : false,
@@ -395,9 +444,11 @@ function optionsFor(type: ImageTypeMeta, inputs: RecommendInputs): Option[] {
       pick: 'claude',
       label: 'Claude (composed)',
       family: 'composed',
+      backend: null,
       score: cs.score,
       band: band(cs.score).label,
       note: cs.note,
+      rank: cs.score,
       installed: true,
       willDownload: false,
       discouraged: cs.score <= DISCOURAGED_AT,
@@ -411,20 +462,46 @@ function optionsFor(type: ImageTypeMeta, inputs: RecommendInputs): Option[] {
       pick: 'unsplash',
       label: 'Unsplash',
       family: 'photo-library',
+      backend: null,
       score: us.score,
       band: band(us.score).label,
       note: us.note,
+      rank: us.score,
       installed: inputs.unsplashConfigured,
       willDownload: false,
       discouraged: us.score <= DISCOURAGED_AT,
     });
   }
 
-  // Best score first; unscored (null) sorts last but stays offerable. Ties break toward
-  // something already installed, so we never recommend a download over an equal option.
-  return out.sort(
-    (a, b) => (b.score ?? -1) - (a.score ?? -1) || Number(b.installed) - Number(a.installed),
-  );
+  // Best first by `rank` — measured score, or UNMEASURED_PRIOR for a model we've never
+  // tested (which is why this sorts on rank and not on `score`: an unmeasured model must
+  // not fall below one we measured as unusable). Ties break toward something already
+  // installed, so we never recommend a download over an equal option.
+  return out.sort((a, b) => b.rank - a.rank || Number(b.installed) - Number(a.installed));
+}
+
+// Why the best option isn't usable here, in the owner's terms. "Not installed" is only
+// true of a local model — the others are blocked by a key, an app, or a bill, and saying
+// "you don't have unsplash installed" sends someone looking for the wrong fix.
+// How we say an option's standing out loud. An unmeasured model has no score and must
+// never be given one — but it still has to read as a sentence.
+function scorePhrase(o: Option): string {
+  return o.score !== null ? `${o.score}/10` : 'unscored (never in our bake-off)';
+}
+
+function missingWhy(best: Option): string {
+  const s = best.score !== null ? ` (${best.score}/10 here)` : '';
+  switch (best.family) {
+    case 'photo-library':
+      return `Unsplash would be better${s}, but it needs UNSPLASH_ACCESS_KEY set.`;
+    case 'cloud':
+      return `${best.pick} would be an option${s}, but it needs GEMINI_API_KEY set (and billing on the Google project) — and note it's a cloud call.`;
+    default:
+      // A Draw Things entry is never "not installed" — the app just isn't answering.
+      return best.backend === 'drawthings'
+        ? `${best.pick} would be better${s}, but the Draw Things app isn't answering — open it and enable Advanced → API Server (HTTP, port 7860, localhost).`
+        : `You don't have ${best.pick} installed${s}.`;
+  }
 }
 
 export function recommendForType(type: ImageTypeMeta, inputs: RecommendInputs): Recommendation {
@@ -448,15 +525,20 @@ export function recommendForType(type: ImageTypeMeta, inputs: RecommendInputs): 
       ? `Unsplash needs UNSPLASH_ACCESS_KEY set before this type can be used.`
       : `Nothing that can make a ${type.label.toLowerCase()} is set up right now. Run \`make image-model\` to install a local model.`;
   } else {
-    const b = recommended.score !== null ? `${recommended.score}/10` : 'unscored';
+    const b = scorePhrase(recommended);
+    // Why the better option isn't available decides what the owner should DO about it —
+    // an API key, an app to open, and a 13 GB download are not the same errand.
     const lead = degraded
-      ? `You don't have ${bestPossible!.pick} installed (${bestPossible!.score}/10 here), so the best you have is ${recommended.pick} at ${b}.`
+      ? `${missingWhy(bestPossible!)} The best you have is ${recommended.pick} (${b}).`
       : `Use ${recommended.pick} — ${b}.`;
     const warn = recommended.discouraged
       ? ` Be aware this is a poor fit: ${recommended.note} I'll still do it if you want it.`
       : '';
+    // Only an mflux entry has weights to fetch. Unsplash and the cloud entry want keys,
+    // and Draw Things manages its own models in-app — `make image-model` is the fix for
+    // exactly one of these, and offering it for the others just wastes the owner's time.
     const fix =
-      degraded && bestPossible && bestPossible.family === 'diffusion'
+      degraded && bestPossible && bestPossible.backend === 'mflux'
         ? ` Installing it (\`make image-model MODEL=${bestPossible.pick}\`) would be a real upgrade.`
         : '';
     guidance = `${lead}${warn}${fix}`;

@@ -183,8 +183,22 @@ the failure mode first, and let them choose: "the best you have for a photo is C
 1/10; it cannot photograph and you'll get an uncanny vector figure. I'd install FLUX.2
 first, but I'll do it now if you want."
 
-**When `score` is `null`** it's a model we've never measured. Say exactly that — don't imply
-a verdict we never earned.
+**When `score` is `null`** it's a model we've never measured — a bring-your-own entry, or
+the Draw Things entry (it names whatever the app has loaded, so there's nothing to match).
+Say exactly that; don't imply a verdict we never earned, in either direction.
+
+Unmeasured is **not** a low score. It ranks at a neutral prior (`rank: 5`, the middle of
+*workable*), so it sits below a model we measured as good and above one we measured as
+unusable — which means an unmeasured local model **can be the `recommended` pick**, and
+usually is for a photo when it's the only generative model you have. Take it, and say why:
+"you have `drawthings` loaded — we've never benchmarked it, so I can't score it, but it's a
+real image model and this is a photo, which Claude scores 1/10 for." Never talk someone out
+of the model they installed just because it wasn't in our bake-off.
+
+**Check `family` before you describe a model as local.** `diffusion` runs on this machine;
+`cloud` does not — a `gemini` entry sends the prompt to Google. Say which, every time, when
+the pick is `cloud`. The `label` already carries it (`Local · x` vs `Cloud · Google · x`) —
+use the label's wording rather than inventing your own.
 
 Claude figures need **no install and no key** — the composed path is this session authoring
 HTML that Chromium rasterizes locally. A read-it type is therefore always available, even on

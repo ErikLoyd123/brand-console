@@ -56,10 +56,27 @@ files; some now have console editors too.
   has formal guidelines). The **imagery** skill reads all of it before producing anything,
   so composed graphics and screenshot annotations land in *your* palette and follow *your*
   rules, not stock ones — while the voice card stays the authority for the writing itself.
-  Optional — without it a neutral default applies. Three ways to set it up: the **Brand**
-  page in the console (color pickers, font fields, style notes, logo/reference/document
-  uploads, and a live test card), the **brand** skill (which can derive a palette from
-  your live website or a reference image), or by hand in the files;
+  The imagery skill also makes **generated images** locally — photoreal scenes or
+  illustrations, any style (a named model from `image-generation.config.json`: FLUX.2
+  [klein] via the `mflux` CLI by default, FLUX.1 [schnell], Draw Things, or your own
+  mflux-supported model — no API key, nothing leaves your machine; optional, offered once
+  during setup and deferrable for good). One backend there is *not* local: `gemini`
+  ("Nano Banana") calls Google and needs `GEMINI_API_KEY` in `.env` plus billing on the
+  Google Cloud project — it ships switched off. Any entry can carry `"enabled": false` to
+  switch it off, so a model you've ruled out stops being offered or suggested anywhere.
+  **You don't pick the model per image — the skill does**, choosing the best one for each
+  image *type* from what's actually installed, and telling you what it picked and why (the
+  card's picker can still force one). The scores behind that live in
+  `src/images/recommend.ts`; the evidence is **System → Image models** and the *Choosing an
+  image model* doc. It can also
+  composite a crisp brand card onto a generated screen so on-screen text is legible.
+  Images are supporting visuals — a chart, a photo, a diagram — never title covers.
+  Optional — with no brand set up, images are produced **unbranded**: no palette, fonts,
+  or logo is applied (composed figures fall back to a neutral rendering default, and
+  generated images take their style from the piece alone). Three ways to set it up: the
+  **Brand** page in the console (color pickers, font fields, style notes,
+  logo/reference/document uploads, and a live test card), the **brand** skill (which can
+  derive a palette from your live website or a reference image), or by hand in the files;
   `profile.example/brand/` shows the documented shape.
 - **The skills and agents** — the `.claude/skills/` and `.claude/agents/` definitions.
   There is **one skill per console page** — `spark`, `discovery`, `queue`,
@@ -105,12 +122,20 @@ are stored in the local database.
   **deletes the idea and everything downstream** (with a confirm); it's refused once anything
   shipped, since the Published archive references it.
 - **Images on a card** — each queue card has an **Images** strip: what's attached, where
-  each image came from (AI graphic / screenshot / Unsplash with photographer credit /
-  upload), an **Image with AI** button, and a hand-upload affordance (alt text required).
-  Image with AI proposes concepts for the piece and produces one — a brand-styled composed
-  graphic, an annotated screenshot of a live page (boxes, arrows, click marks, privacy
-  blurs, scroll composites), or a stock photo (needs `UNSPLASH_ACCESS_KEY` in `.env`) —
-  rows live in the database, files under `data/images/`. **Where images go:** a LinkedIn
+  each image came from (AI image / AI graphic / screenshot / Unsplash with photographer
+  credit / upload), an **Image with AI** button, and a hand-upload affordance (alt text
+  required). Image with AI proposes the image types that fit the piece and produces one — a
+  locally generated image in any style, photoreal or illustrated (the default model from
+  `image-generation.config.json` via `mflux`, no key; the skill proposes candidate prompts
+  from your piece), a bare composed graphic
+  (diagram / data figure / comparison table), an annotated screenshot of a live page (boxes,
+  arrows, click marks, privacy blurs, scroll composites), or a stock photo (needs
+  `UNSPLASH_ACCESS_KEY` in `.env`) —
+  rows live in the database, files under `data/images/`. Generation runs take minutes, so
+  they run in the background and **candidates appear live on the strip** ("not attached
+  yet") while the session works — nothing attaches until you pick, in the session or right
+  on the strip: each candidate has **Attach** (alt text required) and discard, plus a
+  discard-all for leftovers from an ended session. **Where images go:** a LinkedIn
   image sits below the post text — the publish modal offers the card's images as picks,
   and picking several makes a multi-photo post; a web article places images **inline in
   the markdown** as `![alt](image:<id>)` references (the AI inserts them where you agree,
@@ -174,6 +199,13 @@ run right from the Voice page (or any terminal):
      unanswered question instead of starting over.
    - **Stage B — the knob-walk.** Plain-language questions that fill `identity.yaml`:
      pillars, feeds, products, CTA policy, and your **platforms + tones**.
+   - **Stage C — optional: local image generation.** One question at the end: set up the
+     local image model — tools plus, if you want, the model weights downloaded right then
+     so your first image is fast (see the *Local image generation* doc) — skip for now, or
+     **"don't ask again"** — a defer that sticks, so you're never nagged. Existing installs
+     get the same one-time offer on their next setup run. A first pass also leaves you one
+     pointer to the optional **brand look** (see *Your brand look*) — pointed at, never
+     walked, so setup stays short.
    You can run either stage alone to update, any time. It never wipes what's there.
 2. **The onboarding gate.** Every content skill checks your profile before it runs. If
    something it needs is missing, it says so plainly and **offers to run `setup`** for the
@@ -213,7 +245,10 @@ the console is where you then run the pipeline day to day.**
 | Queue (ideas + full content) | — | ✅ the review phase: seed, points, content editor, AI write/revise, Publish | ✅ | Console-owned; every idea carries its full written piece (post fields, or a web article's markdown body) on the card |
 | Article SEO fields | — | ✅ edit (on the web idea's queue card) | ✅ | Target keyword / search intent captured at intake; meta / slug filled at write time; all feed the export frontmatter |
 | Web publish (= export) | — | ✅ Publish on the queue card | ✅ | Writes `data/exports/<profile>/<slug>.md` (gitignored) and moves the piece to Published; the file is the shipped artifact — attached images are bundled beside it |
-| Images on a card | — | ✅ Images strip (view / upload / delete) + LinkedIn publish pick | ✅ (`images`) | Produced by the `imagery` skill (composed graphic / annotated screenshot / Unsplash) or uploaded; files in `data/images/`; alt text required |
+| Images on a card | — | ✅ Images strip (view / upload / delete) + LinkedIn publish pick | ✅ (`images`) | Produced by the `imagery` skill (generated image / composed graphic / annotated screenshot / Unsplash) or uploaded; files in `data/images/`; alt text required; unattached generation candidates show live on the strip during a session and can be attached or discarded right there |
+| Local image generation | ✅ (`image-generation.config.json`, gitignored) | 👁 status on Connections (+ setup steps) | ✅ defer flag (`app_settings`) | Optional, Apple Silicon; offered once by `setup` (install / skip / don't-ask-again); `make image-model` asks which models and pre-downloads their weights, installing the tools itself if needed (`make image-gen` installs just the tools; skip the download and the first image fetches the weights as a failsafe); without it the generated type is left off the menu. Any entry can carry `"enabled": false` to stop it being offered at all |
+| Which model makes an image | ✅ scores (code: `src/images/recommend.ts`) | ✅ override on the card's picker (default "Best for the job") + 👁 System → Image models | — | The skill picks per image *type* from what's installed and says what it chose and why; the picker's Force options override it. Scores come from the bake-off — see the *Choosing an image model* doc |
+| Gemini / "Nano Banana" images | ✅ (`image-generation.config.json` entry + `GEMINI_API_KEY` in `.env`) | 👁 appears in the picker only when enabled + keyed | — | The one **cloud** image backend — the prompt goes to Google. Ships `"enabled": false`; needs billing on the Google Cloud project (the API's free tier is text-only, so an unbilled key returns 429) |
 | Brand look (imagery) | ✅ (`profiles/<slug>/brand/`) | ✅ Brand page (form + uploads + live preview / AI `brand` skill) | — | `brand.yaml` colors/fonts/logo/style notes + `refs/` example images + optional `.md`/`.html` brand docs (brand book, tone guide); read by `imagery`; optional (neutral default) |
 | Profiles / active profile | ✅ (`profiles/<slug>/`, via `setup`) | ✅ switcher | ✅ setting | Disk holds each profile; the sidebar switcher sets the active one and re-scopes the console |
 | Scheduled / published | — | ✅ | ✅ | Console-owned |

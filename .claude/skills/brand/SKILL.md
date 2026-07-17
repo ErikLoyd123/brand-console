@@ -34,16 +34,34 @@ npx tsx -e "import('./src/profile/loader.js').then(async (l) => { const dir = l.
 ```
 
 If `brand.yaml` exists, also read the raw file (comments and all) so an edit preserves
-the owner's own annotations. View every ref image and read every brand doc listed.
+the owner's own annotations. **View every ref image and read every brand doc listed —
+before asking anything.** The orientation you open with must name what you found: how many
+documents, refs, and logos, and what the documents actually contain (a design system with
+token values? a tone guide? hex codes or pointers to a tokens file?). Material the owner
+already attached is never discovered mid-conversation — it shapes the conversation from
+the first line.
 
 ## 2. Ask what they want
 
-One question: set up from scratch, refine something specific (a color, the notes, the
-fonts), derive the palette from a website or image, or just tour where things go. If the
-owner opened with a specific ask, skip the menu and do that.
+One question — **and its options are built from what exists, not from a fixed script.**
+When brand documents or refs are already attached, the first option (marked recommended)
+is to **derive the look from that attached material**, naming the files; website capture,
+reference-image extraction, and manual entry come after it. Offering a menu that ignores
+material the owner attached is the failure mode — they gave you the source of truth; use
+it. Other standing options: refine something specific (a color, the notes, the fonts), or
+just tour where things go. If the owner opened with a specific ask, skip the menu and do
+that.
 
 ## 3. Building the pieces
 
+- **Derive from the attached brand documents** — when `brand/` already holds documents
+  (a design system, brand book, tone guide), they are the source of truth; the owner
+  attached them so they wouldn't have to answer questions the documents answer. Read them
+  in full, pull the palette/fonts/rules straight out (quote real hex where the doc carries
+  it; if it names tokens and points at a code file for values, say so and ask for that
+  pointer rather than guessing), map to the five slots with judgment, distill the doc's
+  rules into `style_notes`, and confirm the mapping — citing which document each value
+  came from — before writing.
 - **Import from an existing brand source** — when the owner points at where their brand
   already lives (another repo, a brand-book folder, a design-system doc, a site
   codebase), go get it rather than making them ferry files:

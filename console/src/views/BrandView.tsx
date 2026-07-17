@@ -28,6 +28,17 @@ const COLOR_SLOTS: { key: keyof BrandState['colors']; label: string; hint: strin
   { key: 'muted', label: 'Muted', hint: 'De-emphasized text — attributions, labels' },
 ]
 
+// Shown on the surfaces that render fallback values when this profile has no saved
+// brand — so the neutral default is never mistaken for a look the owner set.
+function DefaultBadge() {
+  return (
+    <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-surface-nested px-2.5 py-1 text-[11px] font-medium text-text-subtle">
+      <span className="size-1.5 rounded-full bg-text-subtle/60" />
+      Neutral default · not saved
+    </span>
+  )
+}
+
 // One tile in the logo grid; the card default gets the selected treatment.
 function cnLogoCard(isDefault: boolean): string {
   return [
@@ -72,6 +83,10 @@ export function BrandView() {
 
   // Bumped after every write so the preview card re-renders in the new look.
   const [previewKey, setPreviewKey] = useState(0)
+  // With no brand on disk the page shows a true empty state — no pre-filled look
+  // that reads as configured. This opts into the by-hand editor, whose fields are
+  // seeded from the neutral defaults purely as a starting point.
+  const [editByHand, setEditByHand] = useState(false)
 
   const [viewingDoc, setViewingDoc] = useState<{ name: string; content: string } | null>(null)
   const [confirmingDelete, setConfirmingDelete] = useState<string | null>(null)
@@ -196,6 +211,13 @@ export function BrandView() {
     )
   }
 
+  // Three states, two flags. `noBrandAtAll`: nothing on disk — full empty state.
+  // `lookUnset`: no brand.yaml (even if logos/refs/docs are uploaded) — the look
+  // form/preview stay hidden behind an explicit opt-in, and every populated value
+  // is labeled as a neutral starting point, never a saved look.
+  const noBrandAtAll = brand ? !brand.exists : false
+  const lookUnset = brand ? !brand.lookSaved : false
+
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
@@ -239,33 +261,79 @@ export function BrandView() {
         )}
       />
 
-      {brand && !brand.exists && (
-        <p className="rounded-lg bg-surface-nested px-4 py-3 text-sm text-text-muted">
-          No brand saved yet — everything below shows the neutral default. Save the look, or
-          upload a logo, reference, or document, and{' '}
-          <code className="font-mono text-xs">{brand.brandDir}</code> is created for you.
+      {/* No look saved and no editor opened: an explicit no-look state. Nothing
+          here may read as a configured look — no filled palette, no branded
+          preview. Two variants: nothing on disk at all, or material uploaded
+          (logos/refs/docs) with the look itself still unset. The imagery pipeline
+          mirrors this (loadBrand's `lookSaved: false`): the fallback palette never
+          styles a generated image. */}
+      {lookUnset && !editByHand && brand && (
+        <div className="flex flex-col items-start gap-3 rounded-lg bg-surface p-6 shadow-sm">
+          <span className="font-mono text-[11px] font-medium uppercase tracking-wide text-text-subtle">
+            {noBrandAtAll ? 'No brand set up' : 'No look saved'}
+          </span>
+          <p className="text-sm text-text-muted">
+            {noBrandAtAll ? (
+              <>
+                This profile has no brand — and that's a valid state: images are produced
+                unbranded (no palette, fonts, or logo applied) until you create one. Set it
+                up with AI above, upload a logo / reference / document below, or start by
+                hand — saving creates{' '}
+                <code className="font-mono text-xs">{brand.brandDir}</code> for you.
+              </>
+            ) : (
+              <>
+                Your brand material is here (the logos, references, and documents below),
+                but the look itself — colors, fonts, style notes — isn't saved yet, so
+                composed images render with a neutral fallback palette. Run{' '}
+                <span className="font-medium text-text">Set up brand with AI</span> above
+                and it derives the look from that material, or start by hand.
+              </>
+            )}
+          </p>
+          <Button size="sm" variant="outline" onClick={() => setEditByHand(true)}>
+            Start by hand
+          </Button>
+        </div>
+      )}
+
+      {lookUnset && editByHand && (
+        <p className="rounded-lg border-l-2 border-primary/40 bg-surface-nested px-4 py-3 text-sm text-text-muted">
+          <span className="font-medium text-text">Nothing saved yet.</span> The fields below
+          are seeded with neutral starting values, not a brand — adjust and{' '}
+          <span className="font-medium">Save as this profile's brand</span> to create it.
         </p>
       )}
 
       {/* Live test card — a real render from the saved brand, so edits are judged on
-          pixels, not swatches. */}
-      <section className="flex flex-col gap-3">
-        <SectionHeading
-          title="Preview"
-          hint="A test card rendered live from the saved brand — exactly what composed graphics will look like. Save to refresh."
-        />
-        <img
-          key={previewKey}
-          src={`/api/brand/preview.png?v=${previewKey}`}
-          alt="Test card rendered in the saved brand look"
-          className="w-full max-w-xl rounded-lg border border-border shadow-sm"
-        />
-      </section>
+          pixels, not swatches. Hidden entirely while no brand exists and the by-hand
+          editor is closed: an empty state must not exhibit a look. */}
+      {(!lookUnset || editByHand) && (
+        <section className="flex flex-col gap-3">
+          <SectionHeading
+            title="Preview"
+            hint={
+              lookUnset
+                ? 'A test card in the neutral starting look — nothing is saved yet. Save the look to make it this profile’s.'
+                : 'A test card rendered live from the saved brand — exactly what composed graphics will look like. Save to refresh.'
+            }
+            action={lookUnset ? <DefaultBadge /> : undefined}
+          />
+          <img
+            key={previewKey}
+            src={`/api/brand/preview.png?v=${previewKey}`}
+            alt="Test card rendered in the saved brand look"
+            className="w-full max-w-xl rounded-lg border border-border shadow-sm"
+          />
+        </section>
+      )}
 
+      {(!lookUnset || editByHand) && (
       <section className="flex flex-col gap-3">
         <SectionHeading
           title="The look"
           hint="Saved to brand.yaml in the profile's brand/ folder. Colors are hex; fonts are CSS font-family stacks rendered with system fonts."
+          action={lookUnset ? <DefaultBadge /> : undefined}
         />
         <div className="flex flex-col gap-4 rounded-lg bg-surface p-5 shadow-sm">
           {colors && (
@@ -334,7 +402,8 @@ export function BrandView() {
           </label>
           <div className="flex items-center gap-3">
             <Button size="sm" disabled={busy} onClick={saveLook}>
-              <Check className="size-3.5" /> {busy ? 'Saving…' : 'Save look'}
+              <Check className="size-3.5" />{' '}
+              {busy ? 'Saving…' : lookUnset ? "Save as this profile’s brand" : 'Save look'}
             </Button>
             {note && (
               <span className="inline-flex items-center gap-1 text-xs text-success-fg">
@@ -344,6 +413,7 @@ export function BrandView() {
           </div>
         </div>
       </section>
+      )}
 
       <section className="flex flex-col gap-3">
         <SectionHeading

@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
-import { ChevronDown, Search, Terminal as TerminalIcon, X } from 'lucide-react'
+import { ChevronDown, Copy, ImageIcon, Search, Terminal as TerminalIcon, X } from 'lucide-react'
 import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import '@xterm/xterm/css/xterm.css'
 import { api, type Skill } from '../lib/api'
+import { isAcceptedImage, prepareTerminalImage } from '../lib/terminal-images'
+import { readAll } from '../lib/terminal-buffer'
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -95,6 +97,22 @@ async function copyToClipboard(text: string, onFallback: (m: string) => void) {
   }
 }
 
+// Copy text lifted out of the terminal (the header's copy buttons). Separate from
+// copyToClipboard above because none of this is about the backend being offline —
+// it needs its own toasts.
+async function copyTerminalText(text: string, label: string, onFallback: (m: string) => void) {
+  if (!text) {
+    onFallback(`Nothing to copy — ${label} is empty.`)
+    return
+  }
+  try {
+    await navigator.clipboard.writeText(text)
+    onFallback(`Copied ${label} to the clipboard.`)
+  } catch {
+    onFallback("Couldn't copy — the browser blocked clipboard access.")
+  }
+}
+
 export function TerminalDrawer({ open, onClose, onFallback }: TerminalDrawerProps) {
   const mountRef = useRef<HTMLDivElement>(null)
   const termRef = useRef<Terminal | null>(null)
@@ -104,6 +122,11 @@ export function TerminalDrawer({ open, onClose, onFallback }: TerminalDrawerProp
   const [skills, setSkills] = useState<Skill[] | null>(null)
   const [skillsError, setSkillsError] = useState(false)
   const [termError, setTermError] = useState<string | null>(null)
+
+  // Images pasted/dropped into this session. Display-only: the path is already in the
+  // prompt and is the user's to edit, so dismissing a chip retracts nothing.
+  const [attachments, setAttachments] = useState<{ id: string; name: string; url: string }[]>([])
+  const [dragging, setDragging] = useState(false)
 
   // Skills dropdown is controlled so we can focus the search box on open and
   // clear the query on close. `query` filters the list by name/invocation.
@@ -289,6 +312,100 @@ export function TerminalDrawer({ open, onClose, onFallback }: TerminalDrawerProp
     }
   }
 
+  // The window closed: the pty is gone, so the chips describe nothing. Revoke the object
+  // URLs so the blobs can be collected. (Revoking twice is a no-op, so React's
+  // StrictMode double-invoking the updater is harmless.)
+  useEffect(() => {
+    if (open) return
+    setAttachments((prev) => {
+      prev.forEach((a) => URL.revokeObjectURL(a.url))
+      return []
+    })
+  }, [open])
+
+  // Paste and drop both land here.
+  //
+  // Note this reconstructs what a native terminal gets for free: dragging a file into
+  // iTerm inserts its real path and claude reads that path off disk. A browser hands us
+  // bytes and a bare filename, never a path — so we write a copy server-side and type
+  // *that* path in. For a screenshot nothing is lost (there's no original that matters).
+  // For repo files it would be a downgrade, which is why they're rejected below: typing
+  // a path or using @file already reaches the live file.
+  //
+  // Invariant: either a chip appears AND the path is in the prompt, or neither happens.
+  async function attachImage(file: File | Blob, name: string) {
+    if (!isAcceptedImage(file.type)) {
+      onFallback('Only images can be dropped here — type the path, or use @file for repo files.')
+      return
+    }
+    if (wsRef.current?.readyState !== WebSocket.OPEN) {
+      onFallback("Terminal isn't connected — nothing was attached.")
+      return
+    }
+    try {
+      const { dataBase64, mimeType } = await prepareTerminalImage(file)
+      const { path } = await api.uploadTerminalImage(dataBase64, mimeType)
+      // The upload was in flight for a while; the session may have ended meanwhile.
+      const ws = wsRef.current
+      if (!ws || ws.readyState !== WebSocket.OPEN) {
+        onFallback('Terminal closed before the image landed — nothing was attached.')
+        return
+      }
+      setAttachments((prev) => [...prev, { id: path, name, url: URL.createObjectURL(file) }])
+      // Trailing space so whatever gets typed next doesn't run into the path.
+      ws.send(path + ' ')
+      termRef.current?.focus()
+    } catch (e) {
+      // Never retry un-downscaled as a fallback — that reintroduces the size cliff
+      // the downscale exists to avoid.
+      onFallback(`Couldn't attach the image — ${(e as Error).message}`)
+    }
+  }
+
+  function onPaste(e: React.ClipboardEvent) {
+    const item = Array.from(e.clipboardData.items).find(
+      (i) => i.kind === 'file' && isAcceptedImage(i.type),
+    )
+    // Text paste: leave it entirely to xterm.
+    if (!item) return
+    const file = item.getAsFile()
+    if (!file) return
+    e.preventDefault()
+    void attachImage(file, file.name || 'pasted-image.png')
+  }
+
+  function onDrop(e: React.DragEvent) {
+    e.preventDefault()
+    setDragging(false)
+    const file = e.dataTransfer.files[0]
+    if (file) void attachImage(file, file.name)
+  }
+
+  function onDragOver(e: React.DragEvent) {
+    // Without preventDefault the browser navigates away to the dropped file.
+    e.preventDefault()
+    setDragging(true)
+  }
+
+  function onDragLeave(e: React.DragEvent) {
+    // Ignore crossings between the window's own children; only a real exit clears it.
+    if (e.currentTarget.contains(e.relatedTarget as Node | null)) return
+    setDragging(false)
+  }
+
+  function dismissAttachment(id: string) {
+    setAttachments((prev) => {
+      prev.filter((a) => a.id === id).forEach((a) => URL.revokeObjectURL(a.url))
+      return prev.filter((a) => a.id !== id)
+    })
+  }
+
+  function copyEverything() {
+    const term = termRef.current
+    if (!term) return
+    void copyTerminalText(readAll(term), 'the terminal', onFallback)
+  }
+
   if (!open) return null
 
   // Filter the skill list by name/invocation for the dropdown search.
@@ -302,7 +419,17 @@ export function TerminalDrawer({ open, onClose, onFallback }: TerminalDrawerProp
     // the floating window stays usable; only the window itself catches events.
     <div className="pointer-events-none fixed inset-0 z-50">
       <section
-        className="pointer-events-auto absolute flex flex-col overflow-hidden rounded-xl border border-border bg-sidebar text-sidebar-fg shadow-lg animate-fade-in"
+        // Capture phase, not bubble: xterm's own paste listener on its helper textarea
+        // calls stopPropagation(), so a bubbling handler here would never fire. Capture
+        // runs on the way down, before xterm sees the event. Text pastes fall straight
+        // through to xterm untouched.
+        onPasteCapture={onPaste}
+        onDragOver={onDragOver}
+        onDragLeave={onDragLeave}
+        onDrop={onDrop}
+        className={`pointer-events-auto absolute flex flex-col overflow-hidden rounded-xl border bg-sidebar text-sidebar-fg shadow-lg animate-fade-in ${
+          dragging ? 'border-primary ring-2 ring-primary/40' : 'border-border'
+        }`}
         style={{ left: geom.x, top: geom.y, width: geom.width, height: geom.height }}
       >
         {/* Resize handles line the edges and corners of the window */}
@@ -403,19 +530,80 @@ export function TerminalDrawer({ open, onClose, onFallback }: TerminalDrawerProp
             </DropdownMenuContent>
           </DropdownMenu>
 
-          <button
-            type="button"
-            onClick={onClose}
-            onMouseDown={(e) => e.stopPropagation()}
-            className="ml-auto rounded-md p-1.5 text-sidebar-muted hover:bg-sidebar-hover hover:text-sidebar-fg"
-            aria-label="Close terminal"
-          >
-            <X className="size-4" />
-          </button>
+          {/* Copy affordances — the terminal renders text you can't otherwise lift out
+              without hand-selecting it. */}
+          <div className="ml-auto flex items-center gap-1">
+            {/* Only a whole-session copy. A 'last reply' button was tried and removed:
+                Claude Code's input box is anchored, so the cursor sits in the same place
+                before and after a reply and never advances past it — there's no
+                cursor-derived range that spans the response. Recovering one means
+                anchoring on Claude's own output markers, which silently breaks whenever
+                it reformats. Drag-select + Cmd+C covers picking out one block. */}
+            <button
+              type="button"
+              onClick={copyEverything}
+              onMouseDown={(e) => e.stopPropagation()}
+              title="Copy the whole session, scrollback included"
+              className="inline-flex items-center gap-1.5 rounded-md border border-sidebar-border px-2.5 py-1 font-mono text-[11px] text-sidebar-muted hover:bg-sidebar-hover hover:text-sidebar-fg"
+            >
+              <Copy className="size-3" />
+              Copy all
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              onMouseDown={(e) => e.stopPropagation()}
+              className="rounded-md p-1.5 text-sidebar-muted hover:bg-sidebar-hover hover:text-sidebar-fg"
+              aria-label="Close terminal"
+            >
+              <X className="size-4" />
+            </button>
+          </div>
         </header>
+
+        {/* Attached images. The path is already in the prompt — these chips exist so you
+            can see what you actually attached, which the bare path can't tell you. */}
+        {attachments.length > 0 && (
+          <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-sidebar-border px-3 py-2">
+            <span className="font-mono text-[10px] uppercase tracking-wide text-sidebar-muted">
+              Attached
+            </span>
+            {attachments.map((a) => (
+              <span
+                key={a.id}
+                className="inline-flex items-center gap-1.5 rounded-md border border-sidebar-border bg-sidebar-hover py-1 pl-1 pr-1.5"
+              >
+                <img src={a.url} alt="" className="size-6 rounded object-cover" />
+                <span className="max-w-[140px] truncate font-mono text-[11px] text-sidebar-fg">
+                  {a.name}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => dismissAttachment(a.id)}
+                  className="rounded p-0.5 text-sidebar-muted hover:text-sidebar-fg"
+                  aria-label={`Dismiss ${a.name}`}
+                  title="Dismiss this chip (the path stays in the prompt — edit it there)"
+                >
+                  <X className="size-3" />
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
         {/* xterm mount point; the error overlay covers it if the pty couldn't start */}
         <div className="relative min-h-0 flex-1">
           <div ref={mountRef} className="absolute inset-0 px-3 py-2" />
+          {dragging && (
+            // pointer-events-none so the drop still reaches the section's handler.
+            <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-1.5 bg-sidebar/90 text-center">
+              <ImageIcon className="size-5 text-sidebar-muted" />
+              <p className="text-sm text-sidebar-fg">Drop an image to attach it</p>
+              <p className="max-w-xs text-[11px] leading-snug text-sidebar-muted">
+                PNG, JPEG, or WebP. For files already in the repo, type the path or use{' '}
+                <code className="font-mono">@file</code> instead.
+              </p>
+            </div>
+          )}
           {termError && (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-sidebar px-6 text-center">
               <p className="text-sm text-warning-fg">Terminal couldn't start</p>

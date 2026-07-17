@@ -10,12 +10,23 @@ import { dirname, join, resolve } from 'node:path';
 import { eq } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 import { db } from '../db/client';
-import { ideaQueueItems, images } from '../db/schema';
+import { articles, ideaQueueItems, images } from '../db/schema';
 import { REPO_ROOT } from '../profile/loader';
 
 export const IMAGES_ROOT = resolve(REPO_ROOT, 'data', 'images');
 
-export type ImageSource = 'composed' | 'screenshot' | 'unsplash' | 'upload';
+// Transient candidate previews the imagery skill writes while it generates —
+// data/images/previews/<ideaId>/<name>.png. No DB row: the console's Images strip
+// lists the folder live during a session so the owner watches candidates arrive,
+// and the skill removes the folder once a pick is attached. (No collision with the
+// per-profile attachment folders: profile ids are nanoids, never "previews".)
+export const PREVIEWS_ROOT = resolve(IMAGES_ROOT, 'previews');
+
+export function previewDirForIdea(ideaId: string): string {
+  return resolve(PREVIEWS_ROOT, ideaId);
+}
+
+export type ImageSource = 'composed' | 'screenshot' | 'unsplash' | 'upload' | 'generated';
 
 export type ImageRow = typeof images.$inferSelect;
 
@@ -98,6 +109,16 @@ export function deleteImage(id: string): boolean {
   const row = getImage(id);
   if (!row) return false;
   db.delete(images).where(eq(images.id, id)).run();
+  // A web article may reference the image inline as ![alt](image:<id>). A deleted
+  // image must not leave that ref dangling — readers, later imagery sessions, and
+  // the export rewrite would all hit a broken pointer. Scrub it from the body.
+  const article = db.select().from(articles).where(eq(articles.ideaId, row.ideaId)).get();
+  if (article?.body?.includes(`image:${id}`)) {
+    const scrubbed = article.body
+      .replace(new RegExp(`!\\[[^\\]]*\\]\\(image:${id}\\)`, 'g'), '')
+      .replace(/\n{3,}/g, '\n\n');
+    db.update(articles).set({ body: scrubbed }).where(eq(articles.id, article.id)).run();
+  }
   const abs = imageAbsPath(row.path);
   if (existsSync(abs)) {
     try {

@@ -15,6 +15,7 @@ import {
   BookOpen,
   Palette,
   Plug2,
+  Images,
   Code,
   BookText,
   TriangleAlert,
@@ -35,6 +36,7 @@ import { TagsView } from './views/TagsView'
 import { DatabaseView } from './views/DatabaseView'
 import { ConnectionsView } from './views/ConnectionsView'
 import { ApiReferenceView } from './views/ApiReferenceView'
+import { ImageModelsView } from './views/ImageModelsView'
 import { VoiceView } from './views/VoiceView'
 import { BrandView } from './views/BrandView'
 import { DocsView } from './views/DocsView'
@@ -58,6 +60,7 @@ const NAV_KEYS = [
   'feeds',
   'spark',
   'connections',
+  'imagemodels',
   'database',
   'apiref',
   'docs',
@@ -225,6 +228,7 @@ export default function App() {
         label: 'System',
         items: [
           { key: 'connections', label: 'Connections', icon: <Plug2 /> },
+          { key: 'imagemodels', label: 'Image models', icon: <Images /> },
           { key: 'database', label: 'Database', icon: <Database /> },
           { key: 'apiref', label: 'API Reference', icon: <Code /> },
         ],
@@ -276,6 +280,7 @@ export default function App() {
       {active === 'database' && <DatabaseView />}
       {active === 'connections' && <ConnectionsView onNavigate={navigate} />}
       {active === 'apiref' && <ApiReferenceView />}
+      {active === 'imagemodels' && <ImageModelsView />}
       {active === 'voice' && <VoiceView />}
       {active === 'brand' && <BrandView />}
       {active === 'docs' && <DocsView />}

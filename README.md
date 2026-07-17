@@ -72,6 +72,49 @@ non-standard `claude` path (see `.env.example`).
 For the full map of what lives where and how the pieces fit, open **Docs** in the
 console — start with *How it fits together*.
 
+### Optional: local image generation (Apple Silicon)
+
+The imagery skill can generate **images locally** — photoreal or illustrated, any style,
+no API key, nothing leaves your machine. Models are **named entries** in gitignored
+`image-generation.config.json`: FLUX.2 [klein] by default (Apache-2.0, ~13 GB), with
+FLUX.1 [schnell] (~24 GB), the Draw Things app, and **bring-your-own** — anything mflux
+can run — as further entries. (One optional entry is *not* local: the `gemini` backend
+sends prompts to Google, needs a billed `GEMINI_API_KEY`, and ships switched off.) The `setup` skill offers this once during onboarding
+(install / skip / don't-ask-again) and walks these same steps in-app; by hand it's:
+
+```bash
+# One command: asks which models you want (Enter = the default, or pick several,
+# or "all"), installs mflux + the Hugging Face CLI first if they're missing
+# (needs uv — https://docs.astral.sh/uv/), then downloads the chosen weights
+# (one time; ~13 GB FLUX.2 [klein], ~24 GB FLUX.1 [schnell]) with live progress,
+# ending each with a tiny test render that proves the install works.
+make image-model
+
+# Non-interactive, by name (or MODEL=all for every entry):
+make image-model MODEL=flux2-klein
+make image-model MODEL="flux2-klein flux1-schnell"
+```
+
+(`make image-gen` still exists to install/upgrade just the tools without downloading
+anything.) Skipping the download is safe — it's just slower later: the first generated
+image downloads the weights itself before it can render (the same one-time fetch, as a
+failsafe).
+
+**Hugging Face account:** the shipped FLUX defaults are Apache-2.0 and download with
+**no account or token**. Only a **gated** model (its Hugging Face page shows "Agree and
+access repository") needs one: create a free account, accept the license on the model's
+page, create a **Read** token at <https://huggingface.co/settings/tokens>, then
+`hf auth login` (the token lands in `~/.cache/huggingface`, outside the repo).
+
+**Picking and bringing models:** copy `image-generation.config.example.json` to
+`image-generation.config.json` and edit — switch the `default`, or add an entry for any
+model mflux can run (one CLI per family: `mflux-generate`, `mflux-generate-flux2`,
+`mflux-generate-qwen`, …) or whatever Draw Things has loaded. The Connections page shows
+the whole roster with per-model availability. Full walkthrough — including the
+gated-repo and Hugging Face "Xet" download gotchas — is under **Local image generation**
+in the console Docs. Skip all of this and the imagery skill still offers diagrams, data
+figures, screenshots, and Unsplash.
+
 ## Running it
 
 ```bash
@@ -110,10 +153,11 @@ the console.
 
 Work happens in the console, and each pipeline page has its own AI assistant: Spark
 shapes a raw one-liner into a seeded queue item, Discovery works a found article into a
-queued take, Queue develops an idea's points and drafts the post, Drafts revises an
-existing draft, and Articles moves long-form pieces forward. The assistants are the
-repo's skills (`.claude/skills/`), surfaced in-app — the same commands also work in any
-Claude Code session in this repo, or in the embedded terminal.
+queued take, and Queue is where every idea carries its full written piece — the assistant
+develops the points, drafts the post or long-form web article, revises it, and can put an
+image on the card (the `imagery` skill); Publish on the card ships it. The assistants are
+the repo's skills (`.claude/skills/`), surfaced in-app — the same commands also work in
+any Claude Code session in this repo, or in the embedded terminal.
 
 Every draft is routed through the `content-reviewer` gate, which runs
 `src/review/voice-checks.ts` against the draft and applies judgment to the softer rules.
@@ -123,10 +167,10 @@ It never rewrites silently — it passes, or it returns a specific list of fixes
 
 | Path | What it is |
 |------|-----------|
-| `.claude/skills/` | The content workflow, one skill per console surface: `spark`, `discovery`, `queue`, `drafts`, `articles`, `feeds`, `pillars`, `register`, `tags`, `voice` — plus `setup` and the shared `voice-card` and doctrine references |
+| `.claude/skills/` | The content workflow, one skill per console surface: `spark`, `discovery`, `queue`, `feeds`, `pillars`, `register`, `tags`, `voice`, `brand`, `imagery` — plus `setup` and the shared references (`voice-card`, the doctrine, and the `*-procedure.md` files the router skills dispatch to) |
 | `.claude/agents/` | `discover` (fills the idea queue) and `content-reviewer` (the voice gate) |
 | `src/` | Local Express API (`src/server`), SQLite/Drizzle store (`src/db`), ingest (`src/ingest`), profile loader (`src/profile`), core scoring/pillars/tags (`src/core`), voice checks (`src/review`) |
-| `console/` | Local React 19 + Vite + Tailwind console. 18 views across Pipeline (Overview, Discovery, Queue, Drafts, Articles, Published), Insights (Calendar, Pillars, Intent, Register, Tags), Inputs (Voice, Feeds, Spark), System (Connections, Database, API Reference), and Docs — all backed by the live API (no mock data) |
+| `console/` | Local React 19 + Vite + Tailwind console. 17 views across Pipeline (Overview, Discovery, Queue, Published), Insights (Calendar, Pillars, Intent, Register, Tags), Inputs (Voice, Brand, Feeds, Spark), System (Connections, Database, API Reference), and Docs — all backed by the live API (no mock data) |
 | `profiles/` | **Your** profiles, one folder per slug (voice card, `identity.yaml`, interview). Gitignored — never committed |
 | `profile.example/` | A fictional persona (Jordan Rivera) showing the profile shape. Tracked |
 | `docs/` | Cadence design docs and brand docs (gitignored where they carry PII) |

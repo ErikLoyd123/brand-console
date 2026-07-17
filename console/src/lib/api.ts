@@ -446,10 +446,11 @@ export interface ArticlePatch {
 }
 
 // An image attached to a queue idea (the images table). Produced by the imagery
-// skill (composed graphic / annotated screenshot / Unsplash pick) or uploaded here;
+// skill (generated image / composed graphic / annotated screenshot / Unsplash pick)
+// or uploaded here;
 // the file itself lives under gitignored data/images/ and is served by
 // GET /api/images/:id/file. `source` + `params` are the provenance the card shows.
-export type ImageSource = 'composed' | 'screenshot' | 'unsplash' | 'upload'
+export type ImageSource = 'composed' | 'screenshot' | 'unsplash' | 'upload' | 'generated'
 export interface ImageAttachment {
   id: string
   ideaId: string
@@ -467,13 +468,29 @@ export function imageFileUrl(id: string): string {
   return `/api/images/${id}/file`
 }
 
+// A transient candidate the imagery skill has generated but not attached yet — a
+// file under data/images/previews/<ideaId>/, no DB row. The Images strip polls
+// these while an imagery session runs so candidates appear as they finish; the
+// skill removes them once a pick is attached.
+export interface ImagePreview {
+  name: string
+  mtimeMs: number
+}
+
+export function imagePreviewUrl(ideaId: string, name: string): string {
+  return `/api/images/previews/${encodeURIComponent(ideaId)}/${encodeURIComponent(name)}`
+}
+
 // The active profile's brand look (GET /api/brand) — the gitignored
 // profiles/<slug>/brand/ folder the imagery pipeline reads before producing any
 // image. Edited on the Brand page (or by the `brand` skill / by hand).
 export interface BrandState {
   brandDir: string
-  // Whether brand.yaml exists yet — false means everything shown is the neutral default.
+  // Whether ANY brand material exists (brand.yaml or uploaded logos/refs/docs).
   exists: boolean
+  // Whether a look is saved (brand.yaml on disk) — false means the colors/fonts
+  // shown are the neutral fallback, even if material is uploaded.
+  lookSaved: boolean
   colors: { primary: string; accent: string; background: string; foreground: string; muted: string }
   fonts: { heading: string; body: string }
   // The card default (brand/-relative path, one of `logos`), or null for no logo.
@@ -490,12 +507,59 @@ export function brandAssetUrl(relPath: string): string {
   return `/api/brand/asset?path=${encodeURIComponent(relPath)}`
 }
 
+// Local image generation status. `backend`/`configured` describe the config's
+// DEFAULT model (what Image with AI uses); `models` is the whole named roster from
+// image-generation.config.json with per-model availability (mflux command installed
+// / Draw Things API reachable). Generation is local and key-free, so this is just
+// capability status, not a secret.
+export interface GeneratorModelStatus {
+  name: string
+  backend: 'mflux' | 'drawthings' | 'gemini' | string
+  model: string | null
+  available: boolean
+  // Owner intent, distinct from `available`: false = switched off in the config
+  // (`"enabled": false`), so don't offer it at all. Absent = an older API without
+  // the field, which means on.
+  enabled?: boolean
+  // Whether the model's weights are already downloaded. false = usable but the
+  // first generation pays a one-time multi-GB download; null = the backend
+  // manages its own models (Draw Things) or has none (Gemini runs in the cloud);
+  // absent = an older API without the check.
+  weightsCached?: boolean | null
+  default: boolean
+}
+export interface GeneratorStatus {
+  backend: 'mflux' | 'drawthings' | string
+  configured: boolean
+  defaultModel?: string
+  models?: GeneratorModelStatus[]
+}
+
 export const api = {
   // Queue: server returns items sorted by score desc.
   getQueue: () => http<IdeaQueueItem[]>('/queue'),
 
   // Images attached to a queue idea (see ImageAttachment above).
   getImages: (ideaId: string) => http<ImageAttachment[]>(`/images?ideaId=${encodeURIComponent(ideaId)}`),
+  // Unattached candidates from a running imagery session (see ImagePreview above).
+  getImagePreviews: (ideaId: string) =>
+    http<ImagePreview[]>(`/images/previews?ideaId=${encodeURIComponent(ideaId)}`),
+  // Promote a candidate into a real attachment (alt required); removes the preview.
+  attachImagePreview: (ideaId: string, name: string, alt: string) =>
+    http<ImageAttachment>('/images/previews/attach', {
+      method: 'POST',
+      body: JSON.stringify({ ideaId, name, alt }),
+    }),
+  // Discard one candidate, or all of an idea's candidates.
+  deleteImagePreview: (ideaId: string, name: string) =>
+    http<void>(
+      `/images/previews/${encodeURIComponent(ideaId)}/${encodeURIComponent(name)}`,
+      { method: 'DELETE' },
+    ),
+  clearImagePreviews: (ideaId: string) =>
+    http<void>(`/images/previews?ideaId=${encodeURIComponent(ideaId)}`, { method: 'DELETE' }),
+  // Is local image generation set up? (backend + reachable/installed)
+  getGeneratorStatus: () => http<GeneratorStatus>('/images/generator-status'),
   uploadImage: (ideaId: string, dataBase64: string, mimeType: string, alt: string) =>
     http<ImageAttachment>('/images/upload', {
       method: 'POST',
@@ -504,6 +568,14 @@ export const api = {
   updateImageAlt: (id: string, alt: string) =>
     http<ImageAttachment>(`/images/${id}`, { method: 'PATCH', body: JSON.stringify({ alt }) }),
   deleteImage: (id: string) => http<void>(`/images/${id}`, { method: 'DELETE' }),
+
+  // An image pasted/dropped into the terminal drawer. Unlike uploadImage these
+  // attach to nothing — the returned path is typed into the pty for claude to read.
+  uploadTerminalImage: (dataBase64: string, mimeType: string) =>
+    http<{ path: string; name: string }>('/terminal/images', {
+      method: 'POST',
+      body: JSON.stringify({ dataBase64, mimeType }),
+    }),
 
   // The active profile's brand look (the Brand page; see BrandState above).
   getBrand: () => http<BrandState>('/brand'),

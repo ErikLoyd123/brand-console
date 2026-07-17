@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import { api, LINKEDIN_CONNECT_PATH, type Connection, type PillarInfo } from '../lib/api'
+import { api, LINKEDIN_CONNECT_PATH, type Connection, type PillarInfo, type GeneratorStatus } from '../lib/api'
 import {
   Card,
   CardHeader,
@@ -20,7 +20,7 @@ import {
 import { PageHeader } from '../components/kit'
 import { cn } from '../lib/cn'
 import { getCapabilities, capabilityAvailable, toggleOn, setToggle, type Capability } from '../lib/capabilities'
-import { Linkedin, MessageCircle, Twitter, Rss, Loader2, AlertCircle, ExternalLink } from 'lucide-react'
+import { Linkedin, MessageCircle, Twitter, Rss, Loader2, AlertCircle, ExternalLink, Sparkles } from 'lucide-react'
 
 const SIDEBAR_KEY = 'console-sidebar-collapsed'
 const PILLAR_KEY = 'console-default-pillar'
@@ -436,6 +436,148 @@ function PreferencesCard({ pillars }: { pillars: PillarInfo[] }) {
   )
 }
 
+// Local image generation: a status + setup card. Self-describing per the
+// provenance rule — it names what it is, shows whether it's set up, and links out to
+// the exact Hugging Face pages (license acceptance + token) you need. No secret is
+// held here; generation is local and key-free.
+function ImageGenerationCard() {
+  const [status, setStatus] = useState<GeneratorStatus | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    api
+      .getGeneratorStatus()
+      .then(setStatus)
+      .catch(() => setStatus(null))
+      .finally(() => setLoading(false))
+  }, [])
+
+  const ready = status?.configured === true
+  const backend = status?.backend ?? 'mflux'
+  const linkCls = 'inline-flex items-center gap-1 text-primary-ink underline-offset-2 hover:underline'
+  const codeCls = 'font-mono text-xs text-text'
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center gap-2">
+          <Sparkles className="size-5 text-text-muted" />
+          <CardTitle>Local image generation</CardTitle>
+          {!loading && (
+            <span
+              className={cn(
+                'ml-auto inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium',
+                ready ? 'bg-primary-soft text-primary-ink' : 'bg-surface-sunken text-text-muted',
+              )}
+            >
+              <span className={cn('size-1.5 rounded-full', ready ? 'bg-primary' : 'bg-text-subtle/60')} />
+              {ready ? 'Ready' : 'Not set up'}
+            </span>
+          )}
+        </div>
+        <CardDescription>
+          The imagery skill can generate images locally — photoreal scenes or illustrations, any
+          style — no API key, nothing leaves your machine. Models are named entries in{' '}
+          <code className="font-mono text-xs">image-generation.config.json</code> (FLUX.2 [klein]
+          by default; add any model mflux or Draw Things can run). Optional: without it the skill
+          still offers diagrams, data figures, screenshots, and Unsplash.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="text-sm text-text-muted">
+        {ready ? (
+          <div className="flex flex-col gap-3">
+            <p>
+              The default model (backend <code className={codeCls}>{backend}</code>) is set up and
+              available — Image with AI on a queue card uses it. The skill proposes prompts from
+              your piece, photoreal or illustrated.
+            </p>
+            {(status?.models?.length ?? 0) > 0 && (
+              <ul className="flex flex-col gap-1.5">
+                {status!.models!.map((m) => (
+                  <li key={m.name} className="flex items-center gap-2 text-xs">
+                    <span
+                      className={cn(
+                        'size-1.5 shrink-0 rounded-full',
+                        !m.available
+                          ? 'bg-text-subtle/60'
+                          : m.weightsCached === false
+                            ? 'bg-warning'
+                            : 'bg-primary',
+                      )}
+                    />
+                    <code className={codeCls}>{m.name}</code>
+                    <span className="text-text-subtle">
+                      {m.backend}
+                      {m.model ? ` · ${m.model}` : ''}
+                      {m.default ? ' · default' : ''}
+                      {m.available ? '' : ' · unavailable'}
+                    </span>
+                    {m.available && m.weightsCached === false && (
+                      <span className="text-warning-fg">
+                        weights not downloaded —{' '}
+                        <code className={codeCls}>make image-model MODEL={m.name}</code>
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+            <p className="text-xs text-text-subtle">
+              Defined in <code className={codeCls}>image-generation.config.json</code> at the repo
+              root (gitignored) — edit it to change the default or add your own model.
+            </p>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-3">
+            <p>Set it up once (Apple Silicon):</p>
+            <ol className="ml-4 list-decimal space-y-1.5">
+              <li>
+                Install the tools: <code className={codeCls}>make image-gen</code> (or by hand{' '}
+                <code className={codeCls}>uv tool install mflux</code> /{' '}
+                <code className={codeCls}>uv tool upgrade mflux</code> if it&rsquo;s older than
+                0.18 — the FLUX.2 [klein] default needs{' '}
+                <code className={codeCls}>mflux-generate-flux2</code>).
+              </li>
+              <li>
+                Optional: copy{' '}
+                <code className={codeCls}>image-generation.config.example.json</code> →{' '}
+                <code className={codeCls}>image-generation.config.json</code> to pick models —
+                without a config the default is FLUX.2 [klein] via mflux.
+              </li>
+              <li>
+                Download the weights now: <code className={codeCls}>make image-model</code> asks
+                which models (one time; ~13 GB for FLUX.2 [klein]; live progress, ends with a
+                test render) and installs mflux itself if step 1 was skipped. Skippable — the
+                first generated image downloads them itself, it&rsquo;s just a much longer first
+                run.
+              </li>
+              <li>
+                For a gated model on Hugging Face, accept its license and{' '}
+                <code className={codeCls}>hf auth login</code> with a read token from{' '}
+                <a
+                  className={linkCls}
+                  href="https://huggingface.co/settings/tokens"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  huggingface.co/settings/tokens <ExternalLink className="size-3" />
+                </a>
+                {' '}— the Apache-2.0 FLUX defaults need no token.
+              </li>
+            </ol>
+          </div>
+        )}
+      </CardContent>
+      <CardFooter>
+        <span className="text-xs text-text-subtle">
+          Full walkthrough: <span className="text-text">Docs → Setup → Local image generation</span>.
+          Runs locally; the console holds no token.
+        </span>
+      </CardFooter>
+    </Card>
+  )
+}
+
 export function ConnectionsView({ onNavigate }: { onNavigate?: (key: string) => void }) {
   const [connections, setConnections] = useState<Connection[]>([])
   const [pillars, setPillars] = useState<PillarInfo[]>([])
@@ -481,6 +623,9 @@ export function ConnectionsView({ onNavigate }: { onNavigate?: (key: string) => 
         </div>
         <div className="lg:col-span-3">
           <RedditManualCard onNavigate={onNavigate} />
+        </div>
+        <div className="lg:col-span-3">
+          <ImageGenerationCard />
         </div>
         <ComingSoonCard
           icon={<Twitter className="size-5 text-text-muted" />}

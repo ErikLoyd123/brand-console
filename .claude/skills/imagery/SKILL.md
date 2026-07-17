@@ -1,6 +1,6 @@
 ---
 name: imagery
-description: Put an image on a queue idea's card — a brand-styled composed graphic (quote/stat/headline card), an annotated screenshot of a live page (highlight boxes, arrows, click ripples, privacy blurs, scroll composites), or an Unsplash photo (bring-your-own API key). Reads your brand guidelines (profiles/<slug>/brand/) so everything lands in your look. Proposes concepts, you pick; never publishes — Publish on the card ships the image with the piece.
+description: Put a supporting image on a queue idea's card, and pick the right model for it automatically — a photo, abstract metaphor, or illustration generated locally (a named model from image-generation.config.json, FLUX.2 klein by default via mflux, no API key), or a diagram / data figure / comparison table / quote card composed by Claude so its text is typeset rather than garbled. Chooses per image type from what's actually installed on this machine and says which model it picked and why (you can force one instead). Also does annotated screenshots of a live page, Unsplash photos, and perspective-correct UI-card composites onto a generated scene. Reads your brand guidelines (profiles/<slug>/brand/) so everything lands in your look. Proposes the types that fit the piece, you pick; generation runs in the background with candidates appearing live on the card; images are supporting visuals not covers; never publishes — Publish on the card ships the image with the piece.
 type: skill
 ---
 

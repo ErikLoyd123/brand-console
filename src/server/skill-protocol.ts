@@ -6,17 +6,20 @@
 
 // --- Downstream (server/skill -> page) --------------------------------------
 
-export interface AskChoiceOption {
-  label: string;
-  description: string;
-  preview?: string;
-}
-
 // An image the question is about (e.g. a rendered graphic awaiting approval),
 // inlined as a data URI so the page can show it with no extra route or fetch.
 export interface AskImage {
   src: string;
   alt?: string;
+}
+
+export interface AskChoiceOption {
+  label: string;
+  description: string;
+  preview?: string;
+  // Present when the option IS an image (a generated candidate among several):
+  // the page renders a labeled gallery, one figure per option, above the buttons.
+  image?: AskImage;
 }
 
 export interface AskChoice {
@@ -82,6 +85,9 @@ export interface Start {
   type: 'start';
   skillName: string;
   initialInput?: string;
+  // Optional Claude model override for this session (alias or full model id,
+  // e.g. "claude-opus-4-8"). Omitted = the engine's default.
+  model?: string;
 }
 
 export interface Choice {

@@ -38,7 +38,10 @@ const PREAMBLE =
   "and put any teaching or examples in the options' descriptions instead. When a " +
   'question is about an image you produced (a rendered preview, a screenshot, a candidate ' +
   "photo), pass the image file's path as `imageFile` so the user sees the actual image — " +
-  'never ask anyone to approve a visual from a description alone. ' +
+  'never ask anyone to approve a visual from a description alone. When the user is picking ' +
+  'BETWEEN several images (a batch of generated candidates), put each image on its own ' +
+  "option via the option's `imageFile` — all of them render as a labeled gallery, so the " +
+  'user compares every candidate, not just one. ' +
   'Follow the skill exactly.';
 
 // Answer + overall run guards so a wedged model turn or an unanswered question
@@ -141,7 +144,20 @@ function loadAskImage(file: string | undefined, alt: string | undefined): AskIma
 
 // Drives exactly one skill session for one socket. All protocol I/O for the
 // conversation flows through here; teardown is idempotent.
-function driveSession(ws: WebSocket, skillName: string, initialInput: string | undefined): void {
+// A model override from the page is used only when it looks like a Claude model
+// alias/id — anything else is ignored rather than crashing the session.
+function sanitizeModel(model: unknown): string | undefined {
+  return typeof model === 'string' && /^[a-z0-9][a-z0-9._-]{0,63}$/i.test(model)
+    ? model
+    : undefined;
+}
+
+function driveSession(
+  ws: WebSocket,
+  skillName: string,
+  initialInput: string | undefined,
+  model?: string,
+): void {
   const conversationId = nanoid();
   const send = (frame: DownstreamFrame) => {
     if (ws.readyState === ws.OPEN) ws.send(JSON.stringify(frame));
@@ -208,7 +224,9 @@ function driveSession(ws: WebSocket, skillName: string, initialInput: string | u
       'words — treat an off-menu answer as a valid response, not an error. When the ' +
       'question is about an image (a rendered preview to approve, a screenshot, a ' +
       'candidate photo), pass its file path as `imageFile` — the image renders above the ' +
-      'question, so the user judges the actual visual, never a description of one. ' +
+      'question, so the user judges the actual visual, never a description of one. When ' +
+      'the user picks between several images, give each option its own `imageFile` ' +
+      'instead: every candidate renders in a labeled gallery. ' +
       'Returns the answer as text.',
     {
       prompt: z.string().describe('The question shown to the user.'),
@@ -218,6 +236,14 @@ function driveSession(ws: WebSocket, skillName: string, initialInput: string | u
             label: z.string(),
             description: z.string(),
             preview: z.string().optional(),
+            imageFile: z
+              .string()
+              .optional()
+              .describe(
+                "Path to the image this option IS (one candidate of several). All options' " +
+                  'images render as a labeled gallery above the buttons.',
+              ),
+            imageAlt: z.string().optional().describe('Short alt text for this option\'s image.'),
           }),
         )
         .optional()
@@ -261,7 +287,16 @@ function driveSession(ws: WebSocket, skillName: string, initialInput: string | u
         thoughtDirty = false;
         send({ type: 'thought', conversationId, text: '' });
 
-        const opts = args.options as AskChoiceOption[] | undefined;
+        // Per-option images (a candidate gallery) inline the same way as the
+        // top-level one; a bad path degrades to a text-only option, never a failure.
+        const opts = (
+          args.options as
+            | (AskChoiceOption & { imageFile?: string; imageAlt?: string })[]
+            | undefined
+        )?.map(({ imageFile, imageAlt, ...rest }) => ({
+          ...rest,
+          image: loadAskImage(imageFile, imageAlt),
+        }));
         const image = loadAskImage(args.imageFile, args.imageAlt);
         if (opts && opts.length > 0) {
           send({
@@ -354,6 +389,10 @@ function driveSession(ws: WebSocket, skillName: string, initialInput: string | u
         options: {
           cwd: REPO_ROOT,
           abortController,
+          // The page may pin the session's Claude model (e.g. the queue card's
+          // image picker offering Opus/Sonnet for composed graphics); omitted =
+          // the SDK's default.
+          ...(model ? { model } : {}),
           mcpServers: { 'skill-surface': askServer },
           // Headless, single-user, local: no human is present to approve each
           // step, so the session runs the skill's own commands (e.g. spark's
@@ -568,7 +607,7 @@ export function attachSkillSurface(server: Server): void {
       }
       if (msg.type !== 'start') return; // ignore anything before start
       ws.off('message', onFirst);
-      driveSession(ws, msg.skillName, msg.initialInput);
+      driveSession(ws, msg.skillName, msg.initialInput, sanitizeModel(msg.model));
     };
     ws.on('message', onFirst);
   });

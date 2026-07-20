@@ -16,6 +16,10 @@ const SOCIAL_ACTIONS_URL = 'https://api.linkedin.com/v2/socialActions';
 const NOT_A_LINKEDIN_POST_ERROR =
   'This post was not published through LinkedIn, so it cannot be deleted here.';
 
+// LinkedIn caps a multi-photo share at 9 images. The console enforces this too,
+// but the API is the real boundary, so guard here as well.
+const MAX_IMAGES = 9;
+
 type LinkedinTokenRow = typeof linkedinTokens.$inferSelect;
 
 // Shared guard for every route below: LinkedIn must be configured, a token
@@ -155,6 +159,11 @@ router.post('/linkedin', async (req, res) => {
   let specificContent: Record<string, unknown>;
 
   const imageList = images && images.length > 0 ? images : image ? [image] : [];
+  if (imageList.length > MAX_IMAGES) {
+    return res
+      .status(400)
+      .json({ error: `LinkedIn allows up to ${MAX_IMAGES} images in one post.` });
+  }
   if (imageList.length > 0) {
     // Resolve every entry to bytes + alt before touching LinkedIn, so a bad
     // reference fails the whole post instead of shipping a partial carousel.

@@ -11,7 +11,9 @@ export interface PillarInfo {
 }
 export type QueueTag = 'needs-your-take' | 'ready-to-draft'
 export type QueueStatus = 'new' | 'seeded' | 'drafting' | 'drafted' | 'published' | 'archived'
-export type ReviewStatus = 'pending' | 'passed' | 'failed' | 'edited'
+// 'approved' is the owner's own manual sign-off ("Mark reviewed" on the card),
+// distinct from 'passed' which is the AI content-reviewer gate's verdict.
+export type ReviewStatus = 'pending' | 'passed' | 'failed' | 'edited' | 'approved'
 // A post's intent (its job), orthogonal to its pillar (its topic). Platform-keyed
 // roster, server-side source of truth in src/core/silos.ts. LinkedIn: conversation,
 // teach, win, curate. Reddit: discuss, help, share, ask, curate. Web (long-form): the
@@ -443,6 +445,9 @@ export interface ArticlePatch {
   body?: string
   sections?: ArticleSection[]
   stage?: ArticleStage
+  /** Explicit review verdict (e.g. the owner's manual 'approved' sign-off). An
+   *  explicit value is honored; a content write instead resets it to 'pending'. */
+  reviewStatus?: ReviewStatus
 }
 
 // An image attached to a queue idea (the images table). Produced by the imagery
@@ -763,6 +768,14 @@ export const api = {
   getDraft: (id: string) => http<Draft>(`/drafts/${id}`),
   updateDraft: (id: string, patch: Partial<Draft>) =>
     http<Draft>(`/drafts/${id}`, { method: 'PATCH', body: JSON.stringify(patch) }),
+  // Set a draft's review verdict directly (POST /api/drafts/:id/review). Used by the
+  // card's "Mark reviewed" action for the owner's manual 'approved' sign-off, bypassing
+  // the AI gate. A later content edit still resets it to 'pending' server-side.
+  reviewDraft: (id: string, reviewStatus: ReviewStatus) =>
+    http<Draft>(`/drafts/${id}/review`, {
+      method: 'POST',
+      body: JSON.stringify({ reviewStatus }),
+    }),
   publishDraft: (id: string, permalink?: string) =>
     http<PublishedPost>(`/drafts/${id}/publish`, {
       method: 'POST',

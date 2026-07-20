@@ -83,7 +83,10 @@ router.get('/overview', (_req, res) => {
   // Honest-empty: 0 when nothing has been reviewed, never a fabricated percent.
   const reviewed = draftRows.filter((d) => d.reviewStatus !== 'pending');
   const passed = reviewed.filter(
-    (d) => d.reviewStatus === 'passed' || d.reviewStatus === 'edited',
+    (d) =>
+      d.reviewStatus === 'passed' ||
+      d.reviewStatus === 'edited' ||
+      d.reviewStatus === 'approved',
   );
   const reviewPassRate = reviewed.length
     ? Math.round((passed.length / reviewed.length) * 100)

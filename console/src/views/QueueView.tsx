@@ -36,6 +36,7 @@ const REVIEW: Record<ReviewStatus, { label: string; dot: string }> = {
   passed: { label: 'Passed the gate', dot: 'bg-success' },
   failed: { label: 'Needs changes', dot: 'bg-error' },
   edited: { label: 'Edited by you', dot: 'bg-info' },
+  approved: { label: 'Reviewed by you', dot: 'bg-success' },
 }
 
 // Ambient hints for the develop walk's working state (see SkillSurface.workingHints).
@@ -205,6 +206,28 @@ function ContentBlock({
     }
   }
 
+  // The owner's manual sign-off: flip the review verdict to 'approved' without
+  // running the AI gate. Same endpoints the reviewer uses; a later content edit
+  // still resets it to 'pending'.
+  async function markReviewed() {
+    setBusy(true)
+    setError(null)
+    try {
+      if (isWeb && article) {
+        await api.updateArticle(article.id, { reviewStatus: 'approved' })
+      } else if (draft) {
+        await api.reviewDraft(draft.id, 'approved')
+      }
+      setNote('Marked reviewed')
+      setTimeout(() => setNote(null), 2000)
+      onChanged()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setBusy(false)
+    }
+  }
+
   async function publish() {
     setBusy(true)
     setError(null)
@@ -245,7 +268,7 @@ function ContentBlock({
           {isWeb && article?.exportPath ? ' · exported' : ''}
           <span
             className="inline-flex items-center gap-1.5 normal-case tracking-normal"
-            title="The content-reviewer gate's verdict. Run it with Review with AI; any edit resets it to pending."
+            title="The review verdict. Run the AI gate with Review with AI, or sign off yourself with Mark reviewed; any content edit resets it to pending."
           >
             <span className={cn('size-1.5 rounded-full', review.dot)} />
             {review.label}
@@ -259,6 +282,17 @@ function ContentBlock({
           >
             <ShieldCheck className="size-3" /> Review with AI
           </button>
+          {reviewStatus !== 'approved' && reviewStatus !== 'passed' && (
+            <button
+              type="button"
+              onClick={markReviewed}
+              disabled={busy}
+              title="Sign off on this yourself, without running the AI gate."
+              className="inline-flex items-center gap-1 text-xs text-primary-ink underline-offset-2 hover:underline disabled:opacity-50"
+            >
+              <Check className="size-3" /> Mark reviewed
+            </button>
+          )}
           <button
             type="button"
             onClick={onRevise}
@@ -349,6 +383,7 @@ function ContentBlock({
             draft={{ ...draft, platform: platform === 'reddit' ? 'reddit' : 'linkedin' }}
             connection={platform === 'reddit' ? null : linkedinConn}
             profileName={profileName}
+            attachedImages={images}
           />
         )
       )}

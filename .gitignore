@@ -40,6 +40,9 @@ docs/superpowers/
 /profiles/
 /profile/
 
+# Local pointer to the active profile slug (user-specific runtime state, never tracked).
+/.active-profile
+
 # Imagery procedure scratch files (payloads + working HTML the producers read;
 # numbered variants appear when candidates generate in parallel)
 .image-payload*.json

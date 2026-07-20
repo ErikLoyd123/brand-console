@@ -335,7 +335,8 @@ export const articles = sqliteTable(
     body: text('body').notNull().default(''),
     // Pipeline position: outlining | outlined | drafting | drafted | reviewed | exported.
     stage: text('stage').notNull().default('outlining'),
-    // Mirrors drafts.reviewStatus: pending | passed | failed | edited.
+    // Mirrors drafts.reviewStatus: pending | passed | failed | edited | approved
+    // ('approved' = the owner's manual "Mark reviewed" sign-off).
     reviewStatus: text('review_status').notNull().default('pending'),
     exportPath: text('export_path'),
     exportedAt: integer('exported_at'),

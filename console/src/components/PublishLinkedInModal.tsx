@@ -11,6 +11,9 @@ import { X, AlertCircle, Loader2, Link2, Image as ImageIcon } from 'lucide-react
 // Extracted from the retired Drafts page; the Queue workbench is its home now.
 
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024 // ~10MB guard, matches the design brief
+// LinkedIn caps a single multi-photo post at 9 images. Enforced in the UI so we
+// never build a payload LinkedIn will reject.
+const MAX_IMAGES = 9
 
 type Visibility = 'PUBLIC' | 'CONNECTIONS'
 type MediaMode = 'text' | 'link' | 'image'
@@ -50,8 +53,13 @@ export function PublishLinkedInModal({
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Media attachment — defaults to text only. Server precedence is image > linkUrl > text.
-  const [mediaMode, setMediaMode] = useState<MediaMode>('text')
+  // Media attachment. LinkedIn allows exactly one media *category* per post —
+  // text (NONE), a link card (ARTICLE), or image(s) (IMAGE) — so this is a
+  // single toggle, never a mix. When the card already has an image, open in
+  // Image mode with it pre-selected rather than dropping it silently.
+  const [mediaMode, setMediaMode] = useState<MediaMode>(
+    attachedImages.length > 0 ? 'image' : 'text',
+  )
   const [linkUrl, setLinkUrl] = useState('')
   const [imageFileName, setImageFileName] = useState<string | null>(null)
   const [imageData, setImageData] = useState<{ dataBase64: string; mimeType: string } | null>(null)
@@ -62,6 +70,24 @@ export function PublishLinkedInModal({
   const [selectedImageIds, setSelectedImageIds] = useState<string[]>(
     attachedImages.length > 0 ? [attachedImages[0].id] : [],
   )
+
+  // Switching category clears the other categories' inputs, so we can never
+  // carry a typed link into an image post (or vice versa) — the toggle enforces
+  // LinkedIn's one-category rule, and this keeps the discarded state from
+  // lingering behind the scenes. Re-entering Image mode re-seeds the card pick.
+  function selectMode(mode: MediaMode) {
+    setMediaMode(mode)
+    setMediaError(null)
+    if (mode !== 'link') setLinkUrl('')
+    if (mode !== 'image') {
+      setImageData(null)
+      setImageFileName(null)
+      setImageAlt('')
+      setSelectedImageIds([])
+    } else if (selectedImageIds.length === 0 && !imageData && attachedImages.length > 0) {
+      setSelectedImageIds([attachedImages[0].id])
+    }
+  }
 
   async function onImageSelected(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -174,7 +200,7 @@ export function PublishLinkedInModal({
               <button
                 key={m.key}
                 type="button"
-                onClick={() => setMediaMode(m.key)}
+                onClick={() => selectMode(m.key)}
                 disabled={busy}
                 className={cn(
                   'flex-1 rounded-lg px-3 py-2 text-sm shadow-control transition-shadow disabled:opacity-50',
@@ -215,9 +241,20 @@ export function PublishLinkedInModal({
                         type="button"
                         disabled={busy}
                         onClick={() => {
-                          setSelectedImageIds((ids) =>
-                            ids.includes(img.id) ? ids.filter((i) => i !== img.id) : [...ids, img.id],
-                          )
+                          setSelectedImageIds((ids) => {
+                            if (ids.includes(img.id)) {
+                              setMediaError(null)
+                              return ids.filter((i) => i !== img.id)
+                            }
+                            if (ids.length >= MAX_IMAGES) {
+                              setMediaError(`LinkedIn allows up to ${MAX_IMAGES} images in one post.`)
+                              return ids
+                            }
+                            setMediaError(null)
+                            return [...ids, img.id]
+                          })
+                          // A file upload and card picks are the same IMAGE slot —
+                          // choosing a card image drops any staged file upload.
                           setImageData(null)
                           setImageFileName(null)
                         }}

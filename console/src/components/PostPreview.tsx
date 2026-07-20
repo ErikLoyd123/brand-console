@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { ThumbsUp, MessageSquare, Repeat2, Send, Image as ImageIcon, MessageCircle } from 'lucide-react'
-import type { Connection, Draft } from '../lib/api'
+import type { Connection, Draft, ImageAttachment } from '../lib/api'
+import { imageFileUrl } from '../lib/api'
 import { foldTruncation, tokenizeBody } from '../lib/linkedin'
 import { titleStatus, REDDIT_TITLE_MAX } from '../lib/reddit'
 import { Markdown } from './Markdown'
@@ -99,25 +100,35 @@ function LinkedInPreview({
   draft,
   connection,
   profileName,
+  attachedImages,
 }: {
   draft: Draft
   connection?: Connection | null
   profileName?: string
+  attachedImages?: ImageAttachment[]
 }) {
   const [expanded, setExpanded] = useState(false)
   const [imgError, setImgError] = useState(false)
+  const [mediaError, setMediaError] = useState(false)
 
-  // Expansion and avatar-error are one-way per view; reset on draft change so
-  // switching drafts always shows the fold and re-attempts the avatar.
+  // Expansion, avatar-error, and media-load-error are one-way per view; reset on
+  // draft change so switching drafts re-shows the fold and re-attempts both images.
   useEffect(() => {
     setExpanded(false)
     setImgError(false)
+    setMediaError(false)
   }, [draft.id])
 
   const name = connection?.displayName ?? profileName ?? 'You'
   const headline = connection?.headline ?? ''
   const avatarUrl = connection?.avatarUrl
   const media = draft.mediaSuggestion.trim()
+
+  // Once the owner has attached a real image, show it in the media slot instead of
+  // the suggestion placeholder — the strip below already lists every attachment, so
+  // a "suggested media" ghost sitting next to a real one only reads as broken. Fall
+  // back to the suggestion if the file fails to load.
+  const cover = !mediaError ? attachedImages?.[0] : undefined
 
   const body = assemble(draft)
   const { visible, folded } = foldTruncation(body)
@@ -168,15 +179,32 @@ function LinkedInPreview({
         )}
       </div>
 
-      {/* Media placeholder — the draft carries a suggestion, not a real asset. */}
-      {media && (
-        <div className="flex aspect-[1.91/1] flex-col items-center justify-center gap-2 rounded-md border border-dashed border-border-strong bg-surface-sunken p-4 text-center">
-          <ImageIcon className="size-6 text-text-subtle" />
-          <span className="font-mono text-[11px] uppercase tracking-wide text-text-subtle">
-            Suggested media
-          </span>
-          <p className="font-sans text-sm text-text-muted">{media}</p>
+      {/* Media: the real attachment once one exists, otherwise the draft's
+          suggestion (a prompt, not an asset) as a dashed placeholder. */}
+      {cover ? (
+        <div className="relative overflow-hidden rounded-md border border-border">
+          <img
+            src={imageFileUrl(cover.id)}
+            alt={cover.alt || media || 'Attached media'}
+            onError={() => setMediaError(true)}
+            className="w-full"
+          />
+          {attachedImages && attachedImages.length > 1 && (
+            <span className="absolute bottom-2 right-2 rounded bg-black/70 px-1.5 py-0.5 font-sans text-[11px] font-medium text-white">
+              +{attachedImages.length - 1}
+            </span>
+          )}
         </div>
+      ) : (
+        media && (
+          <div className="flex aspect-[1.91/1] flex-col items-center justify-center gap-2 rounded-md border border-dashed border-border-strong bg-surface-sunken p-4 text-center">
+            <ImageIcon className="size-6 text-text-subtle" />
+            <span className="font-mono text-[11px] uppercase tracking-wide text-text-subtle">
+              Suggested media
+            </span>
+            <p className="font-sans text-sm text-text-muted">{media}</p>
+          </div>
+        )
       )}
 
       {/* Static action bar — realism only, inert. */}
@@ -198,13 +226,22 @@ export function PostPreview({
   draft,
   connection,
   profileName,
+  attachedImages,
 }: {
   draft: Draft
   connection?: Connection | null
   profileName?: string
+  attachedImages?: ImageAttachment[]
 }) {
   if (draft.platform === 'reddit') {
     return <RedditPreview draft={draft} connection={connection} profileName={profileName} />
   }
-  return <LinkedInPreview draft={draft} connection={connection} profileName={profileName} />
+  return (
+    <LinkedInPreview
+      draft={draft}
+      connection={connection}
+      profileName={profileName}
+      attachedImages={attachedImages}
+    />
+  )
 }

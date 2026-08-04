@@ -43,7 +43,7 @@ operated through a local **brand-console** web UI.
   the active profile's `identity.yaml` (under gitignored `profiles/<slug>/`, resolved by
   `src/profile/loader.ts` — never hardcode a profile path).
 - **Cadence** — planning system; config `.cadence/config.yaml`, docs under
-  `docs/cadence/`.
+  `~/Projects/notes/brand-console/`.
 
 ## Running it
 

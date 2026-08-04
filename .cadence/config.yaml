@@ -4,9 +4,9 @@
 config_version: 3          # schema version; drives migration detection
 
 paths:
-  designs: docs/cadence/designs
-  plans:   docs/cadence/plans
-  future:  docs/cadence/future
+  designs: /Users/erikloyd/Projects/notes/brand-console/designs
+  plans:   /Users/erikloyd/Projects/notes/brand-console/plans
+  future:  /Users/erikloyd/Projects/notes/brand-console/future
   config:  .cadence
 
 naming:

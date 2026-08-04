@@ -265,7 +265,13 @@ export function DiscoveryView() {
     )
   }
   function workUpGeneric() {
-    triggerWorkUp('List my Discovery inbox best-first and ask which item to work up.')
+    // No item picked yet: open in find mode — the skill asks what the owner is after,
+    // searches the inbox, and proposes the best matches ("show the list" stays available).
+    triggerWorkUp(
+      'I want to work up an article from my Discovery inbox but have not picked one yet. ' +
+        'Ask me what I am looking for (a topic, a pillar, an intent — or I can say "show the ' +
+        'list"), then find the best matches in my inbox and propose them.',
+    )
   }
 
   const sourceInfo = new Map<string, SourceInfo>(sources.map((s) => [s.id, { name: s.name, pillar: s.pillar }]))
@@ -432,7 +438,8 @@ export function DiscoveryView() {
                   <p className="text-sm font-medium text-text-strong">Work up an item with AI</p>
                   <p className="text-xs text-text-subtle">
                     Hit <span className="font-medium">Work up with AI</span> on any item below to
-                    draw out your take and points and promote it — or start here and pick one.
+                    draw out your take and points and promote it — or start here and tell me what
+                    you’re looking for.
                   </p>
                 </div>
               </div>

@@ -330,6 +330,59 @@
         }
       }
     },
+    "/api/posts/{id}": {
+      "get": {
+        "tags": ["Posts"],
+        "summary": "One shipped piece with its content",
+        "description": "The Published screen's viewer. Post-lane rows (LinkedIn/Reddit) resolve through `draftId` to the archived draft — frozen once the idea leaves the queue, so it reads back as what shipped. Web rows (the id is an article id) return the exported article's markdown. Scoped to the active profile.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "A published_posts row id, or an exported article id for web rows."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The published row plus its content.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/PublishedPost" },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "ideaId": {
+                          "type": "string",
+                          "description": "The idea the piece grew from; its attached images ride with the piece."
+                        },
+                        "draft": {
+                          "oneOf": [{ "$ref": "#/components/schemas/Draft" }, { "type": "null" }],
+                          "description": "The archived draft for post-lane rows; null for web rows."
+                        },
+                        "article": {
+                          "type": ["object", "null"],
+                          "description": "The exported article for web rows; null for post-lane rows.",
+                          "properties": {
+                            "title": { "type": "string" },
+                            "body": { "type": "string", "description": "The whole article as one markdown document." },
+                            "exportPath": { "type": ["string", "null"] }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": { "description": "No such piece, or the chain to its content is broken." }
+        }
+      }
+    },
     "/api/scheduled": {
       "get": {
         "tags": ["Scheduled"],

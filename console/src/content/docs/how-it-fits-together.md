@@ -147,7 +147,8 @@ are stored in the local database.
 - **Scheduling & calendar** — the **Calendar** screen plans when a piece goes out.
 - **Published** — the **Published** screen is the archive of everything shipped, across all
   three lanes, sliceable by platform: posts link back to the live post, web rows show the
-  exported file's path.
+  exported file's path. Clicking a row opens the piece as it shipped — read back from the
+  archived draft (or the exported article for web rows), with the images that went with it.
 - **Connections** — the **Connections** screen runs the **LinkedIn** sign-in and disconnect.
   Reddit shows here too, but only as a note that it's a manual copy-paste channel — there's
   nothing to connect.

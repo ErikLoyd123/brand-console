@@ -103,6 +103,8 @@ are stored in the local database.
   (the fast path, where you pick its **silo**), or **Work up with AI** — the `discovery` skill
   reads the piece and its source, draws out your take and the 2–4 points, promotes it, and
   **writes the full piece** onto the new queue card (the discovery-lane mirror of `spark`).
+  Started without an item picked, the assistant asks what you're looking for (a topic, a
+  pillar, an intent) and proposes the best matches from your inbox — or just show the list.
   The flow is a substance ladder: *inbox → saved → queue (with the full piece) → published*.
 - **The queue — the review phase** — the **Queue** screen is the workbench: every idea sits
   with its **full written piece** on the card. Slice by lane (LinkedIn / Reddit / Web) and by

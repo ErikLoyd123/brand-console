@@ -16,7 +16,8 @@ Most pipeline pages carry their own assistant, scoped to that page's job:
 - **Spark** shapes a raw one-liner into a seeded queue item, then writes the full piece
   onto its queue card.
 - **Discovery**'s "Work up with AI" reads a found article, draws out your take and
-  points, promotes it into the queue, and writes the full piece.
+  points, promotes it into the queue, and writes the full piece. Started without an
+  item, it asks what you're looking for and proposes the best matches from the inbox.
 - **Queue** develops an idea's points, writes the full piece (post or long-form article)
   from your take, and revises what's written, in your voice.
 - **Voice** hosts the setup interview and targeted voice-card edits.

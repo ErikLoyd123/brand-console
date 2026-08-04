@@ -1,6 +1,6 @@
 ---
 name: discovery
-description: Work up a discovered article into a finished piece on the queue. Reads a Discovery inbox item and its source, infers the intent (silo) and confirms it, interviews you to draw out your take and the 2-4 points, promotes it into the queue — then writes the full piece (a post, or a long-form web article as one markdown document) onto its Queue card for your review. The discovery-lane mirror of spark. Never invents an opinion, never publishes.
+description: Work up a discovered article into a finished piece on the queue. Start from an item, or just describe what you're looking for — it searches the inbox and proposes the best matches. Reads the item and its source, infers the intent (silo) and confirms it, interviews you to draw out your take and the 2-4 points, promotes it into the queue — then writes the full piece (a post, or a long-form web article as one markdown document) onto its Queue card for your review. The discovery-lane mirror of spark. Never invents an opinion, never publishes.
 type: skill
 ---
 
@@ -24,8 +24,9 @@ its source, and the voice card. You decide; the skill files, then writes the ful
 shared procedures. It never reviews or publishes — that is your call, on the Queue card.
 
 **Invoke with:** "work up this article", "work up item N", "help me shape my take on this",
-or from the Discovery page's per-card **"Work up with AI"** button (which passes the feed-item
-id in the first message and says to use it — take that id directly, do not ask which item).
+"find me an article about X", or from the Discovery page's per-card **"Work up with AI"** button
+(which passes the feed-item id in the first message and says to use it — take that id directly,
+do not ask which item).
 
 ## 1. Onboarding gate (run before anything)
 
@@ -66,16 +67,34 @@ any `[FILL: ...]` goes in the seed or a beat. The doctrine binds every step belo
 ## 3. Pick the feed item
 
 If the first message already gives a feed-item id (the console's "Work up with AI" button
-passes one and says not to ask), **use that id directly — skip listing and skip the question.**
-Likewise if the user named one in words ("item N", "the AWS piece"), resolve and use it. Only
-when no item is identified: list the inbox best-first (highest score first) and ask which to
-work up:
+passes one and says not to ask), **use that id directly — skip the search and skip the
+question.** Likewise if the user named one in words ("item N", "the AWS piece"), resolve
+and use it.
+
+**When no item is identified, find one from what the owner wants — do not open with the full
+inbox.** Ask one plain question first: what are they after — a topic, a pillar, an intent
+(a teach, a curate, a hot take), or they can say "show the list" or "pick for me". If the
+first message already carries a description ("something on AI cost overruns"), skip the
+question and search on it directly.
+
+Load the inbox with enough substance to match on (title, summary, tags, pillar, source, score):
 
 ```bash
-npx tsx -e "import('./src/db/client.js').then(async ({db})=>{const {feedItems,sources}=await import('./src/db/schema.js');const {desc,eq,inArray}=await import('drizzle-orm');const rows=db.select().from(feedItems).where(inArray(feedItems.triageState,['inbox','saved'])).orderBy(desc(feedItems.score)).all();const srcs=new Map(db.select().from(sources).all().map(s=>[s.id,s]));console.log(JSON.stringify(rows.map(r=>({id:r.id,title:r.title,source:srcs.get(r.sourceId)?.name,pillar:srcs.get(r.sourceId)?.pillar,score:r.score,state:r.triageState})),null,2))})"
+npx tsx -e "import('./src/db/client.js').then(async ({db})=>{const {feedItems,sources,feedItemTags,tags}=await import('./src/db/schema.js');const {desc,inArray}=await import('drizzle-orm');const rows=db.select().from(feedItems).where(inArray(feedItems.triageState,['inbox','saved'])).orderBy(desc(feedItems.score)).all();const srcs=new Map(db.select().from(sources).all().map(s=>[s.id,s]));const tagNames=new Map(db.select().from(tags).all().map(t=>[t.id,t.name]));const byItem=new Map();for(const l of db.select().from(feedItemTags).all()){const list=byItem.get(l.feedItemId)??[];list.push(tagNames.get(l.tagId));byItem.set(l.feedItemId,list)}console.log(JSON.stringify(rows.map(r=>({id:r.id,title:r.title,summary:r.summary?.slice(0,200),source:srcs.get(r.sourceId)?.name,pillar:srcs.get(r.sourceId)?.pillar,tags:byItem.get(r.id)??[],score:r.score,state:r.triageState})),null,2))})"
 ```
 
-Resolve the user's words to one `id`. If ambiguous, show the candidates and ask.
+Judge the matches yourself — semantically, against what the owner described, not by keyword
+overlap alone — and propose the **best 2-3 candidates, one line each with why it fits**. The
+owner picks; never start the work-up on an unconfirmed pick.
+
+- **"Show the list"** — the classic fallback: list every inbox item best-first (highest score
+  first) and ask which to work up.
+- **"Pick for me"** — propose the single best item with your reasoning. Still a proposal to
+  confirm, never a silent start.
+- **No real match** — say so honestly: name the nearest misses and offer the full list. Never
+  stretch a bad fit into a recommendation.
+
+Resolve the owner's words to one `id`. If ambiguous, show the candidates and ask.
 
 ## 4. Read the item and its source
 

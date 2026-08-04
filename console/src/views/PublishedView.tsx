@@ -1,11 +1,20 @@
-import { useState } from 'react'
-import { api, type PlatformKey, type PublishedPost } from '../lib/api'
+import { useEffect, useState } from 'react'
+import {
+  api,
+  type Connection,
+  type ImageAttachment,
+  type PlatformKey,
+  type PublishedPost,
+  type PublishedPostDetail,
+} from '../lib/api'
 import { useResource } from '../lib/useResource'
 import { Input } from '../components/ui/input'
 import { Button } from '../components/ui/button'
 import { PageHeader, SectionHeading, EmptyState } from '../components/kit'
 import { PillarBadge } from '../components/PillarBadge'
-import { Send, ExternalLink, Globe, Pencil, Check, X, Trash2, MessageSquarePlus, ThumbsUp, AlertCircle, Loader2, Linkedin, MessageCircle } from 'lucide-react'
+import { PostPreview } from '../components/PostPreview'
+import { Markdown } from '../components/Markdown'
+import { Send, ExternalLink, Globe, Pencil, Check, X, Trash2, MessageSquarePlus, ThumbsUp, AlertCircle, Loader2, Linkedin, MessageCircle, Eye } from 'lucide-react'
 import { useCapabilityToggle } from '../lib/capabilities'
 import { cn } from '../lib/cn'
 
@@ -275,6 +284,119 @@ function LinkedInRowActions({ post, onChanged }: { post: PublishedPost; onChange
   )
 }
 
+// Read-only viewer for a shipped piece: fetches the content through the archive
+// chain (post -> archived draft, or the exported article for web rows) and renders
+// it the way the platform showed it, reusing the Queue's preview components.
+// Strictly a viewer — nothing in here can mutate the post.
+function PostContentModal({ post, onClose }: { post: PublishedPost; onClose: () => void }) {
+  const [detail, setDetail] = useState<PublishedPostDetail | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  // Author chrome for the LinkedIn preview card, same sources as the Queue: the
+  // live connection when there is one, the profile name as the fallback.
+  const [linkedinConn, setLinkedinConn] = useState<Connection | null>(null)
+  const [profileName, setProfileName] = useState<string | undefined>(undefined)
+  const [images, setImages] = useState<ImageAttachment[]>([])
+
+  useEffect(() => {
+    let cancelled = false
+    api
+      .getPost(post.id)
+      .then((d) => {
+        if (cancelled) return
+        setDetail(d)
+        // The images that rode with the piece still hang off its idea.
+        if (d.draft) {
+          api.getImages(d.ideaId).then((rows) => !cancelled && setImages(rows)).catch(() => {})
+        }
+      })
+      .catch((e) => !cancelled && setError(e instanceof Error ? e.message : String(e)))
+    api
+      .getConnections()
+      .then((rows) => !cancelled && setLinkedinConn(rows.find((c) => c.platform === 'linkedin') ?? null))
+      .catch(() => {})
+    api.getProfile().then((p) => !cancelled && setProfileName(p.name)).catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [post.id])
+
+  const publishedOn = new Date(post.publishedAt).toLocaleDateString(undefined, {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  })
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center p-4 sm:p-8">
+      <div className="absolute inset-0 bg-overlay-scrim animate-fade-in" onClick={onClose} />
+      <div className="relative z-10 flex w-full max-w-xl flex-col gap-4 rounded-lg bg-surface-raised p-6 shadow-xl animate-fade-up">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex flex-col gap-0.5">
+            <h2 className="font-serif text-lg text-text-strong">What shipped</h2>
+            <span className="text-xs text-text-muted">Published {publishedOn}</span>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-md p-1.5 text-text-muted hover:bg-row-hover"
+            aria-label="Close"
+          >
+            <X className="size-4" />
+          </button>
+        </div>
+
+        {error ? (
+          <div className="flex items-center gap-2 rounded-lg bg-error-bg p-3 text-sm text-error-fg">
+            <AlertCircle className="size-4 shrink-0" />
+            {error.includes('404') || error.toLowerCase().includes('not') ? 'Content no longer available.' : error}
+          </div>
+        ) : !detail ? (
+          <div className="h-48 skeleton rounded-lg" />
+        ) : (
+          <div className="max-h-[65vh] overflow-y-auto">
+            {detail.draft ? (
+              // The media suggestion is a drafting prompt, not something that
+              // shipped — blank it so the archive shows only real attachments.
+              <PostPreview
+                draft={{ ...detail.draft, mediaSuggestion: '' }}
+                connection={detail.draft.platform === 'reddit' ? null : linkedinConn}
+                profileName={profileName}
+                attachedImages={images}
+              />
+            ) : detail.article ? (
+              <div className="flex flex-col gap-3 rounded-lg bg-surface p-4 shadow-sm">
+                <h3 className="font-serif text-xl font-semibold leading-snug text-text-strong">
+                  {detail.article.title || '(untitled)'}
+                </h3>
+                <Markdown>{detail.article.body}</Markdown>
+              </div>
+            ) : null}
+          </div>
+        )}
+
+        {detail && (
+          <p className="border-t border-border pt-3 text-xs text-text-subtle">
+            {detail.article ? (
+              <>
+                Read from the exported article
+                {detail.article.exportPath && (
+                  <>
+                    {' — '}
+                    <code className="font-mono text-[11px]">{detail.article.exportPath}</code>
+                  </>
+                )}
+                .
+              </>
+            ) : (
+              'Read from the archived draft this post was published from.'
+            )}
+          </p>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // The channel a published post went to, off published_posts.platform. Legacy /
 // raw rows without a platform read as LinkedIn.
 function PlatformBadge({ platform }: { platform?: PlatformKey | 'web' | null }) {
@@ -315,6 +437,9 @@ export function PublishedView() {
   const [permalink, setPermalink] = useState('')
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
+  // The row whose content viewer is open. Any click on a row opens it; the
+  // action cells stop propagation so like/comment/delete/edit stay themselves.
+  const [viewing, setViewing] = useState<PublishedPost | null>(null)
 
   function startEdit(p: PublishedPost) {
     setEditingId(p.id)
@@ -404,7 +529,11 @@ export function PublishedView() {
                 {posts.map((p) => {
                   const editing = editingId === p.id
                   return (
-                    <tr key={p.id} className="border-b border-border/60 last:border-0 hover:bg-row-hover">
+                    <tr
+                      key={p.id}
+                      onClick={() => setViewing(p)}
+                      className="cursor-pointer border-b border-border/60 last:border-0 hover:bg-row-hover"
+                    >
                       <td className="px-5 py-3 tabular-nums text-text-muted">
                         {new Date(p.publishedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                       </td>
@@ -421,7 +550,7 @@ export function PublishedView() {
                       </td>
                       <td className="px-5 py-3">{p.pillar ? <PillarBadge pillar={p.pillar} /> : '-'}</td>
                       {editing ? (
-                        <td className="px-5 py-3">
+                        <td className="px-5 py-3" onClick={(e) => e.stopPropagation()}>
                           <div className="flex flex-col items-end gap-2">
                             <div className="flex items-center justify-end gap-2">
                               <Input
@@ -458,10 +587,18 @@ export function PublishedView() {
                           </div>
                         </td>
                       ) : p.platform === 'web' ? (
-                        <td className="px-5 py-3">
+                        <td className="px-5 py-3" onClick={(e) => e.stopPropagation()}>
                           {/* A web row is an exported article; its artifact is the local
                               markdown file, so the link cell shows the export path. */}
-                          <div className="flex items-center justify-end">
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setViewing(p)}
+                              className="inline-flex text-text-muted hover:text-text-strong"
+                              title="View content"
+                            >
+                              <Eye className="size-4" />
+                            </button>
                             <code
                               className="max-w-64 truncate font-mono text-[11px] text-text-muted"
                               title={p.exportPath ?? undefined}
@@ -471,8 +608,16 @@ export function PublishedView() {
                           </div>
                         </td>
                       ) : (
-                        <td className="px-5 py-3">
+                        <td className="px-5 py-3" onClick={(e) => e.stopPropagation()}>
                           <div className="flex items-center justify-end gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setViewing(p)}
+                              className="inline-flex text-text-muted hover:text-text-strong"
+                              title="View content"
+                            >
+                              <Eye className="size-4" />
+                            </button>
                             {p.permalink ? (
                               <a href={p.permalink} target="_blank" rel="noreferrer" className="inline-flex text-primary-ink hover:text-primary-hover">
                                 <ExternalLink className="size-4" />
@@ -500,6 +645,7 @@ export function PublishedView() {
           </div>
         </section>
       )}
+      {viewing && <PostContentModal post={viewing} onClose={() => setViewing(null)} />}
     </div>
   )
 }

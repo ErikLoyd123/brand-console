@@ -147,6 +147,17 @@ export interface PublishedPost {
   exportPath?: string | null
 }
 
+// A published row plus its content (GET /api/posts/:id) — what the Published
+// screen's viewer renders. Post-lane rows carry the archived draft (frozen once
+// the idea leaves the queue, so it reads back as what shipped); web rows carry
+// the exported article's markdown. ideaId lets the viewer pull the attached
+// images that rode with the piece.
+export interface PublishedPostDetail extends PublishedPost {
+  ideaId: string
+  draft: Draft | null
+  article: { title: string; body: string; exportPath: string | null } | null
+}
+
 // A planned-post slot from the scheduled_posts table (GET /api/scheduled).
 export interface ScheduledPost {
   id: string
@@ -827,6 +838,11 @@ export const api = {
   // Published archive (GET /api/posts), newest first. An empty array is honest —
   // it means nothing has been published yet.
   getPosts: () => http<PublishedPost[]>('/posts'),
+
+  // One shipped piece with its content (GET /api/posts/:id) — the archived draft
+  // for post-lane rows, the exported article for web rows. 404 when the chain to
+  // the content is broken.
+  getPost: (id: string) => http<PublishedPostDetail>(`/posts/${id}`),
 
   // Planned-post slots (GET /api/scheduled), soonest first. Backs the Calendar's
   // "planned" markers with the real scheduled_posts table; empty until scheduled.

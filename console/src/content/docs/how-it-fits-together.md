@@ -149,9 +149,11 @@ are stored in the local database.
   three lanes, sliceable by platform: posts link back to the live post, web rows show the
   exported file's path. Clicking a row opens the piece as it shipped — read back from the
   archived draft (or the exported article for web rows), with the images that went with it.
-- **Connections** — the **Connections** screen runs the **LinkedIn** sign-in and disconnect.
-  Reddit shows here too, but only as a note that it's a manual copy-paste channel — there's
-  nothing to connect.
+- **Connections** — the **Connections** screen runs the **LinkedIn** sign-in, reconnect, and
+  disconnect. LinkedIn tokens expire after 60 days and can't be refreshed in the background,
+  so the card shows how long the current one has left and asks for a reconnect before it
+  lapses rather than after a publish fails. Reddit shows here too, but only as a note that
+  it's a manual copy-paste channel — there's nothing to connect.
 - **Raw data** — the **Database** screen is a direct read-only window into the tables.
 
 ## Both — a menu in config, the choices in the console
@@ -255,7 +257,7 @@ the console is where you then run the pipeline day to day.**
 | Brand look (imagery) | ✅ (`profiles/<slug>/brand/`) | ✅ Brand page (form + uploads + live preview / AI `brand` skill) | — | `brand.yaml` colors/fonts/logo/style notes + `refs/` example images + optional `.md`/`.html` brand docs (brand book, tone guide); read by `imagery`; optional (neutral default) |
 | Profiles / active profile | ✅ (`profiles/<slug>/`, via `setup`) | ✅ switcher | ✅ setting | Disk holds each profile; the sidebar switcher sets the active one and re-scopes the console |
 | Scheduled / published | — | ✅ | ✅ | Console-owned |
-| LinkedIn connection | — | ✅ Connections | ✅ token | OAuth in the console |
+| LinkedIn connection | — | ✅ Connections (connect / reconnect / disconnect) | ✅ token + expiry | OAuth in the console; the token lasts 60 days and is reconnected by hand — LinkedIn grants background refresh only to approved Marketing Developer Platform partners |
 | Reddit posting | — | ✅ Copy + Publish on the queue card | — | Manual copy-paste channel; no API, no connection, no token — Publish just records it |
 | Reddit destinations | ✅ (`identity.yaml`, optional) | — | — | A personal note of where you post; nothing in the console reads it |
 | Skills / agents / review rules | ✅ (code) | ▶ run only | — | Structure, not edited in UI |

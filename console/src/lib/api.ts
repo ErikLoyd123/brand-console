@@ -274,11 +274,25 @@ export type PlatformKey = 'linkedin' | 'reddit' | 'x' | 'newsletter'
 export interface Connection {
   platform: PlatformKey
   connected: boolean
+  // A connection can be linked and still be dead: LinkedIn access tokens last 60
+  // days and this app can't refresh them silently (programmatic refresh tokens are
+  // limited to approved Marketing Developer Platform partners), so the member has
+  // to re-authorize. `expired` says the stored token is past `expiresAt` and every
+  // API call will 401 until then — the surfaces show identity + Reconnect rather
+  // than pretending the connection is healthy.
+  expired: boolean
+  expiresAt: number | null
   displayName: string | null
   avatarUrl: string | null
   headline: string | null
   connectedAt: number | null
   scopes: string[]
+}
+
+// True when a connection can actually reach its platform's API right now.
+// Every publish affordance gates on this, not on `connected` alone.
+export function connectionUsable(c: Connection | null | undefined): boolean {
+  return c?.connected === true && c.expired !== true
 }
 
 // A profile in the multi-profile registry (GET /api/profiles). name is the display name;

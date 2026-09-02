@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode, type CSSProperties } from 'react'
 import {
   api,
+  connectionUsable,
+  LINKEDIN_CONNECT_PATH,
   type Connection,
   type GeneratorStatus,
   type ContentPlatform,
@@ -431,13 +433,29 @@ function ContentBlock({
               Cancel
             </Button>
           </div>
-        ) : platform === 'linkedin' && linkedinConn?.connected === true && publishEnabled ? (
+        ) : platform === 'linkedin' && connectionUsable(linkedinConn) && publishEnabled ? (
           <>
             <Button size="sm" disabled={busy} onClick={() => setLinkedinModalOpen(true)}>
               <Send className="size-3.5" /> Publish to LinkedIn
             </Button>
             {/* The manual path stays reachable while the API is connected: paste it
                 yourself, then record it here with the permalink. */}
+            <Button size="sm" variant="ghost" disabled={busy} onClick={() => setConfirmingPublish(true)}>
+              Mark published…
+            </Button>
+          </>
+        ) : platform === 'linkedin' && linkedinConn?.expired === true && publishEnabled ? (
+          // Connected but the token is dead. Offer the reconnect right here rather
+          // than letting the publish fail with a 401 and sending the user hunting
+          // for the Connections page.
+          <>
+            <Button
+              size="sm"
+              disabled={busy}
+              onClick={() => window.open(LINKEDIN_CONNECT_PATH, '_blank', 'noopener')}
+            >
+              <Send className="size-3.5" /> Reconnect LinkedIn
+            </Button>
             <Button size="sm" variant="ghost" disabled={busy} onClick={() => setConfirmingPublish(true)}>
               Mark published…
             </Button>
@@ -452,9 +470,11 @@ function ContentBlock({
             ? 'Publish writes the markdown file (SEO frontmatter) to data/exports/ and moves this to Published.'
             : platform === 'reddit'
               ? 'Reddit is copy-paste: Copy, post it there, then Publish to record it.'
-              : linkedinConn?.connected === true && publishEnabled
-                ? 'Posts via the LinkedIn API behind a typed confirm.'
-                : 'Copy, post it yourself, then Publish to record it.'}
+              : linkedinConn?.expired === true && publishEnabled
+                ? 'Your LinkedIn session expired (they last 60 days). Reconnect to publish from here, or copy and post it yourself.'
+                : connectionUsable(linkedinConn) && publishEnabled
+                  ? 'Posts via the LinkedIn API behind a typed confirm.'
+                  : 'Copy, post it yourself, then Publish to record it.'}
         </span>
         {note && (
           <span className="inline-flex items-center gap-1 text-xs text-success-fg">
@@ -936,15 +956,30 @@ export function QueueView() {
   // per card) and passed down to every strip's model picker. null = checking; a
   // failed probe reads as no local models, which leaves only the Claude option.
   const [generator, setGenerator] = useState<GeneratorStatus | null>(null)
-  useEffect(() => {
+  // Named so the window-focus listener below can re-run it: reconnecting happens
+  // in a separate OAuth tab, and coming back here should clear the expired state
+  // without a page reload.
+  function loadLinkedinConn() {
     api.getConnections().then((rows) => {
       setLinkedinConn(rows.find((c) => c.platform === 'linkedin') ?? null)
     }).catch(() => setLinkedinConn(null))
+  }
+  useEffect(() => {
+    loadLinkedinConn()
     // The post preview's author fallback when LinkedIn isn't connected.
     api.getProfile().then((p) => setProfileName(p.name)).catch(() => setProfileName(undefined))
     api.getGeneratorStatus().then(setGenerator).catch(() =>
       setGenerator({ backend: 'mflux', configured: false, models: [] }),
     )
+  }, [])
+  // OAuth (connect or reconnect) runs in its own tab; refocusing this one re-polls
+  // so an expired card recovers its Publish to LinkedIn button immediately.
+  useEffect(() => {
+    function onFocus() {
+      loadLinkedinConn()
+    }
+    window.addEventListener('focus', onFocus)
+    return () => window.removeEventListener('focus', onFocus)
   }, [])
   // One `queue` skill drives this surface; the per-card buttons only vary the first-message
   // directive (develop vs draft) and the local `mode` (which sets the working hints and result

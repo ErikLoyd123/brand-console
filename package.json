@@ -13,7 +13,7 @@
     "@anthropic-ai/claude-agent-sdk": "^0.1.5",
     "better-sqlite3": "^11.8.1",
     "drizzle-orm": "^0.38.4",
-    "express": "^4.21.2",
+    "express": "^5.2.1",
     "nanoid": "^5.0.9",
     "node-pty": "^1.0.0",
     "playwright": "^1.61.1",

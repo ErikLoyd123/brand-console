@@ -33,9 +33,10 @@ export interface VoiceCheckOptions {
   close?: string;
 }
 
-// Only the teach-shaped intent of each platform ('teach' on LinkedIn, 'help' on Reddit)
-// may be product-adjacent. A silo-derived `false` overrides any caller `true`, so the
-// strict no-ask path is unbypassable from the caller side.
+// Only the teach-shaped intent of each platform ('teach' on LinkedIn, 'help' on Reddit,
+// 'how-to' on web) and LinkedIn's 'promote' may be product-adjacent. A silo-derived
+// `false` overrides any caller `true`, so the strict no-ask path is unbypassable from
+// the caller side.
 function effectiveAdjacency(opts: VoiceCheckOptions): boolean {
   if (!opts.silo) return opts.isProductAdjacent;
   return siloMayBeProductAdjacent(opts.silo) ? opts.isProductAdjacent : false;
@@ -138,6 +139,65 @@ export function checkSeedRetention(
     severity: "fail",
     message: `Dropped ${missing.length} specific(s) from your seed. Every concrete thing you gave the drafter is load-bearing; put it back by name or edit the seed.`,
     matches: missing,
+  };
+}
+
+// Check B: a close must carry an anchor: a numeral, a capitalized term or acronym also
+// in the body, a product name, a [FILL] marker, or (conversation/discuss only) a question.
+export function checkAphorismClose(
+  close: string | undefined,
+  body: string,
+  silo?: Silo,
+  products: string[] = [],
+): Finding | null {
+  const trimmed = close?.trim() ?? "";
+  if (trimmed === "") return null;
+  if (NUMERAL.test(trimmed) && !/^\d$/.test(trimmed)) { NUMERAL.lastIndex = 0; return null; }
+  NUMERAL.lastIndex = 0;
+  if (/\[FILL:/i.test(trimmed)) return null;
+  const lower = trimmed.toLowerCase();
+  if (products.some((p) => p.trim() !== "" && lower.includes(p.toLowerCase()))) return null;
+  const anchors = extractSpecifics(trimmed).filter((s) => bodyHasSpecific(body, s));
+  if (anchors.length > 0) return null;
+  if ((silo === "conversation" || silo === "discuss") && trimmed.includes("?")) return null;
+  return {
+    rule: "aphorism-close",
+    severity: "warn",
+    message: "The close carries nothing concrete from the post. End on a specific thing you said, or (for a conversation post) a real question. Not a moral.",
+    matches: [trimmed],
+  };
+}
+
+// Check C: teach posts built on list scaffolding. Ordinal paragraph openers, count
+// announcements, and numbered lines. Suppressed (except numbered lines) when the owner's
+// own points are a list of three or more.
+const ORDINAL_OPENER = /^(First|Second|Third|Fourth|Fifth|Next|Finally|Lastly)[,.:]/;
+const COUNT_ANNOUNCEMENT =
+  /\b(?:(?:two|three|four|five|\d+)\s+(?:things|ways|reasons|lessons|rules|tips)|here are (?:two|three|four|five|\d+))\b/gi;
+const NUMBERED_LINE = /^\s*\d+[.)]\s/;
+
+export function checkListCadence(
+  body: string,
+  silo?: Silo,
+  points: string[] = [],
+): Finding | null {
+  if (silo !== "teach") return null;
+  const ownerListed = points.filter((p) => p.trim() !== "").length >= 3;
+  const matches: string[] = [];
+  const paragraphs = body.split(/\n\s*\n/).map((p) => p.trim()).filter((p) => p !== "");
+  if (!ownerListed) {
+    const ordinal = paragraphs.filter((p) => ORDINAL_OPENER.test(p));
+    if (ordinal.length >= 2) matches.push(...ordinal.map((p) => p.split(/\s/)[0]));
+    for (const m of body.matchAll(COUNT_ANNOUNCEMENT)) matches.push(m[0]);
+  }
+  const numbered = body.split("\n").filter((l) => NUMBERED_LINE.test(l));
+  if (numbered.length >= 3) matches.push(...numbered.map((l) => l.trim()));
+  if (matches.length === 0) return null;
+  return {
+    rule: "list-cadence",
+    severity: "warn",
+    message: "Teach post is built on list scaffolding (First/Second/Third, 'three things', numbered lines). Explain one mechanism in prose; a list only when your own points are a list.",
+    matches,
   };
 }
 
@@ -315,5 +375,11 @@ export function runVoiceChecks(
   if (protectedRisk) findings.push(protectedRisk);
   const curateBareLink = checkCurateBareLink(text, opts.silo);
   if (curateBareLink) findings.push(curateBareLink);
+  const seedRetention = checkSeedRetention(text, opts.seed, opts.points);
+  if (seedRetention) findings.push(seedRetention);
+  const aphorism = checkAphorismClose(opts.close, text, opts.silo, opts.products ?? []);
+  if (aphorism) findings.push(aphorism);
+  const listCadence = checkListCadence(text, opts.silo, opts.points ?? []);
+  if (listCadence) findings.push(listCadence);
   return findings;
 }

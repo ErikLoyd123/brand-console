@@ -1,6 +1,6 @@
 ---
 name: spark
-description: Shape a raw spark into a finished piece on the queue. Reads the spark, infers its intent (silo) from the target platform's roster and confirms with you, interviews you at the depth that kind needs, offers a few tone-colored angles to pick from — then writes the full piece (a post, or a long-form web article as one markdown document) and lands it on the Queue card for your review. Never invents an opinion, never publishes.
+description: Shape a raw spark into a finished piece on the queue. Reads the spark, infers its intent (silo) from the target platform's roster and confirms with you, interviews you at the depth that kind needs, offers a few tone-colored angles and a length band to pick from — then writes the full piece (a post, or a long-form web article as one markdown document) and lands it on the Queue card for your review. Invoked with nothing in hand, it proposes three sparks from your own interview material (your words, never invented) and you pick one. Never invents an opinion, never publishes.
 type: skill
 ---
 
@@ -21,7 +21,8 @@ spark verbatim and drops a seeded needs-your-take idea, via the same `src/ingest
 this skill uses). `spark` is the slower, deliberate sibling for when a spark is worth shaping.
 
 **Invoke with:** "spark on this", "spark:", "help me shape this thought", "turn this into a
-post".
+post". With nothing in hand: "spark", "I've got nothing, give me options", or the Spark
+screen's button with an empty box, and Step 2c proposes three from your own material.
 
 ## Onboarding gate (run before sparking)
 
@@ -107,6 +108,40 @@ npx tsx -e "(async () => { const p = await import('./src/core/pillars'); console
 
 This read feeds Step 3: the pillar is proposed from the notes, and its default intent is the
 first silo candidate.
+
+### 2c. No spark in hand? Propose three from the owner's own material
+
+When the invocation carries no thought (a bare "spark", "I've got nothing", an empty box),
+do not ask the owner to produce one cold and do not invent one. Their takes already exist in
+writing: the active profile's `interview.md` (the raw voice interview, with its seed lists,
+stories, and opinions) and the verbatim samples in the voice card. Resolve the file from the
+repo root, then read it in full:
+
+```bash
+npx tsx -e "import('./src/profile/loader.ts').then(m => console.log(m.interviewPath()))"
+```
+
+Then read what has already been used, so a proposal is never a repeat. Every queued or
+published idea on the active profile, with its seed and angle:
+
+```bash
+npx tsx -e "(async () => { const {db} = await import('./src/db/client'); const {ideaQueueItems} = await import('./src/db/schema'); const {eq} = await import('drizzle-orm'); const {getActiveProfileId} = await import('./src/profile/loader'); const r = await db.select({ status: ideaQueueItems.status, pillar: ideaQueueItems.pillar, silo: ideaQueueItems.silo, angle: ideaQueueItems.proposedAngle, seed: ideaQueueItems.seed }).from(ideaQueueItems).where(eq(ideaQueueItems.profileId, getActiveProfileId())); console.log(JSON.stringify(r, null, 2)); process.exit(0); })();"
+```
+
+Propose **exactly three** candidates, one line each, in this shape: the take in the owner's
+own words (quote the interview line or stay within a close paraphrase of it), the pillar it
+sits in (from the notes in Step 2b), and the intent that pillar defaults to. Prefer takes no
+existing item has used, spread the three across pillars, and lean to the pillars the
+coverage numbers say are quiet. Then one question: which one, or none. That is the whole
+step: one round of three, no second round unless the owner asks for one, no drafting on
+speculation. If they pick none and ask for more, offer three different ones; if the
+interview holds nothing unused, say so plainly and ask for a thought instead.
+
+The pick becomes the spark. Its raw text is the interview line itself (that is what Step 7
+records verbatim in the `sparks` row), and the flow continues at Step 3 exactly as if the
+owner had typed it. Take-origination holds throughout: every candidate must trace to a line
+the owner actually said. A take that is "probably how they'd see it" is an invention, and
+this step never produces one.
 
 ### 3. Infer-and-confirm the silo
 
@@ -227,7 +262,7 @@ npx tsx src/ingest/capture.ts "RAW SPARK TEXT" [pillar] \
 ```
 
 - The first positional is the owner's original raw spark (recorded verbatim in the `sparks`
-  row).
+  row). For a spark chosen in Step 2c it is the interview line the owner picked.
 - `pillar` is the pillar key the owner confirmed in Step 3. Always pass it; capture's
   first-pillar default is for bare captures, not for a spark that was walked.
 - `--seed` carries the refined thought the owner converged on.
@@ -306,6 +341,9 @@ annotated screenshot, or an Unsplash pick. If the owner wants one, follow
 - Any specific real detail the owner has not provided (a number, which tool, what actually
   happened, a customer) is a `[FILL: ...]` marker in the seed, surfaced — never a guess.
 - One converged thought per invocation. A second post means a second spark.
+- With nothing in hand, propose only from the owner's own written material (`interview.md`,
+  the voice card's samples): three candidates, one round, every one traceable to a line they
+  said. Never manufacture a take to fill the gap, and never draft one nobody picked.
 - `spark` never reviews or publishes. It writes only via the shared procedures, and only
   after the seed is saved — the write can always be abandoned and rerun without losing the
   shaped thought. Review and Publish belong to the owner, on the Queue card.

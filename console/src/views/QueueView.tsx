@@ -18,6 +18,7 @@ import { Input, Textarea } from '../components/ui/input'
 import { PillarBadge } from '../components/PillarBadge'
 import { TagBadge } from '../components/TagBadge'
 import { SiloBadge } from '../components/SiloBadge'
+import { LengthPicker } from '../components/LengthPicker'
 import { SilosInfoLink } from '../components/SilosInfoLink'
 import { PublishLinkedInModal } from '../components/PublishLinkedInModal'
 import { ImageStrip, type ImageEngine } from '../components/ImageStrip'
@@ -172,13 +173,18 @@ function ContentBlock({
     setChecking(true)
     const t = setTimeout(() => {
       api
-        .postReview(editedText, false, item.silo, isWeb ? undefined : { seed: item.seed, points: item.points, close })
+        .postReview(
+          editedText,
+          false,
+          item.silo,
+          isWeb ? undefined : { seed: item.seed, points: item.points, close, length: item.length ?? null },
+        )
         .then(setFindings)
         .catch(() => setFindings([]))
         .finally(() => setChecking(false))
     }, 600)
     return () => clearTimeout(t)
-  }, [editing, editedText, item.silo, item.seed, item.points, close, isWeb])
+  }, [editing, editedText, item.silo, item.seed, item.points, close, item.length, isWeb])
 
   async function saveContent() {
     setBusy(true)
@@ -651,6 +657,16 @@ function QueueRow({
             <SiloBadge silo={item.silo} />
             <PillarBadge pillar={item.pillar} />
             <TagBadge tag={item.tag} />
+            {item.platform !== 'web' && (
+              <LengthPicker
+                value={item.length ?? null}
+                silo={item.silo}
+                onChange={async (length) => {
+                  await api.setQueueLength(item.id, length)
+                  onDone()
+                }}
+              />
+            )}
           </div>
           <p className="font-serif text-lg leading-snug text-text-strong">{item.proposedAngle}</p>
         </div>
@@ -1018,7 +1034,8 @@ export function QueueView() {
       platform === 'web' ? item.article?.reviewStatus : item.draft?.reviewStatus
     return (
       ` Known context — platform: ${platform}; silo: ${item.silo}; pillar: ${item.pillar}; ` +
-      `tone: ${item.tone ?? 'profile default'}; my take: ${item.seed ? `"${item.seed}"` : 'not given yet'}; ` +
+      `tone: ${item.tone ?? 'profile default'}; length: ${item.length ?? 'not picked (recommend one and ask)'}; ` +
+      `my take: ${item.seed ? `"${item.seed}"` : 'not given yet'}; ` +
       `points: ${item.points.length > 0 ? item.points.map((p) => `"${p}"`).join(' | ') : 'none yet'}; ` +
       `written content: ${written ? `present (review status: ${reviewStatus ?? 'pending'})` : 'none yet'}.`
     )

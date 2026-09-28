@@ -29,6 +29,10 @@ export type Silo =
 // from PlatformKey below, which is the Connections screen's account roster.
 export type ContentPlatform = 'linkedin' | 'reddit' | 'web'
 
+// How long a post runs: a band key from src/core/lengths.ts. Chosen per post at draft
+// time; null on an item means the silo's default band applies.
+export type PostLength = 'short' | 'medium' | 'long'
+
 // IDs are opaque nanoid strings across every table (phase 01 canonical).
 // A web idea's article, as the queue GET attaches it: the SEO fields plus the whole
 // piece as one markdown `body` (the server flattens legacy structured sections into it).
@@ -63,6 +67,9 @@ export interface IdeaQueueItem {
   // The register the idea was shaped for (set by spark/discovery; null for older rows).
   platform?: ContentPlatform | null
   tone?: string | null
+  // The length band the post should run in (set by spark, the queue skill, or the card's
+  // picker; null means the silo's default band).
+  length?: PostLength | null
   // The written content riding with the idea (queue GET join): the latest draft for a
   // post idea, the article for a web idea. The queue is the review phase — a card shows,
   // edits, and publishes this content directly.
@@ -669,6 +676,13 @@ export const api = {
       body: JSON.stringify({ points }),
     }),
 
+  // Set (or clear, with null) the length band on a queue item — the card's picker.
+  setQueueLength: (id: string, length: PostLength | null) =>
+    http<IdeaQueueItem>(`/queue/${id}/length`, {
+      method: 'POST',
+      body: JSON.stringify({ length }),
+    }),
+
   // Pillars come from the active profile (GET /api/pillars) so badges label correctly.
   getPillars: () => http<PillarInfo[]>('/pillars'),
 
@@ -765,12 +779,13 @@ export const api = {
   // draft content never lands in a URL/query string. Empty array means clean.
   // isProductAdjacent drives the cta-rule severity (fail for personal posts,
   // warn for product-adjacent posts carrying more than one ask). seed/points
-  // enable the seed-retention check; close enables the aphorism-close check.
+  // enable the seed-retention check; close enables the aphorism-close check; length
+  // enables the length-band check.
   postReview: (
     text: string,
     isProductAdjacent: boolean,
     silo?: Silo,
-    extra?: { seed?: string | null; points?: string[]; close?: string },
+    extra?: { seed?: string | null; points?: string[]; close?: string; length?: PostLength | null },
   ) =>
     http<ReviewFinding[]>('/review', {
       method: 'POST',
@@ -781,6 +796,7 @@ export const api = {
         seed: extra?.seed ?? undefined,
         points: extra?.points,
         close: extra?.close,
+        length: extra?.length ?? undefined,
       }),
     }),
 

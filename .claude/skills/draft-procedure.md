@@ -41,8 +41,8 @@ Read the item and its tag:
 
 `npx tsx -e "import('./src/draft/draft-store.js').then(m => console.log(JSON.stringify(m.getIdeaForDraft(process.argv[1]), null, 2)))" <ITEM_ID>`
 
-Note `silo`, `pillar`, `tag`, `proposedAngle`, `seed`, `points`, and the register columns
-`platform` and `tone`. The `silo` (a platform-keyed intent from `src/core/silos.ts`) drives
+Note `silo`, `pillar`, `tag`, `proposedAngle`, `seed`, `points`, `length`, and the register
+columns `platform` and `tone`. The `silo` (a platform-keyed intent from `src/core/silos.ts`) drives
 Step 3's shaping. `platform`/`tone` are the register the item was shaped for (set by
 `spark`; usually null for other paths) — Step 2b resolves them into concrete tone guidance.
 
@@ -82,6 +82,25 @@ any), and `format` (a soft length/threading hint). These **color** the draft in 
 they are never hard rules. Register is guidance — the silo and the voice card still govern
 shape and pass/fail.
 
+## Step 2c, settle the length band
+
+How long the post runs is its own axis (bands in `src/core/lengths.ts`: short 300 to 600,
+medium 700 to 1100, long 1300 to 1900 body characters). Read `length` off the row. When it is
+set, draft to it. When it is null, **recommend one and ask, one question**: start from the
+silo's default (`teach`/`help` lean medium; everything else leans short), then move it by the
+material in `seed` and `points`. One gap or one claim is short. A mechanism is medium. A
+mechanism plus the mistake people make plus the fix is long. Say which and why in one line
+("this is one gap, so short; sound right?"), take the answer, and write it back so the card
+shows it:
+
+```bash
+curl -s -X POST http://localhost:5174/api/queue/<ITEM_ID>/length -H 'Content-Type: application/json' -d '{"length":"medium"}'
+```
+
+The band is a target, not a floor: a few characters either side is fine, and no silo carries
+a floor beyond its band any more. The console's `length-band` check warns when the body lands
+outside it.
+
 ## Step 3, write the draft, shaped by the item's silo, colored by the register
 
 Branch on the item's `silo` (from Step 1). The silo, not the pillar, decides the shape,
@@ -95,31 +114,38 @@ warm vs. dry — and the `format` hint informs length and paragraphing softly. T
 overrides the silo's structure, the voice card, or the doctrine; if tone and silo ever pull
 apart, silo wins. The tone colors *how* the silo-shaped post sounds, not *what* it is.
 
-Produce four fields, all in the loaded profile's voice, all voice-card compliant:
+Produce four fields, all in the loaded profile's voice, all voice-card compliant, **in this
+order**: the body, then the close, then the hooks mined from them, then the media suggestion.
+The hook is written last on purpose. The best first line already exists once the argument is
+on the page; a hook composed before the body is the one the body never pays off.
 
-- `hookOptions`: 3 to 5 first lines, each under 10 words, each a genuine hook (no
-  clickbait, no em dashes). A **question** opening hook is banned for `teach`, `win`, and
-  `curate` on LinkedIn and `help`, `share`, `ask`, and `curate` on Reddit, but **allowed
-  for `conversation` and `discuss`** (their job is to open a loop). On Reddit the hooks
-  double as **title candidates**: the first hook becomes the self-post title (hard cap 300
-  characters; the console shows the count), written plain — say what the post is, no bait.
-- `body`: shaped per silo (below). For any `needs-your-take` item the seed is the spine;
-  never invent an opinion. On Reddit the body and close publish as the **markdown
-  self-post body** under the title; plain markdown (paragraphs, a list if it earns it) is
-  fine there. Every specific in `seed` and `points` appears in the body by name (doctrine
-  Principle 5, `.claude/skills/content-doctrine.md`). Do not generalize a named tool,
-  number, or mechanism into a category; the `seed-retention` check fails the draft when one
-  goes missing.
+- `body`: shaped per silo (below) and sized to the item's band (Step 2c). For any
+  `needs-your-take` item the seed is the spine; never invent an opinion. On Reddit the body
+  and close publish as the **markdown self-post body** under the title; plain markdown
+  (paragraphs, a list if it earns it) is fine there. Every specific in `seed` and `points`
+  appears in the body by name (doctrine Principle 5, `.claude/skills/content-doctrine.md`).
+  Do not generalize a named tool, number, or mechanism into a category; the `seed-retention`
+  check fails the draft when one goes missing.
 - `close`: shaped per silo (below). It lands on one concrete thing from the body, or for
   `conversation` a real question. Never an aphorism, an encouragement, or a summary of the
   genre ("stay curious", "worth a second look"); the `aphorism-close` check flags those.
+- `hookOptions`: **mined, not composed.** Read the finished body and close for the sentence a
+  stranger scrolling would stop on, and promote it to line one; cut it from where it sat
+  unless it reads as a callback. Offer 3 to 5 such lines, each under 10 words, each a genuine
+  hook (no clickbait, no em dashes). LinkedIn shows about three lines before "see more", so
+  the hook plus the body's first line must carry the claim. A **question** opening hook is
+  banned for `teach`, `win`, and `curate` on LinkedIn and `help`, `share`, `ask`, and `curate`
+  on Reddit, but **allowed for `conversation` and `discuss`** (their job is to open a loop).
+  On Reddit the hooks double as **title candidates**: the first hook becomes the self-post
+  title (hard cap 300 characters; the console shows the count), written plain, no bait.
 - `mediaSuggestion`: one short suggestion (for example "screenshot of the thing you're
   describing" or "none").
 
 **Per-silo shaping — LinkedIn** (plus the shared `curate`):
 
-- **teach.** Body 1300 to 1900 characters; show, do not tell; lead with the useful, specific
-  thing, then explain the one mechanism behind it in prose. No First/Second/Third, no "three
+- **teach.** Body sized to the item's band (medium by default; long only when the mechanism,
+  the mistake, and the fix all belong in one post); show, do not tell; lead with the useful,
+  specific thing, then explain the one mechanism behind it in prose. No First/Second/Third, no "three
   things", no numbered list unless the owner's points are themselves a list of three or more,
   and prose is still preferred then (the `list-cadence` check flags the scaffolding). Close is
   a soft, honest wrap that restates the specific, never a moral. Apart from `promote`, this
@@ -130,13 +156,13 @@ Produce four fields, all in the loaded profile's voice, all voice-card compliant
   tone). If the profile lists no products, or the policy forbids an ask here, the close
   carries none. No desperate call to action.
 - **conversation.** Opens a loop instead of closing one: the body is the owner's thought
-  or experience, built to pull replies, not to deliver a takeaway. The 1300-1900 floor is
-  relaxed; shorter and tighter is good. The close is an invitation to reply and carries
+  or experience, built to pull replies, not to deliver a takeaway. Short band by default;
+  shorter and tighter is good. The close is an invitation to reply and carries
   **no product ask, ever**. Keep the invitation in the owner's plain voice, never
   engagement bait ("agree? comment below" and "thoughts? comment below" are banned).
 - **win.** A short, warm story. The hero is someone else, or, for a self-story, the owner
-  is the one held accountable (never the aggressive hero). The 1300-1900 floor does not
-  bind; brief is the target. No ask.
+  is the one held accountable (never the aggressive hero). Short band by default; brief is
+  the target. No ask.
 - **curate** (shared by LinkedIn and Reddit). A generous pointer to someone else's tool,
   idea, or post; credit the source explicitly. Low-effort framing on purpose (the owner is
   a node passing something good along) — but never a **bare link-drop**: at least a line
@@ -161,8 +187,8 @@ shape below reads as a community member talking, never marketing):
   floor. The close invites replies plainly (never "thoughts? comment below" bait). A
   question opening is allowed — it is the silo's job. **No product ask, ever.**
 - **help** — the teach-analog. Lead with the concrete answer to the concrete problem;
-  show, don't tell. Substantial like a `teach` body (the 1300-1900 character floor is the
-  guide) — a thin answer reads as karma-farming. This is the **only Reddit silo that may
+  show, don't tell. Substantial like a `teach` body (medium band by default; long when the
+  answer needs it) — a thin answer reads as karma-farming. This is the **only Reddit silo that may
   be product-adjacent**, gated by the same `cta_policy` rules as `teach`, and Reddit's
   norms bind harder: at most one soft, honest line, with the owner's affiliation stated
   plainly ("I work on X"). If the policy forbids it or no product genuinely applies, no
@@ -182,13 +208,13 @@ root (put the full draft text in `DRAFT`; only a `teach` or `help` post that gen
 touches a product is adjacent):
 
 ```bash
-DRAFT="$(cat path/to/draft.txt)" SILO=<silo> ADJACENT=<0|1> npx tsx -e "(async () => { const { loadIdentity } = await import('./src/profile/loader.ts'); const identity = loadIdentity(); const m = await import('./src/review/voice-checks.ts'); console.log(JSON.stringify(m.runVoiceChecks(process.env.DRAFT ?? '', { isProductAdjacent: process.env.ADJACENT === '1', silo: process.env.SILO, protectedRelationships: identity.protected_relationships ?? [], products: identity.products ?? [] }), null, 2)); })()"
+DRAFT="$(cat path/to/body.txt)" CLOSE="$(cat path/to/close.txt)" SEED="<seed>" POINTS='["<beat 1>","<beat 2>"]' SILO=<silo> LENGTH=<short|medium|long> ADJACENT=<0|1> npx tsx -e "(async () => { const { loadIdentity } = await import('./src/profile/loader.ts'); const identity = loadIdentity(); const m = await import('./src/review/voice-checks.ts'); const points = process.env.POINTS ? JSON.parse(process.env.POINTS) : []; console.log(JSON.stringify(m.runVoiceChecks(process.env.DRAFT ?? '', { isProductAdjacent: process.env.ADJACENT === '1', silo: process.env.SILO, seed: process.env.SEED || undefined, points, close: process.env.CLOSE || undefined, length: process.env.LENGTH || undefined, protectedRelationships: identity.protected_relationships ?? [], products: identity.products ?? [] }), null, 2)); })()"
 ```
 
 For every silo except the teach-shaped one of each platform (`teach` on LinkedIn, `help`
 on Reddit) the module forces adjacency to `false`, so any stray ask fails here before it
-ships. Confirm `teach`/`help` body length is in range (the other silos have no
-lower-length failure). Fix anything that fails. Re-read it aloud in the loaded voice:
+ships. Confirm the body sits in its band (the `length-band` warn names the gap) and that
+the seed's specifics survived. Fix anything that fails. Re-read it aloud in the loaded voice:
 bar-explaining-to-a-friend, not press release.
 
 ## Step 4, save via draft-store
@@ -213,7 +239,7 @@ The CLI prints `{"draftId":N,"ideaId":M,"status":"drafted"}`. Saving sets the dr
 
 ## Step 5, hand off
 
-Report the new draft id **and the draft's silo, plus whether it is product-adjacent**
+Report the new draft id **and the draft's silo and length band, plus whether it is product-adjacent**
 (only possibly true for the teach-shaped silo — `teach` on LinkedIn, `help` on Reddit —
 and for LinkedIn's `promote`, and always false for every other silo), **and the resolved
 register (platform + tone)** from Step 2b. `content-reviewer` needs the silo to grade the
@@ -230,6 +256,7 @@ Nothing here publishes.
 - NEVER drop a specific from the seed or points; carry it by name (Principle 5).
 - NEVER close on an aphorism; the close lands on a specific from the body or, for a conversation post, a real question.
 - NEVER scaffold a teach post as a list unless the owner's points are a list; explain the mechanism in prose.
-- Shape by silo, on either platform: only the teach-shaped silo and LinkedIn's `promote` may carry an ask; only `teach` on LinkedIn (and `help` on Reddit) holds the 1300-1900 body floor, and `promote` runs 400-900; only the conversation-shaped silo may open with a question (`conversation`, `discuss`); every other silo carries no ask and no length floor. 3 to 5 hooks, each under 10 words, for every silo; on Reddit the first hook is the self-post title (300-char hard cap).
+- Shape by silo, on either platform: only the teach-shaped silo and LinkedIn's `promote` may carry an ask; only the conversation-shaped silo may open with a question (`conversation`, `discuss`); every other silo carries no ask. Length is the item's band, never a silo floor: short 300-600, medium 700-1100, long 1300-1900 body characters (`src/core/lengths.ts`); `teach`/`help` default to medium, everything else to short, and `promote` runs 400-900. 3 to 5 hooks, each under 10 words, mined from the finished body, for every silo; on Reddit the first hook is the self-post title (300-char hard cap).
+- NEVER write the hook first. Write the body and the close, then promote the line a stranger would stop on. A hook the body never pays off is a tell.
 - The register (platform + tone) is **soft coloring, never a hard rule**: it shifts the language's register and hints at length, but the silo, the voice card, and the doctrine govern. Tone never gates a draft and never enters the mechanical checks. If tone and silo conflict, silo wins.
 - The output is a draft, never a published post.

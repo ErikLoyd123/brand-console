@@ -175,6 +175,17 @@ needs, one plain question each: the **target keyword** (the single phrase the pi
 buying"). These are the owner's, never invented; if the owner does not know the keyword yet, leave it
 as a `[FILL: ...]` marker. Depth still follows the piece kind, not these two questions.
 
+### 5b. Recommend the length band
+
+How long the post runs is its own axis (bands in `src/core/lengths.ts`: short 300 to 600,
+medium 700 to 1100, long 1300 to 1900 body characters). Recommend one, **in one line with the
+reason, and ask**. Start from the silo's default (`teach`/`help` lean medium; every other
+post intent leans short) and move it by what the interview actually produced: one gap or one
+claim is short; a mechanism is medium; a mechanism plus the mistake people make plus the fix
+is long. "You gave me one gap and one number, so short; sound right?" The owner nods or
+picks another. The band is a target the drafter writes to, not a floor. Skip this step for
+`web` (the article carries its own length target).
+
 ### 6. Angle-finder, calibrated by silo and colored by tone
 
 Offer one-line candidate angles — options, not drafts — with the **count and shapes scaled
@@ -211,7 +222,8 @@ npx tsx src/ingest/capture.ts "RAW SPARK TEXT" [pillar] \
   --seed "REFINED CONVERGED THOUGHT" \
   --silo <conversation|teach|win|curate|promote|discuss|help|share|ask|how-to|explainer|comparison|thought-piece|whitepaper> \
   --platform <platform-key> \
-  --tone <tone-key>
+  --tone <tone-key> \
+  --length <short|medium|long>
 ```
 
 - The first positional is the owner's original raw spark (recorded verbatim in the `sparks`
@@ -224,9 +236,11 @@ npx tsx src/ingest/capture.ts "RAW SPARK TEXT" [pillar] \
   capture's `conversation` default.
 - `--platform` and `--tone` persist the register the spark was shaped for, so `queue`
   and `content-reviewer` can read it downstream.
+- `--length` persists the band the owner confirmed in Step 5b, so the drafter writes to it
+  and the card shows it. Omit it only for `web`.
 
-The item lands with `status = seeded`, `tag = needs-your-take`, `silo = <detected>`, and the
-platform/tone pinned. Report the new spark id and idea id and confirm what it landed as
+The item lands with `status = seeded`, `tag = needs-your-take`, `silo = <detected>`, the
+platform/tone pinned, and the length band set. Report the new spark id and idea id and confirm what it landed as
 (silo, platform, tone).
 
 ### 8. Web only — side-write the article row

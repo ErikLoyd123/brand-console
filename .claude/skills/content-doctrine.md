@@ -48,6 +48,11 @@ needs to be profound; demanding depth a post's purpose does not want deforms it.
 - **Register** (tone/platform — the menu in `src/core/registers.ts`, selected per user in
   `identity.yaml`) *colors* that depth — how the calibrated thought sounds on the chosen
   platform — but never overrides the silo's shape.
+- **Length** (the band roster in `src/core/lengths.ts`, chosen per post) sets how much room
+  the depth gets. The silo only defaults it (`teach`/`help` lean medium, the rest lean short);
+  the material decides it: one gap or one claim is short, a mechanism is medium, a mechanism
+  plus the mistake plus the fix is long. A teach post is as long as its mechanism, never as
+  long as a floor.
 
 Read depth off the axes; do not apply it uniformly.
 

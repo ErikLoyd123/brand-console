@@ -44,8 +44,8 @@ files; some now have console editors too.
   post to), but that's now just a personal note — Reddit is a manual copy-paste channel, so
   nothing in the console reads the list.
 - **The fixed menus (code)** — the roster of **silos** (post intents), now **keyed by
-  platform** — LinkedIn: conversation / teach / win / curate; Reddit: discuss / help /
-  share / ask / curate — and the **platform + tone menu**, which now spans **both
+  platform** — LinkedIn: conversation / teach / win / curate / promote; Reddit: discuss /
+  help / share / ask / curate — and the **platform + tone menu**, which now spans **both
   LinkedIn and Reddit** (each platform ships its own tones and neutral starter themes).
   These are product structure; they change only in code, and the same menus ship to
   everyone.
@@ -166,8 +166,8 @@ recognize.
   directly (add, rename, reweight, remove — it writes the config file) *and* shows live
   stats. You can still edit them via `setup` in the terminal.
 - **Silo (post intent)** — the *menu* is fixed in code (now **keyed by platform**:
-  LinkedIn's conversation / teach / win / curate and Reddit's discuss / help / share /
-  ask / curate), but you **choose** an item's silo in the console when you promote it from
+  LinkedIn's conversation / teach / win / curate / promote and Reddit's discuss / help /
+  share / ask / curate), but you **choose** an item's silo in the console when you promote it from
   Discovery, and that choice is saved to the item. The **Intent** screen browses the
   intents (meaning, rules, live counts); it's read-only because the roster is fixed
   structure that drafting and review depend on.

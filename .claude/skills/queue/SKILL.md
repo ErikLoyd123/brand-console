@@ -72,6 +72,10 @@ must supply the context a person would want:
 - One branch, one item, per run. Never silently do two. Follow-up questions and tweaks on
   the same item in the same session are fine; a different branch or item is a new run.
 - Never invent the opinion, the beats, or a fact — the procedures spell this out; it binds here too.
+- Obey the shared interaction rules (`.claude/skills/interaction-rules.md`) on every branch:
+  "just go" means take your own recommendations and stop asking (only a missing take or a
+  fact that cannot be written around still stops), and never ask the owner to approve or
+  save text they cannot see in the same message; a revision shows before and after in full.
 - Only ever writes through the procedures' CLIs (`develop-idea.ts` / `draft-store.ts` /
   `update-draft.ts` / `update-article.ts`) — plus, in the review branch only, the verdict
   writes the content-reviewer spec itself prescribes (`reviewStatus`, article stage). Never

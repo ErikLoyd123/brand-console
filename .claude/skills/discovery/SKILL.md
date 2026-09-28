@@ -65,6 +65,12 @@ rules: no em dashes, no AI-tells). The **seed** is the unit that must stay your 
 a missing specific is asked for, else left out of the seed or the beat, never placeholdered.
 The doctrine binds every step below.
 
+`discovery` also obeys the shared interaction rules (`.claude/skills/interaction-rules.md`):
+"just go" switches the run to decide-for-me mode (the pick, the silo, the beats, and the length
+band take the recommended answer and say so in a line; only a missing take or a fact that
+cannot be written around still stops), and nothing is put up for approval without its full
+text shown first.
+
 ## 3. Pick the feed item
 
 If the first message already gives a feed-item id (the console's "Work up with AI" button

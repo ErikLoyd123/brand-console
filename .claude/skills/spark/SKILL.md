@@ -64,6 +64,12 @@ for in the interview or left out of the seed (never a placeholder), and depth is
 silo inferred in Step 3 *before* the interview runs. The
 doctrine binds every step below; this file does not restate it.
 
+`spark` also obeys the shared interaction rules (`.claude/skills/interaction-rules.md`).
+"Just go" (or "decide for me", "no questions") switches the run to decide-for-me mode: Steps
+2c, 3, 4, 5b, and 6 take their own recommended pick and say so in one line instead of asking;
+only a missing take or a fact that cannot be written around still stops. And nothing is ever
+put up for approval, the finished piece in Step 9 included, without its full text shown first.
+
 ## The flow
 
 `spark` runs these steps in order. Steps 1-2 are setup and doctrine; steps 3-4 resolve the

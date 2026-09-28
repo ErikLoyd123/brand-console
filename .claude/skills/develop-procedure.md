@@ -15,6 +15,12 @@ It is the substance step of the ladder: **Discovery inbox → saved → (develop
 insight → Draft.** A spark arrives with a take but usually no beats; a promoted article arrives
 with your one-line take and the source. Either way, the develop procedure turns it into something with meat.
 
+It obeys the shared interaction rules (`.claude/skills/interaction-rules.md`): the proposed take
+and beats are shown as the exact text that will be saved before asking; in decide-for-me mode
+("just go") they are saved without the confirm round and shown in the report. The one stop that
+always holds is an item with no take at all: the beats are drawn from the owner's take, so with
+no take there is nothing to draw from, and the procedure asks for it.
+
 It **never invents the opinion or the beats.** They come from the owner, grounded in the item,
 its source, and the voice card. The owner decides; the skill files.
 

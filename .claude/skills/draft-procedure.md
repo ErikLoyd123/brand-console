@@ -86,8 +86,9 @@ shape and pass/fail.
 
 How long the post runs is its own axis (bands in `src/core/lengths.ts`: short 300 to 600,
 medium 700 to 1100, long 1300 to 1900 body characters). Read `length` off the row. When it is
-set, draft to it. When it is null, **recommend one and ask, one question**: start from the
-silo's default (`teach`/`help` lean medium; everything else leans short), then move it by the
+set, draft to it. When it is null, **recommend one and ask, one question** (in decide-for-me
+mode, take the recommendation and say so in a line; `.claude/skills/interaction-rules.md`):
+start from the silo's default (`teach`/`help` lean medium; everything else leans short), then move it by the
 material in `seed` and `points`. One gap or one claim is short. A mechanism is medium. A
 mechanism plus the mistake people make plus the fix is long. Say which and why in one line
 ("this is one gap, so short; sound right?"), take the answer, and write it back so the card
@@ -258,5 +259,6 @@ Nothing here publishes.
 - NEVER scaffold a teach post as a list unless the owner's points are a list; explain the mechanism in prose.
 - Shape by silo, on either platform: only the teach-shaped silo and LinkedIn's `promote` may carry an ask; only the conversation-shaped silo may open with a question (`conversation`, `discuss`); every other silo carries no ask. Length is the item's band, never a silo floor: short 300-600, medium 700-1100, long 1300-1900 body characters (`src/core/lengths.ts`); `teach`/`help` default to medium, everything else to short, and `promote` runs 400-900. 3 to 5 hooks, each under 10 words, mined from the finished body, for every silo; on Reddit the first hook is the self-post title (300-char hard cap).
 - NEVER write the hook first. Write the body and the close, then promote the line a stranger would stop on. A hook the body never pays off is a tell.
+- Obey the shared interaction rules (`.claude/skills/interaction-rules.md`): the hand-off shows the saved hook, body, and close in full, and a run in decide-for-me mode takes the recommended band and hook without asking.
 - The register (platform + tone) is **soft coloring, never a hard rule**: it shifts the language's register and hints at length, but the silo, the voice card, and the doctrine govern. Tone never gates a draft and never enters the mechanical checks. If tone and silo conflict, silo wins.
 - The output is a draft, never a published post.

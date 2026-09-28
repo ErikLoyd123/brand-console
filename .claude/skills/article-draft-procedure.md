@@ -65,7 +65,8 @@ contradict it, never add a position it does not contain.
 ## 3. Confirm the shape — one light ask
 
 Sketch the structure internally from the take, the points, and the kind's guidance, then
-confirm it with **one** question: the proposed section headings as a short list, one line
+confirm it with **one** question (skipped in decide-for-me mode, where the headings are
+still shown in the report; `.claude/skills/interaction-rules.md`): the proposed section headings as a short list, one line
 each ("I'd structure it: verdict first → what changed → the numbers → when gp2 still wins →
 how to migrate. Good?"). The owner nods or redirects; incorporate and move on. One ask, not
 a walk — the full-document review happens on the queue card afterward.

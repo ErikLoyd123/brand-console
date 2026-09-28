@@ -77,6 +77,8 @@ Proceed one question at a time, follow the energy, and move on from a theme when
 
 **Optional light register touch.** The register axis adds **no** mandatory seventh theme. But once the owner's leaned tones are known (the `platforms` step in Stage B, or an existing profile), the interview MAY ask one light follow-up inside **theme 4 (voice mechanics)** or **theme 5 (audience)** — "when you write in that register, what does it actually sound like?" — and distill the answer into a short **register per platform** note in the voice card. That note is prose only: how the owner's chosen tones read in their voice, the guidance a drafter needs that a tone *key* cannot carry. The structured selection stays in `identity.yaml`; the voice stays in the card. If the interview yields nothing concrete, the distillation discipline applies — leave the note thin and flag the gap rather than inventing a register the owner never described.
 
+**Optional "How I end a post" note.** When the interview surfaces how the owner likes to end a post (a specific restated, a question, a plain stop), distill it into a short **How I end a post** section in the voice card. Take-origination applies: name the pattern the person actually showed, never invent one, and leave the section out when nothing concrete came up. The committed rules for closes live in the doctrine (`.claude/skills/content-doctrine.md`, Principle 5); this note is the owner's nuance on top.
+
 ### Stage A when `kind` is `brand`: the company interview
 
 For a `brand` profile, Stage A is a company interview, not a personal one. It keeps the same

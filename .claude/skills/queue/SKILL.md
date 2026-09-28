@@ -16,7 +16,7 @@ never publishes (the card's Publish button is your action, gated in the console)
 | develop / flesh out / "what are the points" | `.claude/skills/develop-procedure.md` | Draw out your take + 2-4 points on a queue item |
 | write / draft / "write the full post/article" | post idea → `.claude/skills/draft-procedure.md` · web idea → `.claude/skills/article-draft-procedure.md` | Write the full piece from your take + points and save it onto the idea's card |
 | revise / sharpen / "rewrite the intro" | `.claude/skills/revise-procedure.md` (its web variant for a web idea) | Refine the written piece in your voice, write it back |
-| review / "run the gate" / "is this good to publish" | `.claude/agents/content-reviewer.md` — follow it exactly as a procedure | Judge the written piece against the voice card (and, for web, the SEO checks), write the verdict, report pass or the fix list |
+| review / "run the gate" / "is this good to publish" | `.claude/agents/content-reviewer.md` — follow it exactly as a procedure | Judge the written piece against the voice card (and, for web, the SEO checks), write the verdict, report pass or the fix list. Hand the reviewer the item's `seed` and `points` and the draft's `close` alongside silo, platform, and tone, so the seed-retention and aphorism-close checks run |
 | image / visual / "add an image" / "screenshot this" | `.claude/skills/imagery-procedure.md` | Put an image on the idea's card — composed brand graphic, annotated screenshot, or Unsplash pick — in the profile's brand look |
 
 **Lane detection:** read the item first. `platform = 'web'` (equivalently, a piece-kind

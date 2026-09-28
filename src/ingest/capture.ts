@@ -9,6 +9,7 @@ import { sparks, ideaQueueItems } from '../db/schema';
 import { getPillars, getPillarDefaultSilo, type Pillar } from '../core/pillars';
 import { getSilos, type Silo } from '../core/silos';
 import { getDefaultPlatform, type Platform } from '../core/registers';
+import { getLengths, type PostLength } from '../core/lengths';
 import { getActiveProfileId } from '../profile/loader';
 
 export type CaptureResult = { sparkId: string; ideaId: string };
@@ -34,6 +35,10 @@ export type CaptureOptions = {
   // Developed points — the beats of the argument. `capture` leaves them empty (a raw
   // spark has none yet); `spark`/`develop` may pass them when the walk drew them out.
   points?: string[];
+  // The length band the post should run in (src/core/lengths.ts). `spark` passes the
+  // band the owner confirmed; `capture` leaves it undefined (null in the row, so drafting
+  // falls back to the silo's default band).
+  length?: PostLength;
 };
 
 /** The default capture pillar: the first pillar declared in the profile. */
@@ -83,6 +88,7 @@ export async function captureSpark(
     // spark passes the resolved platform/tone.
     platform: opts.platform?.trim() ? opts.platform.trim() : null,
     tone: opts.tone?.trim() ? opts.tone.trim() : null,
+    length: opts.length ?? null,
     tag: 'needs-your-take',
     sourceRef: `spark:${sparkId}`,
     proposedAngle: seed.slice(0, 240),
@@ -97,7 +103,8 @@ export async function captureSpark(
 }
 
 // CLI: tsx src/ingest/capture.ts "your spark text" [pillar] [--seed "refined thought"]
-//        [--silo <conversation|teach|win|curate>] [--platform <key>] [--tone <key>]
+//        [--silo <conversation|teach|win|curate|promote>] [--platform <key>] [--tone <key>]
+//        [--length <short|medium|long>]
 // `capture` uses the two-positional form: silo defaults to 'conversation', seed is the
 // verbatim text, and no platform/tone are pinned. `spark` passes --seed with the refined
 // thought plus --silo/--platform/--tone from the register it resolved.
@@ -123,6 +130,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const silo = flags.silo as Silo | undefined;
   const platform = flags.platform;
   const tone = flags.tone;
+  const length = flags.length as PostLength | undefined;
 
   // The intent roster is platform-keyed, so --silo validates against the item's
   // resolved platform: the parsed --platform when given, else the shipped default.
@@ -130,7 +138,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     platform && platform.trim() ? (platform.trim() as Platform) : getDefaultPlatform();
 
   const usage =
-    `usage: tsx src/ingest/capture.ts "your spark text" [pillar] [--seed "refined thought"] [--silo <${getSilos(resolvedPlatform).join('|')}>] [--platform <key>] [--tone <key>]`;
+    `usage: tsx src/ingest/capture.ts "your spark text" [pillar] [--seed "refined thought"] [--silo <${getSilos(resolvedPlatform).join('|')}>] [--platform <key>] [--tone <key>] [--length <${getLengths().join('|')}>]`;
   if (!text) {
     console.error(usage);
     process.exit(1);
@@ -139,8 +147,12 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     console.error(`invalid --silo "${silo}"; must be one of: ${getSilos(resolvedPlatform).join(', ')}`);
     process.exit(1);
   }
+  if (length !== undefined && !getLengths().includes(length)) {
+    console.error(`invalid --length "${length}"; must be one of: ${getLengths().join(', ')}`);
+    process.exit(1);
+  }
 
-  captureSpark(text, pillar, { seed, silo, platform, tone })
+  captureSpark(text, pillar, { seed, silo, platform, tone, length })
     .then((r) => {
       console.log(`captured spark ${r.sparkId} -> idea ${r.ideaId} (needs-your-take, seeded)`);
       process.exit(0);

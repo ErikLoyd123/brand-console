@@ -14,6 +14,7 @@ for (const f of FIXTURES) {
     seed: f.seed,
     points: f.points,
     close: f.close,
+    length: f.length,
     products: ["RoastLog"],
     protectedRelationships: [],
   });

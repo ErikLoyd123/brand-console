@@ -4,6 +4,7 @@
 // a teach post with an aphorism close). Prose is written for the example persona (a coffee
 // roaster); no real user's text appears here. Consumed by voice-checks.verify.ts.
 import type { Silo } from "../core/silos";
+import type { PostLength } from "../core/lengths";
 
 export interface Fixture {
   name: string;
@@ -12,6 +13,8 @@ export interface Fixture {
   points: string[];
   body: string;
   close: string;
+  // The band the post was drafted for; omitted when the fixture does not exercise it.
+  length?: PostLength;
   // Rules expected to fire, each with the matches that must be present.
   expect: { rule: string; matches: string[] }[];
   // Rules that must NOT fire.
@@ -76,6 +79,20 @@ export const FIXTURES: Fixture[] = [
       "The preheat brings the drum to a stable temperature before the beans go in, so the first minute reads true instead of low.",
     close: "Give the Aillio its preheat and the first minute of the curve stops lying to you.",
     expect: [],
+    forbid: ["seed-retention", "aphorism-close", "list-cadence"],
+  },
+  {
+    name: "short-band teach post that ran long",
+    silo: "teach",
+    length: "short",
+    seed: "Green beans lose about a percent of weight a month in a dry warehouse, so the price per cup drifts up while the invoice stays the same.",
+    points: [],
+    body:
+      "Green beans lose about a percent of weight a month in a dry warehouse. The bag still says 60 kilos on the invoice, but by the time you roast the last of it you are paying for water that left months ago, so the price per cup drifts up while the number on the invoice stays the same.\n\n" +
+      "The fix is not a better supplier. It is weighing what you roast, not what you bought, and letting the cost per cup move with it. Once you do that the drift shows up as a line on a chart instead of a surprise at the end of the quarter, and you can decide whether faster turnover is worth the smaller order.\n\n" +
+      "That is also why the roasters who buy small and often seem to pay more per bag and less per cup.",
+    close: "Weigh the 60 kilos you roast, not the 60 kilos you bought.",
+    expect: [{ rule: "length-band", matches: [] }],
     forbid: ["seed-retention", "aphorism-close", "list-cadence"],
   },
 ];

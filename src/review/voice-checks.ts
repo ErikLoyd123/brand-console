@@ -13,6 +13,7 @@ export interface Finding {
 }
 
 import { siloMayBeProductAdjacent, type Silo } from "../core/silos";
+import { getLengthBand, type PostLength } from "../core/lengths";
 
 export interface VoiceCheckOptions {
   isProductAdjacent: boolean;
@@ -31,6 +32,9 @@ export interface VoiceCheckOptions {
   // The draft's close, separately from `text` (the body). When present, the aphorism
   // check runs; absent, it is skipped.
   close?: string;
+  // The length band the post was drafted for (src/core/lengths.ts). When present, the
+  // band check runs against the body; absent, it is skipped.
+  length?: PostLength;
 }
 
 // Only the teach-shaped intent of each platform ('teach' on LinkedIn, 'help' on Reddit,
@@ -370,6 +374,23 @@ export function checkCurateBareLink(text: string, silo?: Silo): Finding | null {
   };
 }
 
+// Length band: the body should land inside the band the post was drafted for. Soft on
+// purpose (a few characters either side is not a defect); the reviewer decides.
+export function checkLengthBand(body: string, length?: PostLength): Finding | null {
+  if (!length) return null;
+  const band = getLengthBand(length);
+  if (!band) return null;
+  const chars = body.trim().length;
+  if (chars >= band.min && chars <= band.max) return null;
+  const direction = chars < band.min ? "under" : "over";
+  return {
+    rule: "length-band",
+    severity: "warn",
+    message: `Body is ${chars} characters, ${direction} the ${band.label.toLowerCase()} band (${band.min} to ${band.max}). ${chars < band.min ? "Either the idea needs a longer band or the body is missing its mechanism." : "Either the idea needs a longer band or the body is carrying more than one idea."}`,
+    matches: [`${chars} chars`],
+  };
+}
+
 // Aggregator: runs every mechanical check and returns all findings. An empty
 // array means the mechanical checks pass. Soft rules are content-reviewer's job.
 export function runVoiceChecks(
@@ -396,5 +417,7 @@ export function runVoiceChecks(
   if (aphorism) findings.push(aphorism);
   const listCadence = checkListCadence(text, opts.silo, opts.points ?? []);
   if (listCadence) findings.push(listCadence);
+  const lengthBand = checkLengthBand(text, opts.length);
+  if (lengthBand) findings.push(lengthBand);
   return findings;
 }

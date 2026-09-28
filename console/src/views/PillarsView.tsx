@@ -6,6 +6,7 @@ import { Input } from '../components/ui/input'
 import { PageHeader, SectionHeading, Eyebrow, EmptyState } from '../components/kit'
 import { SkillSurface } from '../components/SkillSurface'
 import { AlertCircle, Layers, Plus, Trash2, Check, Sparkles } from 'lucide-react'
+import { getConsoleSilos } from '../lib/silos'
 
 // Warm categorical dot colors, one per pillar card (matches the design tokens).
 const PILLAR_COLORS = [
@@ -72,7 +73,7 @@ function PillarEditor({ onSaved, reloadKey }: { onSaved: () => void; reloadKey: 
     setError(null)
   }
   function add() {
-    setRows((rs) => [...(rs ?? []), { key: '', label: '', weight: 0, isNew: true }])
+    setRows((rs) => [...(rs ?? []), { key: '', label: '', weight: 0, note: '', default_silo: null, isNew: true }])
     setSaved(false)
   }
 
@@ -81,7 +82,13 @@ function PillarEditor({ onSaved, reloadKey }: { onSaved: () => void; reloadKey: 
     setSaving(true)
     setError(null)
     try {
-      const payload = rows.map((r) => ({ key: r.key.trim(), label: r.label.trim(), weight: Number(r.weight) || 0 }))
+      const payload = rows.map((r) => ({
+        key: r.key.trim(),
+        label: r.label.trim(),
+        weight: Number(r.weight) || 0,
+        note: (r.note ?? '').trim(),
+        default_silo: r.default_silo && r.default_silo !== '' ? r.default_silo : null,
+      }))
       const r = await api.savePillars(payload)
       setRows(r.pillars)
       setSaved(true)
@@ -116,41 +123,66 @@ function PillarEditor({ onSaved, reloadKey }: { onSaved: () => void; reloadKey: 
         </div>
 
         {rows.map((row, i) => (
-          <div key={i} className="flex items-center gap-2">
-            {row.isNew ? (
+          <div key={i} className="flex flex-col gap-1.5 border-b border-border/40 pb-2 last:border-b-0">
+            <div className="flex items-center gap-2">
+              {row.isNew ? (
+                <Input
+                  value={row.key}
+                  onChange={(e) => patch(i, { key: e.target.value })}
+                  placeholder="short-key"
+                  className="h-8 w-40 font-mono text-xs"
+                />
+              ) : (
+                <span className="w-40 shrink-0 truncate px-2 font-mono text-xs text-text-subtle" title={row.key}>
+                  {row.key}
+                </span>
+              )}
               <Input
-                value={row.key}
-                onChange={(e) => patch(i, { key: e.target.value })}
-                placeholder="short-key"
-                className="h-8 w-40 font-mono text-xs"
+                value={row.label}
+                onChange={(e) => patch(i, { label: e.target.value })}
+                placeholder="Human label"
+                className="h-8 flex-1"
               />
-            ) : (
-              <span className="w-40 shrink-0 truncate px-2 font-mono text-xs text-text-subtle" title={row.key}>
-                {row.key}
-              </span>
-            )}
-            <Input
-              value={row.label}
-              onChange={(e) => patch(i, { label: e.target.value })}
-              placeholder="Human label"
-              className="h-8 flex-1"
-            />
-            <Input
-              type="number"
-              min={0}
-              value={String(row.weight)}
-              onChange={(e) => patch(i, { weight: Number(e.target.value) })}
-              className="h-8 w-24 tabular-nums"
-            />
-            <Button
-              size="icon"
-              variant="ghost"
-              className="size-8 shrink-0 text-text-subtle hover:text-error"
-              onClick={() => remove(i)}
-              title="Remove pillar"
-            >
-              <Trash2 className="size-4" />
-            </Button>
+              <Input
+                type="number"
+                min={0}
+                value={String(row.weight)}
+                onChange={(e) => patch(i, { weight: Number(e.target.value) })}
+                className="h-8 w-24 tabular-nums"
+              />
+              <Button
+                size="icon"
+                variant="ghost"
+                className="size-8 shrink-0 text-text-subtle hover:text-error"
+                onClick={() => remove(i)}
+                title="Remove pillar"
+              >
+                <Trash2 className="size-4" />
+              </Button>
+            </div>
+            <div className="flex items-start gap-2 pl-40">
+              <textarea
+                value={row.note ?? ''}
+                onChange={(e) => patch(i, { note: e.target.value })}
+                placeholder="What posts in this pillar cover, and how they should read"
+                rows={2}
+                className="min-h-[3.5rem] flex-1 resize-y rounded-md border border-border bg-surface px-2 py-1.5 text-xs leading-snug text-text focus:outline-none focus:ring-1 focus:ring-ring"
+              />
+              <select
+                value={row.default_silo ?? ''}
+                onChange={(e) => patch(i, { default_silo: e.target.value === '' ? null : e.target.value })}
+                title="The intent a new spark in this pillar is filed as unless you say otherwise"
+                className="h-8 w-40 shrink-0 rounded-md border border-border bg-surface px-2 text-xs text-text"
+              >
+                <option value="">No default intent</option>
+                {getConsoleSilos('linkedin').map((s) => (
+                  <option key={s.key} value={s.key}>
+                    {s.label}
+                  </option>
+                ))}
+              </select>
+              <span className="w-8 shrink-0" />
+            </div>
           </div>
         ))}
 
@@ -176,7 +208,9 @@ function PillarEditor({ onSaved, reloadKey }: { onSaved: () => void; reloadKey: 
       </div>
       <p className="text-sm text-text-subtle">
         Weights are relative shares — the engine normalizes them. A pillar's key is fixed once created
-        (renaming it would orphan queued items); change the label to rename it in the UI.
+        (renaming it would orphan queued items); change the label to rename it in the UI. The note is
+        what the drafter, discovery, and the reviewer read to know what this pillar's posts look like;
+        the default intent is what a new spark in this pillar is filed as unless you say otherwise.
       </p>
     </section>
   )

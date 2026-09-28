@@ -380,6 +380,10 @@ export interface PillarConfig {
   key: string
   label: string
   weight: number
+  // Guidance the drafter, discovery, and the reviewer read. Omitted when unset.
+  note?: string
+  // The intent a spark in this pillar is filed as unless one is named. Omitted when unset.
+  default_silo?: string | null
 }
 
 // The register axis. The menu is committed structure (src/core/registers.ts), read-only;

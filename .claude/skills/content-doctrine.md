@@ -39,11 +39,12 @@ needs to be profound; demanding depth a post's purpose does not want deforms it.
 - **Silo** (intent — the platform-keyed roster in `src/core/silos.ts`) sets the *floor and
   shape* of depth. `conversation` (LinkedIn) and its Reddit analog `discuss` are the deepest
   silos: they live in the owner's cross-domain seam and earn seam-mining. Every other silo —
-  `teach`/`win`/`curate` on LinkedIn, `help`/`share`/`ask`/`curate` on Reddit — is lighter and
-  purpose-fit: a teach (or its Reddit analog, `help`) delivers one useful thing, a win (or
-  `share`) is a short plain story, a curate is a generous pointer shared by both platforms,
-  and an ask (Reddit-only) puts one real question to the community. None of them demands a
-  profound thought.
+  `teach`/`win`/`curate`/`promote` on LinkedIn, `help`/`share`/`ask`/`curate` on Reddit — is
+  lighter and purpose-fit: a teach (or its Reddit analog, `help`) delivers one useful thing, a
+  win (or `share`) is a short plain story, a curate is a generous pointer shared by both
+  platforms, an ask (Reddit-only) puts one real question to the community, and a promote
+  (LinkedIn-only, the lightest) states one thing the product does and one real specific, then
+  asks once. No thought-leadership, no lesson. None of them demands a profound thought.
 - **Register** (tone/platform — the menu in `src/core/registers.ts`, selected per user in
   `identity.yaml`) *colors* that depth — how the calibrated thought sounds on the chosen
   platform — but never overrides the silo's shape.

@@ -31,6 +31,15 @@ Your output is two things, always both:
     **recommendation** (a `warn`-level fix to consider), never as a `failed` verdict. The
     voice card, the silo rules, and the doctrine are what pass or fail a draft.
 
+2c. **Read the pillar's note as advisory context.** The idea row's `pillar` names the lane; its
+    note (from `identity.yaml`) says what that lane's posts cover and how they read. Read it:
+
+    npx tsx -e "(async () => { const p = await import('./src/core/pillars'); console.log(p.getPillarNote(process.env.PILLAR ?? '')); process.exit(0); })();"
+
+    with `PILLAR` set to the idea's pillar key. Like the register, the note is **guidance,
+    never a gate**: it feeds the "Pillar fit" recommendation in step 4 and never a `failed`
+    verdict on its own.
+
 3. **Run the mechanical checks.** The protected-relationship guardrail and the CTA product check need the profile's data, so this command reads `protected_relationships` and `products` from the active profile's `identity.yaml` (resolved by the profile loader) and passes them into `runVoiceChecks`. Put the full draft text in the `DRAFT` environment variable, set `SILO` to the draft's silo, and set `ADJACENT` to `1` for a product-adjacent post or `0` otherwise (only a `teach` post can be adjacent; the module forces the other three to non-adjacent regardless of `ADJACENT`), then run, from the repo root:
 
     DRAFT="$(cat path/to/draft.txt)" SILO=teach ADJACENT=0 npx tsx -e "(async () => { const { loadIdentity } = await import('./src/profile/loader.ts'); const identity = loadIdentity(); const m = await import('./src/review/voice-checks.ts'); console.log(JSON.stringify(m.runVoiceChecks(process.env.DRAFT ?? '', { isProductAdjacent: process.env.ADJACENT === '1', silo: process.env.SILO, protectedRelationships: identity.protected_relationships ?? [], products: identity.products ?? [] }), null, 2)); })()"
@@ -52,6 +61,10 @@ Your output is two things, always both:
     - **No fabricated specifics.** Any specific real fact (a number, a named tool, a customer detail, what actually happened) that the profile owner did not provide must carry a `[FILL: ...]` marker. An unmarked invented specific is a failure. Never relaxes, in any silo, on either platform.
     - **Engagement bait.** No manufactured "agree? / comment below" bait, as a hook or a close, in any silo. (A *genuine* question is not bait; see the hook rule.)
     - **CTA fit.** Only the teach-shaped post may carry an ask — `teach` on LinkedIn, `help` on Reddit — and then a single soft, honest one. Any ask on any other silo (`conversation`/`win`/`curate` on LinkedIn; `discuss`/`share`/`ask`/`curate` on Reddit) fails (the module already flags it).
+    - **Pillar fit** (advisory). When the pillar has a note and the draft plainly does not do
+      what it describes (a "FinOps Education" post that teaches nothing; a "Building Sentasity"
+      post with no build-in-public detail), report it as a `warn`-level recommendation quoting
+      the note line it misses. Never a failure; the owner may have filed it loosely on purpose.
 
     Teach-shaped, relax for the conversation-shaped intent only (`conversation` on LinkedIn, `discuss` on Reddit):
     - **Show, do not tell / lead with the useful thing.** For `teach`/`help` (and `win`/`share`/`ask`/`curate`), flag credibility declared instead of shown, and a body that buries the useful, specific thing. For `conversation`/`discuss`, do **not** require a teach-style takeaway or a useful-thing lead: a conversation post may lead with an experience, a provocation, or a question. (The anti-credential-drop spirit still holds everywhere; what relaxes is the demand for a packaged lesson.)

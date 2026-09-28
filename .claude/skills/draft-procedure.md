@@ -135,6 +135,14 @@ Produce four fields, all in the loaded profile's voice, all voice-card compliant
   of the owner's own framing around the link (Reddit treats bare links as spam, and the
   mechanical check flags it on both platforms). Short; no length floor. No ask, no product
   tie-in; the only link is the credited source.
+- **promote.** The direct-promotion post, and the only silo whose close *is* the ask. Body
+  400 to 900 characters: one plain paragraph on what the product does and for whom, in the
+  owner's words, plus one real specific (a finding, a number, a screenshot the owner names).
+  Where the owner has not supplied the specific, leave a `[FILL: ...]` marker; never invent
+  one. No stacked benefit list, no hype. Close is the single ask, worded per
+  `cta_policy.ask_style`, and nothing else; it references only a product named in the active
+  profile's `identity.yaml` (`products`). `mediaSuggestion` leans to a screenshot or a short
+  recording: product proof is shown, not told.
 
 **Per-silo shaping — Reddit** (the register from Step 2b is a subreddit-plain voice; every
 shape below reads as a community member talking, never marketing):
@@ -199,7 +207,7 @@ The CLI prints `{"draftId":N,"ideaId":M,"status":"drafted"}`. Saving sets the dr
 
 Report the new draft id **and the draft's silo, plus whether it is product-adjacent**
 (only possibly true for the teach-shaped silo — `teach` on LinkedIn, `help` on Reddit —
-and always false for every other silo), **and the resolved
+and for LinkedIn's `promote`, and always false for every other silo), **and the resolved
 register (platform + tone)** from Step 2b. `content-reviewer` needs the silo to grade the
 post by the right rules and the tone as soft context. The idea row's `silo` is authoritative either way. The
 draft still has to pass `content-reviewer` and then the profile owner's edit-and-approve.
@@ -211,6 +219,6 @@ Nothing here publishes.
 - NEVER invent an opinion for a needs-your-take item that has no seed. Surface it and stop.
 - NEVER fabricate a specific real fact. If a draft needs a specific the profile owner has not provided (a number, which tool, what actually happened, a customer detail), leave a `[FILL: ...]` marker in place and surface it to the profile owner. Style can be generated; facts cannot.
 - NEVER use an em dash. NEVER use an AI-tell from the blocklist.
-- Shape by silo, on either platform: only the teach-shaped silo may carry an ask and holds the 1300-1900 body floor (`teach` on LinkedIn, `help` on Reddit); only the conversation-shaped silo may open with a question (`conversation`, `discuss`); every other silo carries no ask and no length floor. 3 to 5 hooks, each under 10 words, for every silo; on Reddit the first hook is the self-post title (300-char hard cap).
+- Shape by silo, on either platform: only the teach-shaped silo and LinkedIn's `promote` may carry an ask; only `teach` on LinkedIn (and `help` on Reddit) holds the 1300-1900 body floor, and `promote` runs 400-900; only the conversation-shaped silo may open with a question (`conversation`, `discuss`); every other silo carries no ask and no length floor. 3 to 5 hooks, each under 10 words, for every silo; on Reddit the first hook is the self-post title (300-char hard cap).
 - The register (platform + tone) is **soft coloring, never a hard rule**: it shifts the language's register and hints at length, but the silo, the voice card, and the doctrine govern. Tone never gates a draft and never enters the mechanical checks. If tone and silo conflict, silo wins.
 - The output is a draft, never a published post.

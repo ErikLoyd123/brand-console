@@ -122,8 +122,8 @@ Produce four fields, all in the loaded profile's voice, all voice-card compliant
   thing, then explain the one mechanism behind it in prose. No First/Second/Third, no "three
   things", no numbered list unless the owner's points are themselves a list of three or more,
   and prose is still preferred then (the `list-cadence` check flags the scaffolding). Close is
-  a soft, honest wrap that restates the specific, never a moral. This is the
-  **only** silo that may carry an ask, and only when the post genuinely touches a product:
+  a soft, honest wrap that restates the specific, never a moral. Apart from `promote`, this
+  is the **only** silo that may carry an ask, and only when the post genuinely touches a product:
   a tie-in may reference only a product named in the active profile's `identity.yaml` (`products`), and
   only if `cta_policy` allows it (`personal_posts_carry_ask` gates asks on non-product
   posts; `product_posts_max_ask_lines` caps product-adjacent asks; `ask_style` sets the

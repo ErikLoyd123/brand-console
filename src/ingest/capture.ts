@@ -6,7 +6,7 @@
 import { nanoid } from 'nanoid';
 import { db } from '../db/client';
 import { sparks, ideaQueueItems } from '../db/schema';
-import { getPillars, type Pillar } from '../core/pillars';
+import { getPillars, getPillarDefaultSilo, type Pillar } from '../core/pillars';
 import { getSilos, type Silo } from '../core/silos';
 import { getDefaultPlatform, type Platform } from '../core/registers';
 import { getActiveProfileId } from '../profile/loader';
@@ -15,8 +15,9 @@ export type CaptureResult = { sparkId: string; ideaId: string };
 
 /**
  * Options for a spark-origin write.
- * - `silo` defaults to 'conversation': a spark is the owner's own thought, and a
- *   lightbulb thought is a conversation post, not a reaction to a feed item.
+ * - `silo` defaults to the pillar's `default_silo` for the item's platform, else
+ *   'conversation': a spark is the owner's own thought, and a lightbulb thought is a
+ *   conversation post unless the pillar says otherwise.
  * - `seed` overrides the stored seed. `capture` stores the raw text verbatim; `spark`
  *   passes the refined thought the owner converged on. See design
  *   2026-07-02-content-silos/02-spark-skill "The store hook".
@@ -56,7 +57,13 @@ export async function captureSpark(
   if (!trimmed) throw new Error('captureSpark: text is empty');
 
   const chosenPillar = pillar ?? defaultCapturePillar();
-  const silo = opts.silo ?? 'conversation';
+  // Silo resolution order: an explicit intent (spark/develop always pass one), then the
+  // pillar's default for the item's platform, then 'conversation' (a raw spark is the
+  // owner's own thought). See design 2026-09-28-strategy-pillars-anti-slop/01-pillar-fields.
+  const resolvedPlatform: Platform =
+    opts.platform?.trim() ? (opts.platform.trim() as Platform) : getDefaultPlatform();
+  const silo: Silo =
+    opts.silo ?? getPillarDefaultSilo(chosenPillar, resolvedPlatform) ?? 'conversation';
   // The raw spark is always what lands in the `sparks` row; only the idea's seed can be
   // a refined thought (spark), otherwise it is the verbatim spark (capture).
   const seed = opts.seed?.trim() ? opts.seed.trim() : trimmed;

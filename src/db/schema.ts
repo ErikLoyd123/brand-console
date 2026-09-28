@@ -106,6 +106,10 @@ export const ideaQueueItems = sqliteTable(
     // 2026-07-03-content-spine-register-axis/01-register-axis.
     platform: text('platform'),
     tone: text('tone'),
+    // How long the post should run: a band key from src/core/lengths.ts ('short' |
+    // 'medium' | 'long'). Nullable: null means no band was picked, so drafting falls back
+    // to the silo's default band. Set by spark, the queue skill, or the card's picker.
+    length: text('length'),
     tag: text('tag').notNull(),
     sourceRef: text('source_ref'),
     proposedAngle: text('proposed_angle').notNull(),

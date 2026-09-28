@@ -26,10 +26,14 @@ An agent does not get to decide what the profile owner thinks.
 ## Principle 2 — never-fabricate-a-fact
 
 **Style can be generated; facts cannot.** A specific real detail the owner did not
-provide — a number, a named tool, a customer, what actually happened — must never be
-invented. When a draft or a seed needs such a detail, leave a `[FILL: ...]` marker in
-place and surface it to the owner rather than filling it with a plausible guess. An
-unmarked invented specific is a failure.
+provide — a number, a named tool, a customer, what actually happened — is never invented,
+and it is never placeholdered either. When a piece needs such a detail, **ask for it before
+writing**, one plain question in the interview or the develop step. If the owner does not
+have it, **write around the gap**: drop the claim that needed it and build the piece on the
+specifics they did supply. The gap belongs in the report to the owner ("no number for X,
+so the post says Y instead"), never in the post, the seed, or a beat. A `[FILL: ...]`
+marker in saved text is a failure, mechanically caught by `no-fill-markers` in
+`src/review/voice-checks.ts`; an unmarked invented specific fails on judgment.
 
 ## Principle 3 — depth-calibration
 
@@ -95,8 +99,8 @@ mirrors `onboarding-gate.md`'s `REQUIRED`/`DEGRADATION` fill table.
 
 | Skill | Where it embeds | Per-skill fill (what varies) |
 |-------|-----------------|------------------------------|
-| `spark` | Rules section, before writing the seed | The **seed** is the unit that must stay the owner's own thought; `[FILL: ...]` goes in the seed; depth is set by the inferred silo before the interview runs. **Adopted now.** |
-| `queue` | Step 2 guardrail + Rules | `[FILL: ...]` goes in the draft body; unseeded `needs-your-take` is a hard stop; depth read off `idea_queue_items.silo` drives Step 3 shaping. *Follow-on.* |
+| `spark` | Rules section, before writing the seed | The **seed** is the unit that must stay the owner's own thought; a missing specific is asked for in the interview, else the seed drops the claim (no placeholders); depth is set by the inferred silo before the interview runs. **Adopted now.** |
+| `queue` | Step 2 guardrail + Rules | a missing specific is asked for before writing, else written around (no placeholders in the draft body); unseeded `needs-your-take` is a hard stop; depth read off `idea_queue_items.silo` drives Step 3 shaping. *Follow-on.* |
 | `setup` | Distillation stage | Take-origination applied to persona-building: name patterns shown, never manufacture a voice. *Follow-on.* |
 | `content-reviewer` | Soft-rule checks | Enforces, not authors: "No fabricated specifics" (unmarked invented fact fails) and silo-appropriate depth (no teach-takeaway demand on a `conversation`/`discuss` post). *Follow-on.* Principle 5: reads the three findings and applies judgment (specifics carried, close lands, prose over scaffolding). **Adopted now.** |
 | `draft` (via `draft-procedure.md`) | The "Produce four fields" block and the per-silo teach block | Principle 5 only: carry every specific from `seed`/`points`; the close lands on one; teach is prose. **Adopted now.** |

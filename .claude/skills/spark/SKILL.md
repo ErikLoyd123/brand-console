@@ -55,12 +55,13 @@ Run this first. This is the shared detect-and-offer gate (`.claude/skills/onboar
 
 `spark` obeys the shared content doctrine (`.claude/skills/content-doctrine.md`) — the single
 source for **take-origination** (never invent an opinion), **never-fabricate-a-fact**
-(`[FILL: ...]` markers, never a plausible guess), **depth-calibration** (depth is a
-function of silo × register, not every post must be profound), and **voice-rules-everywhere**
+(ask before writing, else write around the gap; never a guess and never a placeholder),
+**depth-calibration** (depth is a function of silo × register, not every post must be profound), and **voice-rules-everywhere**
 (every string you save — the seed, the angle, the points, not just the piece — follows the
 voice card's hard mechanical rules: no em dashes, no AI-tells). Riff's fill on that doctrine:
-the **seed** is the unit that must stay the owner's own thought, any `[FILL: ...]` goes in
-the seed, and depth is set by the silo inferred in Step 3 *before* the interview runs. The
+the **seed** is the unit that must stay the owner's own thought, a missing specific is asked
+for in the interview or left out of the seed (never a placeholder), and depth is set by the
+silo inferred in Step 3 *before* the interview runs. The
 doctrine binds every step below; this file does not restate it.
 
 ## The flow
@@ -207,8 +208,9 @@ one thing its downstream shape needs.
 one of the five piece kinds and the interview additionally captures the two SEO inputs the article
 needs, one plain question each: the **target keyword** (the single phrase the piece targets) and the
 **search intent** (who is searching and why, in the owner's own words, e.g. "compare tools before
-buying"). These are the owner's, never invented; if the owner does not know the keyword yet, leave it
-as a `[FILL: ...]` marker. Depth still follows the piece kind, not these two questions.
+buying"). These are the owner's, never invented; if the owner does not know the keyword yet, leave the
+field empty and say so in the hand-off; never a placeholder. Depth still follows the piece
+kind, not these two questions.
 
 ### 5b. Recommend the length band
 
@@ -289,7 +291,7 @@ and side-write the long-form `articles` row that carries the SEO inputs, via the
 ```bash
 npx tsx src/articles/create-article.ts "<ideaId>" '{
   "title": "<a working title from the chosen angle>",
-  "targetKeyword": "<the target keyword, or a [FILL: ...] marker>",
+  "targetKeyword": "<the target keyword, or empty if the owner has none yet>",
   "searchIntent": "<the search intent in the owner's words>"
 }'
 ```
@@ -339,7 +341,8 @@ annotated screenshot, or an Unsplash pick. If the owner wants one, follow
 - The owner's spark is the spine. The interview sharpens and the angle-finder reframes, but
   the converged seed must still be recognizably the owner's thought.
 - Any specific real detail the owner has not provided (a number, which tool, what actually
-  happened, a customer) is a `[FILL: ...]` marker in the seed, surfaced — never a guess.
+  happened, a customer) is asked for in the interview; if the owner does not have it, the
+  seed drops the claim. Never a guess, never a placeholder in saved text.
 - One converged thought per invocation. A second post means a second spark.
 - With nothing in hand, propose only from the owner's own written material (`interview.md`,
   the voice card's samples): three candidates, one round, every one traceable to a line they

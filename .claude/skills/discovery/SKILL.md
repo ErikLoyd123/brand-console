@@ -58,11 +58,12 @@ Run this first. This is the shared detect-and-offer gate (`.claude/skills/onboar
 
 `discovery` obeys the shared content doctrine (`.claude/skills/content-doctrine.md`) — the single
 source for **take-origination** (never invent an opinion), **never-fabricate-a-fact**
-(`[FILL: ...]` markers, never a plausible guess), **depth-calibration** (depth is a
-function of silo × register), and **voice-rules-everywhere** (every string you save — the
+(ask before writing, else write around the gap; never a guess and never a placeholder),
+**depth-calibration** (depth is a function of silo × register), and **voice-rules-everywhere** (every string you save — the
 seed, the angle, the beats, not just the piece — follows the voice card's hard mechanical
 rules: no em dashes, no AI-tells). The **seed** is the unit that must stay your own thought;
-any `[FILL: ...]` goes in the seed or a beat. The doctrine binds every step below.
+a missing specific is asked for, else left out of the seed or the beat, never placeholdered.
+The doctrine binds every step below.
 
 ## 3. Pick the feed item
 
@@ -143,12 +144,14 @@ never a wall of questions.
   **drawn from your take and the source**, then have you confirm or rewrite each. Do not invent
   a position; if you cannot supply the substance, stop rather than fill it in.
 - Keep it to 2-4 beats. Any specific real detail you have not provided (a number, which tool,
-  what actually happened) is a `[FILL: ...]` marker, surfaced — never a guess.
+  what actually happened) is asked for; if you do not have it, the beat drops the claim.
+  Never a guess, never a placeholder.
 
 **Web only — capture the two SEO inputs.** When the confirmed silo is a `web` piece kind, also draw
 out, one plain question each, the **target keyword** (the single phrase the piece targets) and the
 **search intent** (who is searching and why, in the owner's words). These are the owner's, never
-invented; an unknown keyword is a `[FILL: ...]` marker. They ride onto the `articles` row in Step 7.
+invented; an unknown keyword is left empty and named in the report, never a placeholder. They
+ride onto the `articles` row in Step 7.
 
 ## 7. Promote it into the queue
 
@@ -175,7 +178,7 @@ inputs from Step 6, via the shared create CLI:
 ```bash
 npx tsx src/articles/create-article.ts "<ideaId>" '{
   "title": "<a working title from your take>",
-  "targetKeyword": "<the target keyword, or a [FILL: ...] marker>",
+  "targetKeyword": "<the target keyword, or empty if you have none yet>",
   "searchIntent": "<the search intent in your words>"
 }'
 ```

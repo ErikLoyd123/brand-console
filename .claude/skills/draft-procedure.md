@@ -172,8 +172,8 @@ on the page; a hook composed before the body is the one the body never pays off.
 - **promote.** The direct-promotion post, and the only silo whose close *is* the ask. Body
   400 to 900 characters: one plain paragraph on what the product does and for whom, in the
   owner's words, plus one real specific (a finding, a number, a screenshot the owner names).
-  Where the owner has not supplied the specific, leave a `[FILL: ...]` marker; never invent
-  one. No stacked benefit list, no hype. Close is the single ask, worded per
+  Where the owner has not supplied the specific, ask for it before writing; a promote cannot
+  ship without one, and a placeholder is not one. No stacked benefit list, no hype. Close is the single ask, worded per
   `cta_policy.ask_style`, and nothing else; it references only a product named in the active
   profile's `identity.yaml` (`products`). `mediaSuggestion` leans to a screenshot or a short
   recording: product proof is shown, not told.
@@ -251,7 +251,7 @@ Nothing here publishes.
 
 - NEVER draft without loading the voice card first.
 - NEVER invent an opinion for a needs-your-take item that has no seed. Surface it and stop.
-- NEVER fabricate a specific real fact. If a draft needs a specific the profile owner has not provided (a number, which tool, what actually happened, a customer detail), leave a `[FILL: ...]` marker in place and surface it to the profile owner. Style can be generated; facts cannot.
+- NEVER fabricate a specific real fact, and NEVER leave a placeholder for one. If a draft needs a specific the profile owner has not provided (a number, which tool, what actually happened, a customer detail), ask for it before writing; if they do not have it, write around the gap and say so in the hand-off. A `[FILL: ...]` marker in saved text fails the `no-fill-markers` check. Style can be generated; facts cannot.
 - NEVER use an em dash. NEVER use an AI-tell from the blocklist.
 - NEVER drop a specific from the seed or points; carry it by name (Principle 5).
 - NEVER close on an aphorism; the close lands on a specific from the body or, for a conversation post, a real question.

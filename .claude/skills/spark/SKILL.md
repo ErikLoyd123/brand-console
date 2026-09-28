@@ -120,7 +120,7 @@ the same take-origination principle applied to the pillar and silo choice, so `s
 decides *for* the owner what lane or kind of post this is.
 
 The silo roster is platform-keyed in `src/core/silos.ts`: LinkedIn ships
-`conversation | teach | win | curate`, Reddit ships `discuss | help | share | ask | curate`, and
+`conversation | teach | win | curate | promote`, Reddit ships `discuss | help | share | ask | curate`, and
 **`web` (long-form) ships the piece kinds** `how-to | explainer | comparison | thought-piece | whitepaper`.
 Propose from whichever platform the spark is headed for — the profile's default platform
 (Step 4 confirms it) unless the spark plainly names the other one. Propose exactly one;
@@ -150,6 +150,7 @@ quotas.
 | `teach` | Light | Usually one question | The single useful takeaway + the concrete example that proves it |
 | `win` | Light | One question | Whose win / what happened and why it mattered; keep the owner accountable, never the aggressive hero |
 | `curate` | Minimal | One question | What the owner adds by passing this along, and who gets credit |
+| `promote` | Minimal | One or two questions | What is the one thing to show, and what is the ask; then stop |
 | `discuss` (Reddit) | Deepest | 1-3 sharp questions | Cross-domain friction — the Reddit analog of `conversation` |
 | `help` (Reddit) | Light | Usually one question | The concrete problem and the concrete answer — the teach-analog |
 | `share` (Reddit) | Light | One question | What happened and why it mattered, told plainly — the win-analog, no hero framing |
@@ -162,7 +163,7 @@ the other side push back?" A conversation post lives in that seam; the interview
 seam this spark sits on. Three questions is a ceiling. Reddit's `discuss` gets the identical
 deepest treatment — it is the same seam-mining, just headed for a subreddit instead of the feed.
 
-**The lighter branches.** `teach`/`win`/`curate` and their Reddit counterparts `help`/`share`,
+**The lighter branches.** `teach`/`win`/`curate`/`promote` and their Reddit counterparts `help`/`share`,
 plus the Reddit-only `ask`, do **not** get seam-mining — that would over-shape a post the
 drafter keeps short and purpose-fit. Each is essentially one well-aimed question surfacing the
 one thing its downstream shape needs.
@@ -190,6 +191,8 @@ reshaping of the owner's own spark, never an invented take.
   whose-moment-this-was, or what-I-learned-watching-it. Never the aggressive-hero frame.
 - **curate** (shared by both platforms) — **1 angle**, the generous pointer, phrased so the
   credited source is the subject. Minimal by design.
+- **promote** (LinkedIn-only) — **1 angle**, the plain statement of what it does and for whom,
+  phrased in the resolved tone. No contrarian frame, no story.
 - **ask** (Reddit-only, no LinkedIn counterpart) — **1-2 angles** around framing the question:
   bare and direct, or with a sentence of context first.
 
@@ -206,7 +209,7 @@ plus the resolved platform and tone. From the repo root:
 ```bash
 npx tsx src/ingest/capture.ts "RAW SPARK TEXT" [pillar] \
   --seed "REFINED CONVERGED THOUGHT" \
-  --silo <conversation|teach|win|curate|discuss|help|share|ask|how-to|explainer|comparison|thought-piece|whitepaper> \
+  --silo <conversation|teach|win|curate|promote|discuss|help|share|ask|how-to|explainer|comparison|thought-piece|whitepaper> \
   --platform <platform-key> \
   --tone <tone-key>
 ```
@@ -217,7 +220,7 @@ npx tsx src/ingest/capture.ts "RAW SPARK TEXT" [pillar] \
   first-pillar default is for bare captures, not for a spark that was walked.
 - `--seed` carries the refined thought the owner converged on.
 - `--silo` sets the detected silo, validated against `src/core/silos.ts`'s roster for the
-  resolved `--platform` (LinkedIn's four, Reddit's five, or `web`'s five piece kinds), instead of
+  resolved `--platform` (LinkedIn's five, Reddit's five, or `web`'s five piece kinds), instead of
   capture's `conversation` default.
 - `--platform` and `--tone` persist the register the spark was shaped for, so `queue`
   and `content-reviewer` can read it downstream.

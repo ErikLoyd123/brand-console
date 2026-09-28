@@ -38,16 +38,16 @@ Run this before the ingests. This is the shared detect-and-offer gate (`.claude/
    npx tsx -e "(async () => { const {db} = await import('./src/db/client'); const {feedItems} = await import('./src/db/schema'); const {eq} = await import('drizzle-orm'); const r = await db.select({ id: feedItems.id, sourceId: feedItems.sourceId, title: feedItems.title, summary: feedItems.summary, score: feedItems.score }).from(feedItems).where(eq(feedItems.triageState, 'inbox')); console.log(JSON.stringify(r, null, 2)); process.exit(0); })();"
    ```
 
-3. Read the profile's pillar labels so your pillar-fit check is pillar-aware. Each inbox item inherits its source's pillar; you confirm the fit against these labels:
+3. Read the profile's pillar labels **and notes** so your pillar-fit check is pillar-aware. Each inbox item inherits its source's pillar; you confirm the fit against the note (what that lane's posts cover), falling back to the label when the note is empty:
    ```bash
-   npx tsx -e "(async () => { const {getPillars, getPillarLabel} = await import('./src/core/pillars'); console.log(JSON.stringify(getPillars().map((k) => ({ key: k, label: getPillarLabel(k) })), null, 2)); process.exit(0); })();"
+   npx tsx -e "(async () => { const p = await import('./src/core/pillars'); console.log(JSON.stringify(p.getPillars().map((k) => ({ key: k, label: p.getPillarLabel(k), note: p.getPillarNote(k) })), null, 2)); process.exit(0); })();"
    ```
 
 ## Enrich (categorize and tag)
 
 For each `triage_state='inbox'` feed_item from Run step 3, using the pillar labels from Run step 4:
 
-1. **Confirm pillar fit.** The item inherits its source's pillar. If it clearly belongs to another pillar or is a weak fit (an item that plainly fits a different declared pillar than its source's, say), note it in your report for a manual retag. Do not change the pillar here; pillar is single-select and profile-derived.
+1. **Confirm pillar fit against the note.** The item inherits its source's pillar. Read the pillar's `note` (Run step 3): it says what posts in that lane cover. If the item clearly belongs to another pillar's note, or fits its own pillar's note weakly, note it in your report for a manual retag and quote the one line of the note it fails. When a pillar has no note, fall back to the label. Do not change the pillar here; pillar is single-select and profile-derived.
 
 2. **Choose tags.** Read the existing tag vocabulary first, then pick the fitting tags for the item from its `title` + `summary`. Read the vocabulary:
    ```bash

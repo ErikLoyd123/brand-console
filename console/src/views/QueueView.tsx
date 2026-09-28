@@ -533,11 +533,6 @@ function QueueRow({
 }) {
   const [seed, setSeed] = useState(item.seed ?? '')
   const [busy, setBusy] = useState(false)
-  // Inline take editing: `editingSeed` swaps the read-only take box for a textarea;
-  // `confirmingDeleteTake` gates deletion behind a confirm, since the take is the item's
-  // only opinion and clearing it is destructive (a needs-your-take item reverts to needing one).
-  const [editingSeed, setEditingSeed] = useState(false)
-  const [confirmingDeleteTake, setConfirmingDeleteTake] = useState(false)
   const hasSeed = Boolean(item.seed && item.seed.trim())
   // A needs-your-take item must carry the owner's take before it can be drafted; until then
   // the only action is saving that take. Everything else (ready-to-draft, or a needs-your-take
@@ -580,34 +575,6 @@ function QueueRow({
     setBusy(true)
     try {
       await api.seedQueueItem(item.id, seed)
-      onDone()
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  // Save an edit to an existing take. Same write as the first-take Save (seedQueueItem),
-  // just from the read-only box's Edit affordance.
-  async function saveSeedEdit() {
-    setBusy(true)
-    try {
-      await api.seedQueueItem(item.id, seed.trim())
-      setEditingSeed(false)
-      onDone()
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  // Delete the take by clearing the seed. A needs-your-take item then reverts to needing
-  // a take (its Save-take editor returns); a ready-to-draft item drops back to drafting
-  // from the angle. Gated by confirmingDeleteTake so it can't happen on a stray click.
-  async function deleteSeed() {
-    setBusy(true)
-    try {
-      await api.seedQueueItem(item.id, '')
-      setSeed('')
-      setConfirmingDeleteTake(false)
       onDone()
     } finally {
       setBusy(false)
@@ -797,89 +764,6 @@ function QueueRow({
         </div>
       ) : (
         <div className="flex flex-col gap-2">
-          {hasSeed && (
-            <div className="flex flex-col gap-2 rounded-lg bg-surface-nested px-4 py-3">
-              {editingSeed ? (
-                <>
-                  <label className="font-mono text-[11px] font-medium uppercase tracking-wide text-text-subtle">
-                    Your take — one or two sentences, in your voice
-                  </label>
-                  <Textarea
-                    value={seed}
-                    onChange={(e) => setSeed(e.target.value)}
-                    className="bg-surface"
-                  />
-                  <div className="flex items-center gap-2">
-                    <Button size="sm" disabled={busy || seed.trim() === ''} onClick={saveSeedEdit}>
-                      <Check className="size-3.5" /> {busy ? 'Saving…' : 'Save take'}
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      disabled={busy}
-                      onClick={() => {
-                        setSeed(item.seed ?? '')
-                        setEditingSeed(false)
-                      }}
-                    >
-                      <X className="size-3.5" /> Cancel
-                    </Button>
-                  </div>
-                </>
-              ) : confirmingDeleteTake ? (
-                <>
-                  <span className="font-mono text-[11px] font-medium uppercase tracking-wide text-text-subtle">
-                    Your take
-                  </span>
-                  <p className="mt-1 text-sm text-text-muted">{item.seed}</p>
-                  <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-2">
-                    <span className="text-xs text-text">
-                      Delete this take? It's the only opinion on this idea — you'll have to write it
-                      again to draft in your voice.
-                    </span>
-                    <div className="flex items-center gap-2">
-                      <Button size="sm" variant="destructive" disabled={busy} onClick={deleteSeed}>
-                        <X className="size-3.5" /> {busy ? 'Deleting…' : 'Delete take'}
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        disabled={busy}
-                        onClick={() => setConfirmingDeleteTake(false)}
-                      >
-                        Cancel
-                      </Button>
-                    </div>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="flex items-center justify-between">
-                    <span className="font-mono text-[11px] font-medium uppercase tracking-wide text-text-subtle">
-                      Your take
-                    </span>
-                    <div className="flex items-center gap-3">
-                      <button
-                        type="button"
-                        onClick={() => setEditingSeed(true)}
-                        className="text-xs text-text-subtle underline-offset-2 hover:text-text hover:underline"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setConfirmingDeleteTake(true)}
-                        className="text-xs text-text-subtle underline-offset-2 hover:text-error-fg hover:underline"
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </div>
-                  <p className="mt-1 text-sm text-text-muted">{item.seed}</p>
-                </>
-              )}
-            </div>
-          )}
           <ContentBlock
             item={item}
             linkedinConn={linkedinConn}
@@ -1001,6 +885,9 @@ export function QueueView() {
   // set it); undefined = the engine's default model.
   const [surfaceModel, setSurfaceModel] = useState<string | undefined>(undefined)
   const [surfaceKey, setSurfaceKey] = useState(0)
+  // The item the current draft/revise session is about, so the result card's "Refine
+  // again" box can start the next run against the item's latest state after reload.
+  const [surfaceItemId, setSurfaceItemId] = useState<string | null>(null)
   // Which idea has a live imagery session — its card's Images strip polls for
   // candidates and shows the "generation takes a while" state. Set by imageItem;
   // cleared when any non-image session replaces the surface.
@@ -1044,10 +931,14 @@ export function QueueView() {
         itemContext(item),
     )
   }
-  function draftItem(item: IdeaQueueItem) {
+  // `instruction` is set by the result card's "Refine again" box: the owner already said
+  // what to change, so the run skips its one question and goes straight to the change.
+  function draftItem(item: IdeaQueueItem, instruction?: string) {
     const kind = item.platform === 'web' ? 'article' : 'post'
     const hasContent =
       item.platform === 'web' ? Boolean(item.article?.body?.trim()) : Boolean(item.draft)
+    setSurfaceItemId(item.id)
+    const change = instruction?.trim()
     runQueue(
       'draft',
       hasContent
@@ -1057,8 +948,12 @@ export function QueueView() {
               ? `, and revise the draft whose id is ${item.draft.id}, the one on the card (the ` +
                 `loader resolves it too; never pick another row)`
               : '') +
-            `. Follow the revise procedure: one loader call, then ask me exactly one thing, ` +
-            `what I want changed, as a free-text question. Make that change and nothing else, ` +
+            `. Follow the revise procedure: one loader call, ` +
+            (change
+              ? `then make this change and nothing else: "${change.replace(/"/g, "'")}". Do not ask ` +
+                `me anything. `
+              : `then ask me exactly one thing, what I want changed, as a free-text question. ` +
+                `Make that change and nothing else, `) +
             `write it back with the procedure's writer, and end with the before and after of ` +
             `every field you changed, in full. Do not summarize where the piece stands, do ` +
             `not ask me to confirm the text, and do not ask anything else.` +
@@ -1194,7 +1089,22 @@ export function QueueView() {
           resultActions={
             mode === 'develop'
               ? { resetLabel: 'Develop another' }
-              : { linkLabel: 'Show in Queue', resetLabel: 'Done' }
+              : mode === 'draft'
+                ? {
+                    linkLabel: 'Show in Queue',
+                    resetLabel: 'Done',
+                    // Keep refining: the next instruction starts another revise run against
+                    // the item's latest state (the list reloaded on this result).
+                    followUp: {
+                      label: 'Refine again',
+                      placeholder: 'What else should change? (⌘/Ctrl + Enter to send)',
+                      onSubmit: (text) => {
+                        const latest = items.find((i) => i.id === surfaceItemId)
+                        if (latest) draftItem(latest, text)
+                      },
+                    },
+                  }
+                : { linkLabel: 'Show in Queue', resetLabel: 'Done' }
           }
           onProgress={reload}
           onResult={() => {

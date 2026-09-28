@@ -64,4 +64,18 @@ export const FIXTURES: Fixture[] = [
     expect: [{ rule: "aphorism-close", matches: [] }],
     forbid: ["seed-retention", "list-cadence"],
   },
+  {
+    name: "seed with a contraction and a paragraph opener is not over-extracted",
+    silo: "teach",
+    seed:
+      "I'm convinced the Aillio preheat matters more than people think, and it saves about 6 minutes a batch.\n\n" +
+      "Most roasters skip it.",
+    points: [],
+    body:
+      "I am convinced the Aillio preheat matters more than people think. It is the step that gets skipped most, and skipping it costs about 6 minutes a batch in drift you then chase for the rest of the roast.\n\n" +
+      "The preheat brings the drum to a stable temperature before the beans go in, so the first minute reads true instead of low.",
+    close: "Give the Aillio its preheat and the first minute of the curve stops lying to you.",
+    expect: [],
+    forbid: ["seed-retention", "aphorism-close", "list-cadence"],
+  },
 ];

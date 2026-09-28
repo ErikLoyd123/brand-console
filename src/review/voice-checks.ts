@@ -79,11 +79,19 @@ function contextsFor(text: string, pattern: RegExp): string[] {
 }
 
 // Specifics: the concrete things a seed names that a draft must carry by name. Numerals
-// with their unit, capitalized terms not at sentence start, all-caps acronyms, and the
-// items of a parenthesized capitalized list. See design 03-anti-slop-checks, Check A.
+// with their unit, capitalized terms not at sentence or paragraph start, all-caps
+// acronyms, and the items of a parenthesized capitalized list (each item matches on its
+// own, after the "(" or the ", "). See design 03-anti-slop-checks, Check A.
 const NUMERAL = /\$?\d[\d,.]*(?:-\d[\d,.]*)?(?:%|x|k|m|ms|s)?\b/gi;
 const ACRONYM = /\b[A-Z][A-Z0-9]{1,5}\b/g;
-const CAPITALIZED_RUN = /(?<![.!?]\s|^)(?<=\s|\(|,)((?:[A-Z][a-zA-Z0-9'-]*)(?:\s[A-Z][a-zA-Z0-9'-]*)*)/g;
+// A capitalized run must follow a space, "(" or "," and must not sit at the start of a
+// sentence (".!?" plus whitespace) or of a line (a newline plus indentation), since
+// those capitals are grammar, not names. Runs continue across spaces only, never across
+// a line break.
+const CAPITALIZED_RUN =
+  /(?<![.!?]\s+)(?<!\n[ \t]*)(?<=\s|\(|,)((?:[A-Z][a-zA-Z0-9'\u2019-]*)(?:[ \t][A-Z][a-zA-Z0-9'\u2019-]*)*)/g;
+// "I'm", "I've", "I'd": a pronoun contraction, never a specific.
+const PRONOUN_CONTRACTION = /^I['\u2019]/;
 const SPECIFIC_STOPLIST = new Set([
   "I", "The", "A", "An", "But", "And", "So", "Then", "Here", "This", "That", "What", "Why",
   "How", "When", "If", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday",
@@ -106,22 +114,30 @@ export function extractSpecifics(...sources: (string | undefined)[]): string[] {
       if (!SPECIFIC_STOPLIST.has(m[0])) found.add(m[0]);
     }
     for (const m of source.matchAll(CAPITALIZED_RUN)) {
-      for (const part of m[1].split(/,\s*/)) {
-        const term = part.trim();
-        if (term && !SPECIFIC_STOPLIST.has(term)) found.add(term);
-      }
+      const term = m[1].trim();
+      if (!term || SPECIFIC_STOPLIST.has(term) || PRONOUN_CONTRACTION.test(term)) continue;
+      found.add(term);
     }
   }
   return [...found];
 }
 
 // A specific is retained when it appears in the body with word boundaries, allowing an
-// s/es plural and ignoring thousands separators in numerals.
+// s/es plural on a word (not on a numeral or acronym) and ignoring thousands separators
+// in numerals.
 function bodyHasSpecific(body: string, specific: string): boolean {
   const normalizedBody = body.replace(/(\d),(\d)/g, "$1$2");
   const normalized = specific.replace(/(\d),(\d)/g, "$1$2");
-  const pattern = new RegExp(`(?<![\\w-])${escapeRegExp(normalized)}(?:e?s)?(?![\\w-])`, "i");
+  const plural = /[a-z]$/i.test(normalized) && !ACRONYM.test(normalized) ? "(?:e?s)?" : "";
+  ACRONYM.lastIndex = 0;
+  const pattern = new RegExp(`(?<![\\w-])${escapeRegExp(normalized)}${plural}(?![\\w-])`, "i");
   return pattern.test(normalizedBody);
+}
+
+// A numeral that is more than a bare single digit ("step 1" is not an anchor; "6 minutes"
+// and "$40" are). Uses matchAll so the shared global regex keeps no state between calls.
+function hasRealNumeral(text: string): boolean {
+  return [...text.matchAll(NUMERAL)].some((m) => !isBareSingleDigit(m[0]));
 }
 
 // Check A: every specific in the seed and points must survive into the body.
@@ -152,8 +168,7 @@ export function checkAphorismClose(
 ): Finding | null {
   const trimmed = close?.trim() ?? "";
   if (trimmed === "") return null;
-  if (NUMERAL.test(trimmed) && !/^\d$/.test(trimmed)) { NUMERAL.lastIndex = 0; return null; }
-  NUMERAL.lastIndex = 0;
+  if (hasRealNumeral(trimmed)) return null;
   if (/\[FILL:/i.test(trimmed)) return null;
   const lower = trimmed.toLowerCase();
   if (products.some((p) => p.trim() !== "" && lower.includes(p.toLowerCase()))) return null;

@@ -60,6 +60,28 @@ live checks scan it. An em dash or an AI-tell in a take reads exactly as badly a
 post, and makes the checks look broken besides. Follow the voice card's hard mechanical
 rules (no em dashes, no AI-tells, plain language) in every string you save, at every stage.
 
+## Principle 5 — specifics-are-load-bearing
+
+**Every specific the owner gave is carried by name, the close lands on one, and a teach
+post explains rather than enumerates.** Style can be generated; the concrete things cannot,
+and they are also what makes a post read as a person's. Three rules follow.
+
+- **Carry the specifics.** A tool name, a number, a proper noun, a named mechanism in the
+  seed or the points appears in the body by name. Generalizing it away ("the right packages"
+  for "Polars and Arrow") is a failure, mechanically caught by `seed-retention` in
+  `src/review/voice-checks.ts` (severity `fail`).
+- **Close on something.** The last line restates one concrete thing from the body, or, for a
+  conversation-shaped post, asks one real question. It is never a moral, an encouragement, or
+  a summary of the genre ("stay curious", "worth a second look"). Mechanically flagged by
+  `aphorism-close` (severity `warn`); the reviewer decides.
+- **Prose over scaffolding in teach.** A teach post explains one mechanism in paragraphs.
+  First/Second/Third, "three things", and numbered lines appear only when the owner's own
+  points are a list, and even then prose is preferred. Mechanically flagged by `list-cadence`
+  (severity `warn`); the reviewer decides. The reflexive three-item sentence is the same tell
+  in miniature; break it or cut one. It is a judgment call, not a mechanical one.
+
+See design `2026-09-28-strategy-pillars-anti-slop/03-anti-slop-checks`.
+
 ## How skills link this fragment
 
 Each consuming skill restates the doctrine at its choke point and links back here as the
@@ -71,8 +93,12 @@ mirrors `onboarding-gate.md`'s `REQUIRED`/`DEGRADATION` fill table.
 | `spark` | Rules section, before writing the seed | The **seed** is the unit that must stay the owner's own thought; `[FILL: ...]` goes in the seed; depth is set by the inferred silo before the interview runs. **Adopted now.** |
 | `queue` | Step 2 guardrail + Rules | `[FILL: ...]` goes in the draft body; unseeded `needs-your-take` is a hard stop; depth read off `idea_queue_items.silo` drives Step 3 shaping. *Follow-on.* |
 | `setup` | Distillation stage | Take-origination applied to persona-building: name patterns shown, never manufacture a voice. *Follow-on.* |
-| `content-reviewer` | Soft-rule checks | Enforces, not authors: "No fabricated specifics" (unmarked invented fact fails) and silo-appropriate depth (no teach-takeaway demand on a `conversation`/`discuss` post). *Follow-on.* |
+| `content-reviewer` | Soft-rule checks | Enforces, not authors: "No fabricated specifics" (unmarked invented fact fails) and silo-appropriate depth (no teach-takeaway demand on a `conversation`/`discuss` post). *Follow-on.* Principle 5: reads the three findings and applies judgment (specifics carried, close lands, prose over scaffolding). **Adopted now.** |
+| `draft` (via `draft-procedure.md`) | The "Produce four fields" block and the per-silo teach block | Principle 5 only: carry every specific from `seed`/`points`; the close lands on one; teach is prose. **Adopted now.** |
+| `develop` (via `develop-procedure.md`) | The take-and-beats interview | Principle 5 only: when a beat is a category, ask for the name, because the seed is where specifics must live. **Adopted now.** |
 
-> Only the `spark` row is adopted today. The other four skills keep their current (correct
-> but duplicated) inline wording; retrofitting them to link this fragment is follow-on
-> work, recorded in the design's `99-out-of-scope`.
+> The `spark` row is adopted for Principles 1 to 4; the `draft`, `develop`, and
+> `content-reviewer` rows are adopted for Principle 5 (design
+> `2026-09-28-strategy-pillars-anti-slop`). Retrofitting `queue`, `setup`, and
+> `content-reviewer` to link Principles 1 to 4 remains follow-on work, recorded in the
+> register-axis design's `99-out-of-scope`.

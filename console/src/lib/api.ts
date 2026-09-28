@@ -764,11 +764,24 @@ export const api = {
   // Run the mechanical voice checks over draft text (POST /api/review). POST so
   // draft content never lands in a URL/query string. Empty array means clean.
   // isProductAdjacent drives the cta-rule severity (fail for personal posts,
-  // warn for product-adjacent posts carrying more than one ask).
-  postReview: (text: string, isProductAdjacent: boolean, silo?: Silo) =>
+  // warn for product-adjacent posts carrying more than one ask). seed/points
+  // enable the seed-retention check; close enables the aphorism-close check.
+  postReview: (
+    text: string,
+    isProductAdjacent: boolean,
+    silo?: Silo,
+    extra?: { seed?: string | null; points?: string[]; close?: string },
+  ) =>
     http<ReviewFinding[]>('/review', {
       method: 'POST',
-      body: JSON.stringify({ text, isProductAdjacent, silo }),
+      body: JSON.stringify({
+        text,
+        isProductAdjacent,
+        silo,
+        seed: extra?.seed ?? undefined,
+        points: extra?.points,
+        close: extra?.close,
+      }),
     }),
 
   // Frontend-only health probe. Uses a RAW fetch (NOT http()) against /api/profiles —

@@ -172,13 +172,13 @@ function ContentBlock({
     setChecking(true)
     const t = setTimeout(() => {
       api
-        .postReview(editedText, false, item.silo)
+        .postReview(editedText, false, item.silo, isWeb ? undefined : { seed: item.seed, points: item.points, close })
         .then(setFindings)
         .catch(() => setFindings([]))
         .finally(() => setChecking(false))
     }, 600)
     return () => clearTimeout(t)
-  }, [editing, editedText, item.silo])
+  }, [editing, editedText, item.silo, item.seed, item.points, close, isWeb])
 
   async function saveContent() {
     setBusy(true)

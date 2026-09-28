@@ -31,7 +31,7 @@ operated through a local **brand-console** web UI.
   `register`, `tags`, `voice`, `setup`, `voice-card`, `imagery`, `brand`) and agents in
   `.claude/agents/<name>.md` (`content-reviewer`, `discover`). Shared, non-invokable
   skill references (no `name:` frontmatter, linked not run) live directly under
-  `.claude/skills/`: `onboarding-gate.md`, `content-doctrine.md`, and the
+  `.claude/skills/`: `onboarding-gate.md`, `content-doctrine.md`, `interaction-rules.md`, and the
   `*-procedure.md` files the router skills dispatch to (`develop`/`draft`/`revise` for
   posts, `article-draft` for long-form web pieces written as one markdown document,
   `imagery` for putting an image on a queue card). The

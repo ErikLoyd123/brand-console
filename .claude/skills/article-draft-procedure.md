@@ -16,7 +16,8 @@ never reviews its own work (`content-reviewer` is the gate).
 
 It **never invents the argument.** Take-origination (`.claude/skills/content-doctrine.md`)
 binds: the owner's `seed` is the spine, their `points` are the beats, and any real fact
-they have not supplied is a `[FILL: ...]` marker, never a plausible guess.
+they have not supplied is asked for before writing or written around, never a plausible
+guess and never a placeholder in the document.
 
 ## Onboarding gate (run before writing)
 
@@ -64,7 +65,8 @@ contradict it, never add a position it does not contain.
 ## 3. Confirm the shape — one light ask
 
 Sketch the structure internally from the take, the points, and the kind's guidance, then
-confirm it with **one** question: the proposed section headings as a short list, one line
+confirm it with **one** question (skipped in decide-for-me mode, where the headings are
+still shown in the report; `.claude/skills/interaction-rules.md`): the proposed section headings as a short list, one line
 each ("I'd structure it: verdict first → what changed → the numbers → when gp2 still wins →
 how to migrate. Good?"). The owner nods or redirects; incorporate and move on. One ask, not
 a walk — the full-document review happens on the queue card afterward.
@@ -75,7 +77,8 @@ Write the article as **one markdown document**: `##` section headings inline (no
 `#` — the export prepends the title), prose in the owner's voice, ordered by the confirmed
 structure with the owner's points worked in order. Calibrate length to the kind's guidance
 and `lengthTarget` (guidance, not a gate). Work the `targetKeyword` into the lead heading
-naturally. Real specifics the owner has not given are `[FILL: ...]` markers.
+naturally. Real specifics the owner has not given are asked for first, else the piece is
+written around them; never a placeholder.
 
 Also produce:
 
@@ -120,8 +123,8 @@ markdown file** — publish is the owner's call, never this procedure's.
 ## Rules
 
 - NEVER write without the voice card loaded.
-- NEVER invent the take, a beat, or a fact — seed is the spine; `[FILL: ...]` for missing
-  specifics.
+- NEVER invent the take, a beat, or a fact — seed is the spine; ask for a missing specific
+  before writing, else write around it. Never a placeholder in the document.
 - One markdown document: `##` headings inline, no structured sections array — the `body`
   field is the piece.
 - No em dashes, no AI-tells, and the CTA policy binds (only a genuinely product-adjacent

@@ -21,7 +21,8 @@ into its export. Nothing here publishes for you; the last step is a file you pla
    section structure, then the whole piece as a single markdown document (headings
    inline), with the **meta description** and **slug** filled. It lands on the idea's
    Queue card. Your take is the spine throughout — the AI never invents your argument, and
-   any fact you haven't supplied is a `[FILL: …]` marker, never a guess.
+   any fact you haven't supplied is asked for first or written around, never a guess and
+   never a placeholder.
 3. **Review — on the queue card.** Read the piece in the card's content box. Edit it (and
    the meta description / slug) by hand, or **Write with AI** again to revise a part of it.
    **Review with AI** runs the `content-reviewer` gate: your voice card's rules, the piece

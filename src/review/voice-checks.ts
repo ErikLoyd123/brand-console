@@ -163,7 +163,7 @@ export function checkSeedRetention(
 }
 
 // Check B: a close must carry an anchor: a numeral, a capitalized term or acronym also
-// in the body, a product name, a [FILL] marker, or (conversation/discuss only) a question.
+// in the body, a product name, or (conversation/discuss only) a question.
 export function checkAphorismClose(
   close: string | undefined,
   body: string,
@@ -173,7 +173,6 @@ export function checkAphorismClose(
   const trimmed = close?.trim() ?? "";
   if (trimmed === "") return null;
   if (hasRealNumeral(trimmed)) return null;
-  if (/\[FILL:/i.test(trimmed)) return null;
   const lower = trimmed.toLowerCase();
   if (products.some((p) => p.trim() !== "" && lower.includes(p.toLowerCase()))) return null;
   const anchors = extractSpecifics(trimmed).filter((s) => bodyHasSpecific(body, s));
@@ -391,6 +390,21 @@ export function checkLengthBand(body: string, length?: PostLength): Finding | nu
   };
 }
 
+// A placeholder for a fact the owner did not supply. The doctrine says ask first or write
+// around the gap; a marker in saved text is a failure, never a fix to make later.
+const FILL_MARKER = /\[FILL\b[^\]]*\]?/gi;
+
+export function checkFillMarkers(text: string): Finding | null {
+  const matches = contextsFor(text, FILL_MARKER);
+  if (matches.length === 0) return null;
+  return {
+    rule: "no-fill-markers",
+    severity: "fail",
+    message: `Found ${matches.length} placeholder(s). A post never carries a [FILL] marker: ask the owner for the fact, or write around the gap.`,
+    matches,
+  };
+}
+
 // Aggregator: runs every mechanical check and returns all findings. An empty
 // array means the mechanical checks pass. Soft rules are content-reviewer's job.
 export function runVoiceChecks(
@@ -419,5 +433,7 @@ export function runVoiceChecks(
   if (listCadence) findings.push(listCadence);
   const lengthBand = checkLengthBand(text, opts.length);
   if (lengthBand) findings.push(lengthBand);
+  const fill = checkFillMarkers([text, opts.close ?? ""].join("\n"));
+  if (fill) findings.push(fill);
   return findings;
 }

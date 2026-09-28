@@ -72,8 +72,11 @@ Interview lightly, or act on the directive they already gave. Common moves:
   no ask).
 
 Preserve everything the owner did not ask you to change. Do not add a beat, an opinion, or a
-claim that is not in the take/points. When you propose a rewrite, show it and confirm before
-writing — the owner's judgment governs.
+claim that is not in the take/points. When you propose a rewrite, show the before and after
+of every changed field, in full, then confirm before writing; an "approve the edits?" with no
+text above it is a defect (`.claude/skills/interaction-rules.md`). In decide-for-me mode
+("just go"), write it without the confirm round and show the same before-and-after in the
+report. Either way the owner's judgment governs what the post argues.
 
 ## 4. Write it back
 
@@ -127,5 +130,5 @@ The same discipline applies, with these substitutions:
   expression, never the position. If a revision would change what the post argues, stop and ask.
 - **Obey the voice card**, every rule — em-dash ban, AI-tells, show-don't-tell, hook formulas,
   CTA rule, protected relationships. A revision that breaks one is worse than the original.
-- **Confirm before writing**, preserve everything untouched, one draft per run, then report.
+- **Show, then confirm before writing** (full before and after; in decide-for-me mode, write and show), preserve everything untouched, one draft per run, then report.
   Never review your own work (that is `content-reviewer`) and never publish.

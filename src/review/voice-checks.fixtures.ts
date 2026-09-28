@@ -95,4 +95,16 @@ export const FIXTURES: Fixture[] = [
     expect: [{ rule: "length-band", matches: [] }],
     forbid: ["seed-retention", "aphorism-close", "list-cadence"],
   },
+  {
+    name: "draft that left a placeholder for a fact",
+    silo: "teach",
+    seed: "The Aillio preheat matters more than people think.",
+    points: [],
+    body:
+      "The Aillio preheat matters more than people think. Skip it and the first minute of the curve reads low, so you chase drift for the rest of the roast.\n\n" +
+      "On my last batch the difference was about [FILL: how many degrees] at first crack.",
+    close: "Give the Aillio its preheat and the first minute stops lying to you.",
+    expect: [{ rule: "no-fill-markers", matches: ["[FILL: how many degrees]"] }],
+    forbid: ["seed-retention", "aphorism-close", "list-cadence"],
+  },
 ];

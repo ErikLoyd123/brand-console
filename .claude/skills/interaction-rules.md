@@ -33,6 +33,19 @@ hiding what was decided.
 with its reason, never more than one question per turn, and never re-asking a choice the
 owner already made in this run.
 
+## Headless runs (the console's AI buttons)
+
+A run started from a console button (Write / Revise / Develop with AI, the Spark and Pillars
+surfaces) is headless: its only channels to the owner are one-sentence question cards and
+the final result card. Two consequences, and they override the defaults below:
+
+- **Questions are for missing input only** (a take, what to change, a fact that cannot be
+  written around). Every choice the skill could recommend, it takes, as if "just go" had been
+  said. Never more than the one question the procedure names.
+- **No approval of text, ever.** A question card cannot carry a draft, so "save this?" would
+  show nothing. The skill writes, then the result card shows what it wrote: the full new text,
+  or the before and after of every changed field. Showing replaces asking.
+
 ## Rule 2 — Show before you ask for approval
 
 **Never ask the owner to approve, confirm, save, or accept text they cannot see in the same

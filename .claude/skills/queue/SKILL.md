@@ -32,12 +32,13 @@ web idea or article-draft a post.
    - **"Write with AI"** passes a queue-item id: when nothing is written yet it asks to write
      the full piece → **draft-procedure** or **article-draft-procedure** by lane; when content
      already exists it asks to revise → **revise-procedure**.
-   - **"Review with AI"** passes a queue-item id and asks to review its written content →
-     follow **`.claude/agents/content-reviewer.md`** exactly, as a procedure: the short-form
-     path for a post's draft, the long-form path (voice + kind judgment + SEO checks) for a
-     web idea's article. It writes the verdict (`reviewStatus`, and the article stage on a
-     pass) exactly as that file specifies, reports PASS or the fix list, and **never rewrites
-     the content** — the owner decides what to change.
+   - **"Revise with AI"** passes the queue-item id and the draft id the card shows, and either
+     says what to change or says the owner will answer that next → **revise-procedure**
+     (one loader call, at most one question, one write, before-and-after in the report).
+   - There is no review button. "Review it" / "run the gate" from the terminal follows
+     **`.claude/agents/content-reviewer.md`** exactly, as a procedure (short-form path for a
+     post's draft, long-form path for a web article), writes the verdict, and **never rewrites
+     the content**; the card's **Mark reviewed** is the owner's own sign-off.
    In words: "develop item N" / "what are the points" → develop; "write this" / "draft the
    full post/article" → write; "revise/sharpen/tighten it" → revise; "review it" / "run the
    gate" → review. If the ask is ambiguous, ask once which you mean.

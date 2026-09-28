@@ -641,7 +641,9 @@ function ResultCard({
       <div className="flex size-11 items-center justify-center rounded-full bg-success-bg text-success-fg">
         <Check className="size-5" />
       </div>
-      <p className="text-sm text-text">{result.summary}</p>
+      <div className="text-sm text-text">
+        <Markdown>{result.summary}</Markdown>
+      </div>
       <div className="flex items-center gap-2">
         {result.link && (
           <Button asChild variant="outline">

@@ -6,6 +6,7 @@ import {
   type Connection,
   type GeneratorStatus,
   type ContentPlatform,
+  type Draft,
   type IdeaQueueItem,
   type ImageAttachment,
   type ReviewFinding,
@@ -30,6 +31,20 @@ import { cn } from '../lib/cn'
 import { PageHeader, ScoreChip, EmptyState } from '../components/kit'
 import { SkillSurface } from '../components/SkillSurface'
 import { ListChecks, Plus, Check, Copy, Send, ShieldCheck, Trash2, X, Sparkles } from 'lucide-react'
+
+// The card editor shows a draft as one post: the body with the close as its last
+// paragraph. These two are inverses for the split at save time.
+function joinPost(draft: Draft | null | undefined): string {
+  if (!draft) return ''
+  return [draft.body, draft.close].filter((s) => s && s.trim() !== '').join('\n\n')
+}
+function splitPost(post: string): { body: string; close: string } {
+  const paras = post.trim().split(/\n\s*\n/)
+  if (paras.length <= 1) return { body: paras[0] ?? '', close: '' }
+  const close = paras[paras.length - 1].trim()
+  return { body: paras.slice(0, -1).join('\n\n'), close }
+}
+
 
 // The review-gate verdict, rendered on each card's content header. Same vocabulary the
 // retired Drafts editor used; set by content-reviewer (via Review with AI or the terminal)
@@ -56,14 +71,6 @@ const DRAFT_HINTS = [
   'Reading the idea and its points',
   'Shaping hooks and body',
   'Saving the draft',
-]
-
-// Ambient hints for the review gate's working state.
-const REVIEW_HINTS = [
-  'Loading your voice card',
-  'Reading the piece',
-  'Running the mechanical checks',
-  'Judging it against the rules',
 ]
 
 // Ambient hints for the imagery run's working state.
@@ -103,7 +110,6 @@ function ContentBlock({
   images,
   onChanged,
   onRevise,
-  onReview,
 }: {
   item: IdeaQueueItem
   linkedinConn: Connection | null
@@ -114,7 +120,6 @@ function ContentBlock({
   images: ImageAttachment[]
   onChanged: () => void
   onRevise: () => void
-  onReview: () => void
 }) {
   const platform: ContentPlatform = (item.platform as ContentPlatform | null) ?? 'linkedin'
   const isWeb = platform === 'web'
@@ -127,8 +132,10 @@ function ContentBlock({
   const [error, setError] = useState<string | null>(null)
   // Post fields
   const [hooks, setHooks] = useState((draft?.hookOptions ?? []).join('\n'))
-  const [body, setBody] = useState(draft?.body ?? '')
-  const [close, setClose] = useState(draft?.close ?? '')
+  // The editor shows the post as one box: the body with the close as its last paragraph.
+  // On save it is split back into the draft's body and close (the last paragraph), so
+  // the stored shape, the publish text, and the checks are unchanged.
+  const [post, setPost] = useState(joinPost(draft))
   // Web fields
   const [webBody, setWebBody] = useState(article?.body ?? '')
   const [metaDescription, setMetaDescription] = useState(article?.metaDescription ?? '')
@@ -140,8 +147,7 @@ function ContentBlock({
 
   useEffect(() => {
     setHooks((draft?.hookOptions ?? []).join('\n'))
-    setBody(draft?.body ?? '')
-    setClose(draft?.close ?? '')
+    setPost(joinPost(draft))
     setWebBody(article?.body ?? '')
     setMetaDescription(article?.metaDescription ?? '')
     setSlug(article?.slug ?? '')
@@ -167,7 +173,7 @@ function ContentBlock({
   // the prose tells these rules scan for.
   const editedText = isWeb
     ? [item.proposedAngle, article?.title ?? '', metaDescription, webBody].join('\n\n').trim()
-    : [item.proposedAngle, hooks.split('\n')[0] ?? '', '', body, '', close].join('\n').trim()
+    : [item.proposedAngle, hooks.split('\n')[0] ?? '', '', post].join('\n').trim()
   useEffect(() => {
     if (!editing) return
     setChecking(true)
@@ -177,14 +183,16 @@ function ContentBlock({
           editedText,
           false,
           item.silo,
-          isWeb ? undefined : { seed: item.seed, points: item.points, close, length: item.length ?? null },
+          isWeb
+            ? undefined
+            : { seed: item.seed, points: item.points, close: splitPost(post).close, length: item.length ?? null },
         )
         .then(setFindings)
         .catch(() => setFindings([]))
         .finally(() => setChecking(false))
     }, 600)
     return () => clearTimeout(t)
-  }, [editing, editedText, item.silo, item.seed, item.points, close, item.length, isWeb])
+  }, [editing, editedText, item.silo, item.seed, item.points, post, item.length, isWeb])
 
   async function saveContent() {
     setBusy(true)
@@ -197,6 +205,7 @@ function ContentBlock({
           slug: slug.trim() === '' ? undefined : slug.trim(),
         })
       } else if (draft) {
+        const { body, close } = splitPost(post)
         await api.updateDraft(draft.id, {
           hookOptions: hooks.split('\n').map((h) => h.trim()).filter((h) => h !== ''),
           body,
@@ -276,20 +285,13 @@ function ContentBlock({
           {isWeb && article?.exportPath ? ' · exported' : ''}
           <span
             className="inline-flex items-center gap-1.5 normal-case tracking-normal"
-            title="The review verdict. Run the AI gate with Review with AI, or sign off yourself with Mark reviewed; any content edit resets it to pending."
+            title="The review verdict. Sign off with Mark reviewed (the content-reviewer gate can still be run from the terminal); any content edit resets it to pending."
           >
             <span className={cn('size-1.5 rounded-full', review.dot)} />
             {review.label}
           </span>
         </span>
         <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={onReview}
-            className="inline-flex items-center gap-1 text-xs text-primary-ink underline-offset-2 hover:underline"
-          >
-            <ShieldCheck className="size-3" /> Review with AI
-          </button>
           {reviewStatus !== 'approved' && reviewStatus !== 'passed' && (
             <button
               type="button"
@@ -351,27 +353,22 @@ function ContentBlock({
         ) : (
           <div className="flex flex-col gap-2">
             <label className="flex flex-col gap-1 text-[11px] font-medium uppercase tracking-wide text-text-subtle">
-              Hooks — one per line, first is the {platform === 'reddit' ? 'title' : 'opener'}
-              <Textarea
-                value={hooks}
-                onChange={(e) => setHooks(e.target.value)}
-                className="min-h-0 bg-surface font-sans text-sm normal-case tracking-normal"
+              {platform === 'reddit' ? 'Title (the self-post title, 300 characters max)' : 'Title (the first line of the post)'}
+              <Input
+                value={hooks.split('\n')[0] ?? ''}
+                onChange={(e) => {
+                  const rest = hooks.split('\n').slice(1)
+                  setHooks([e.target.value, ...rest].join('\n'))
+                }}
+                className="bg-surface font-sans text-sm normal-case tracking-normal"
               />
             </label>
             <label className="flex flex-col gap-1 text-[11px] font-medium uppercase tracking-wide text-text-subtle">
-              Body
+              Post (the closing line is the last paragraph)
               <Textarea
-                value={body}
-                onChange={(e) => setBody(e.target.value)}
-                className="min-h-40 bg-surface font-sans text-sm normal-case tracking-normal"
-              />
-            </label>
-            <label className="flex flex-col gap-1 text-[11px] font-medium uppercase tracking-wide text-text-subtle">
-              Close
-              <Textarea
-                value={close}
-                onChange={(e) => setClose(e.target.value)}
-                className="min-h-0 bg-surface font-sans text-sm normal-case tracking-normal"
+                value={post}
+                onChange={(e) => setPost(e.target.value)}
+                className="min-h-48 bg-surface font-sans text-sm normal-case tracking-normal"
               />
             </label>
             <Button size="sm" className="self-start" disabled={busy} onClick={saveContent}>
@@ -514,7 +511,6 @@ function QueueRow({
   onDone,
   onDevelop,
   onDraft,
-  onReview,
   onImage,
   generator = null,
   imageWorking = false,
@@ -527,7 +523,6 @@ function QueueRow({
   onDone: () => void
   onDevelop: () => void
   onDraft: () => void
-  onReview: () => void
   // Launches the imagery session with the producer the strip's model picker chose.
   onImage: (engine: ImageEngine) => void
   // Local generator status (model roster) for the strip's picker (page-level fetch).
@@ -893,7 +888,6 @@ function QueueRow({
             images={cardImages}
             onChanged={onDone}
             onRevise={onDraft}
-            onReview={onReview}
           />
           <ImageStrip
             ideaId={item.id}
@@ -1001,7 +995,7 @@ export function QueueView() {
   // directive (develop vs draft) and the local `mode` (which sets the working hints and result
   // link). Each trigger bumps surfaceKey to remount the surface fresh on that item; the bump is
   // what lets the same card re-trigger.
-  const [mode, setMode] = useState<'develop' | 'draft' | 'review' | 'image'>('develop')
+  const [mode, setMode] = useState<'develop' | 'draft' | 'image'>('develop')
   const [surfaceInput, setSurfaceInput] = useState<string | undefined>(undefined)
   // Claude model pin for the session (only the image picker's Claude-tier options
   // set it); undefined = the engine's default model.
@@ -1013,7 +1007,7 @@ export function QueueView() {
   const [imageIdeaId, setImageIdeaId] = useState<string | null>(null)
   const surfaceRef = useRef<HTMLDivElement>(null)
   function runQueue(
-    nextMode: 'develop' | 'draft' | 'review' | 'image',
+    nextMode: 'develop' | 'draft' | 'image',
     input: string,
     model?: string,
   ) {
@@ -1058,10 +1052,16 @@ export function QueueView() {
       'draft',
       hasContent
         ? `Revise the written ${kind} for the queue item whose id is ${item.id} (angle: ` +
-            `"${item.proposedAngle}"). Do not ask which item — use this one. Load the voice ` +
-            `card and read the ${kind} first, then open by telling me where it stands in a ` +
-            `few sentences (what it says, its review status, any standing check findings) ` +
-            `and ask what I want changed. Write the revision back, then stay for follow-ups.` +
+            `"${item.proposedAngle}"). Do not ask which item — use this one` +
+            (kind === 'post' && item.draft
+              ? `, and revise the draft whose id is ${item.draft.id}, the one on the card (the ` +
+                `loader resolves it too; never pick another row)`
+              : '') +
+            `. Follow the revise procedure: one loader call, then ask me exactly one thing, ` +
+            `what I want changed, as a free-text question. Make that change and nothing else, ` +
+            `write it back with the procedure's writer, and end with the before and after of ` +
+            `every field you changed, in full. Do not summarize where the piece stands, do ` +
+            `not ask me to confirm the text, and do not ask anything else.` +
             itemContext(item)
         : `Write the full ${kind} for the queue item whose id is ${item.id} (angle: ` +
             `"${item.proposedAngle}"). Do not ask which item — use this one. Load the voice ` +
@@ -1134,19 +1134,6 @@ export function QueueView() {
       engine.kind === 'claude' ? engine.claudeModel : undefined,
     )
   }
-  function reviewItem(item: IdeaQueueItem) {
-    const kind = item.platform === 'web' ? 'article' : 'post'
-    runQueue(
-      'review',
-      `Review the written ${kind} for the queue item whose id is ${item.id} (angle: ` +
-        `"${item.proposedAngle}"). Do not ask which item — use this one. Open with a short ` +
-        `orientation before the verdict: what this ${kind} is, what it is trying to do (its ` +
-        `intent and platform), in plain words. Then follow the content-reviewer spec exactly, ` +
-        `write the verdict, and report pass or the fix list. Do not rewrite the content. ` +
-        `Afterward stay in the session and answer my questions about the verdict or the piece.` +
-        itemContext(item),
-    )
-  }
   // The generic top entry launches the queue skill in develop mode and lets it pick an item.
   function developGeneric() {
     runQueue('develop', 'List my queue ideas best-first and ask which one to develop.')
@@ -1200,11 +1187,9 @@ export function QueueView() {
           workingHints={
             mode === 'draft'
               ? DRAFT_HINTS
-              : mode === 'review'
-                ? REVIEW_HINTS
-                : mode === 'image'
-                  ? IMAGE_HINTS
-                  : DEVELOP_HINTS
+              : mode === 'image'
+                ? IMAGE_HINTS
+                : DEVELOP_HINTS
           }
           resultActions={
             mode === 'develop'
@@ -1322,7 +1307,6 @@ export function QueueView() {
               onDone={reload}
               onDevelop={() => developItem(item)}
               onDraft={() => draftItem(item)}
-              onReview={() => reviewItem(item)}
               onImage={(engine) => imageItem(item, engine)}
               generator={generator}
               imageWorking={imageIdeaId === item.id}

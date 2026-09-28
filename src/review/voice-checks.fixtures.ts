@@ -107,4 +107,17 @@ export const FIXTURES: Fixture[] = [
     expect: [{ rule: "no-fill-markers", matches: ["[FILL: how many degrees]"] }],
     forbid: ["seed-retention", "aphorism-close", "list-cadence"],
   },
+  {
+    name: "legacy seed with a placeholder does not force it into the body",
+    silo: "teach",
+    seed: "Green beans lose weight in a dry warehouse, so the price per cup drifts up. The fix is [FILL: the concrete step that actually works].",
+    points: [],
+    body:
+      "Green beans lose weight in a dry warehouse. The bag still says 60 kilos on the invoice, but by the time you roast the last of it you are paying for water that left months ago, so the price per cup drifts up while the invoice stays the same.\n\n" +
+      "Weigh what you roast, not what you bought, and let the cost per cup move with it.",
+    close: "Weigh the 60 kilos you roast, not the 60 kilos you bought.",
+    // The seed's marker is reported (fix the take), but the body is not asked to carry "FILL".
+    expect: [{ rule: "no-fill-markers", matches: ["[FILL: the concrete step that actually works]"] }],
+    forbid: ["seed-retention", "aphorism-close", "list-cadence"],
+  },
 ];

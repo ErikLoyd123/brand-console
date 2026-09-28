@@ -180,6 +180,12 @@ function PillarEditor({ onSaved, reloadKey }: { onSaved: () => void; reloadKey: 
                     {s.label}
                   </option>
                 ))}
+                {/* A default set to another platform's intent (the writer accepts any roster's
+                    key) keeps its stored value here instead of rendering blank and being
+                    dropped on the next save. */}
+                {row.default_silo && !getConsoleSilos('linkedin').some((s) => s.key === row.default_silo) && (
+                  <option value={row.default_silo}>{row.default_silo} (other platform)</option>
+                )}
               </select>
               <span className="w-8 shrink-0" />
             </div>

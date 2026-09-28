@@ -82,6 +82,9 @@ function contextsFor(text: string, pattern: RegExp): string[] {
   return out;
 }
 
+// A placeholder for a fact the owner did not supply ("[FILL: ...]"). See checkFillMarkers.
+const FILL_MARKER = /\[FILL\b[^\]]*\]?/gi;
+
 // Specifics: the concrete things a seed names that a draft must carry by name. Numerals
 // with their unit, capitalized terms not at sentence or paragraph start, all-caps
 // acronyms, and the items of a parenthesized capitalized list (each item matches on its
@@ -109,8 +112,12 @@ function isBareSingleDigit(token: string): boolean {
 
 export function extractSpecifics(...sources: (string | undefined)[]): string[] {
   const found = new Set<string>();
-  for (const source of sources) {
-    if (!source) continue;
+  for (const raw of sources) {
+    if (!raw) continue;
+    // A placeholder is never a specific: strip it before extracting, so a legacy seed that
+    // carries "[FILL: ...]" cannot demand that the body carry it too.
+    const source = raw.replace(FILL_MARKER, " ");
+    FILL_MARKER.lastIndex = 0;
     for (const m of source.matchAll(NUMERAL)) {
       if (!isBareSingleDigit(m[0])) found.add(m[0]);
     }
@@ -391,17 +398,29 @@ export function checkLengthBand(body: string, length?: PostLength): Finding | nu
 }
 
 // A placeholder for a fact the owner did not supply. The doctrine says ask first or write
-// around the gap; a marker in saved text is a failure, never a fix to make later.
-const FILL_MARKER = /\[FILL\b[^\]]*\]?/gi;
-
-export function checkFillMarkers(text: string): Finding | null {
-  const matches = contextsFor(text, FILL_MARKER);
-  if (matches.length === 0) return null;
+// around the gap; a marker in saved text is a failure, never a fix to make later. The
+// seed and points are scanned too: a marker there was written by a skill, not the owner,
+// and it poisons every draft built on it, so the fix is the take, not the body.
+export function checkFillMarkers(
+  text: string,
+  close?: string,
+  seed?: string,
+  points: string[] = [],
+): Finding | null {
+  const inPost = contextsFor([text, close ?? ""].join("\n"), FILL_MARKER);
+  const inSeed = contextsFor([seed ?? "", ...points].join("\n"), FILL_MARKER);
+  if (inPost.length === 0 && inSeed.length === 0) return null;
+  const where =
+    inPost.length > 0 && inSeed.length > 0
+      ? "in the post and in the seed"
+      : inPost.length > 0
+        ? "in the post"
+        : "in the seed";
   return {
     rule: "no-fill-markers",
     severity: "fail",
-    message: `Found ${matches.length} placeholder(s). A post never carries a [FILL] marker: ask the owner for the fact, or write around the gap.`,
-    matches,
+    message: `Found ${inPost.length + inSeed.length} placeholder(s) ${where}. A post never carries a [FILL] marker: ask the owner for the fact, or write around the gap.${inSeed.length > 0 ? " The seed carries one: fix the take first, then redraft." : ""}`,
+    matches: [...inPost, ...inSeed],
   };
 }
 
@@ -433,7 +452,7 @@ export function runVoiceChecks(
   if (listCadence) findings.push(listCadence);
   const lengthBand = checkLengthBand(text, opts.length);
   if (lengthBand) findings.push(lengthBand);
-  const fill = checkFillMarkers([text, opts.close ?? ""].join("\n"));
+  const fill = checkFillMarkers(text, opts.close, opts.seed, opts.points ?? []);
   if (fill) findings.push(fill);
   return findings;
 }

@@ -73,7 +73,10 @@ Interview at the depth the idea needs. The substance is the owner's:
 - **The points (2-4 beats).** Ask what they'd actually say, in order — the tension only they
   see, the concrete example, the turn, what it means for the reader. Propose candidate beats
   **drawn from their take and the source**, then have them confirm or rewrite each. Do not invent
-  a position; if they can't supply the substance, stop rather than fill it in.
+  a position; if they can't supply the substance, stop rather than fill it in. When a beat is
+  a category ("the right packages", "a few regions"), ask for the name. The seed and points are
+  where the specifics have to live: the drafter carries them by name and the reviewer fails a
+  draft that loses one (doctrine Principle 5).
 - Keep it to 2-4 beats. More than that is a draft, not a developed idea. Fewer than two is still
   a bare angle — push gently for at least two unless the piece is genuinely a single move.
 

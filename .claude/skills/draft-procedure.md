@@ -106,15 +106,23 @@ Produce four fields, all in the loaded profile's voice, all voice-card compliant
 - `body`: shaped per silo (below). For any `needs-your-take` item the seed is the spine;
   never invent an opinion. On Reddit the body and close publish as the **markdown
   self-post body** under the title; plain markdown (paragraphs, a list if it earns it) is
-  fine there.
-- `close`: shaped per silo (below).
+  fine there. Every specific in `seed` and `points` appears in the body by name (doctrine
+  Principle 5, `.claude/skills/content-doctrine.md`). Do not generalize a named tool,
+  number, or mechanism into a category; the `seed-retention` check fails the draft when one
+  goes missing.
+- `close`: shaped per silo (below). It lands on one concrete thing from the body, or for
+  `conversation` a real question. Never an aphorism, an encouragement, or a summary of the
+  genre ("stay curious", "worth a second look"); the `aphorism-close` check flags those.
 - `mediaSuggestion`: one short suggestion (for example "screenshot of the thing you're
   describing" or "none").
 
 **Per-silo shaping — LinkedIn** (plus the shared `curate`):
 
-- **teach** (today's behavior, unchanged). Body 1300 to 1900 characters; show, do not
-  tell; lead with the useful, specific thing. Close is a soft, honest wrap. This is the
+- **teach.** Body 1300 to 1900 characters; show, do not tell; lead with the useful, specific
+  thing, then explain the one mechanism behind it in prose. No First/Second/Third, no "three
+  things", no numbered list unless the owner's points are themselves a list of three or more,
+  and prose is still preferred then (the `list-cadence` check flags the scaffolding). Close is
+  a soft, honest wrap that restates the specific, never a moral. This is the
   **only** silo that may carry an ask, and only when the post genuinely touches a product:
   a tie-in may reference only a product named in the active profile's `identity.yaml` (`products`), and
   only if `cta_policy` allows it (`personal_posts_carry_ask` gates asks on non-product
@@ -219,6 +227,9 @@ Nothing here publishes.
 - NEVER invent an opinion for a needs-your-take item that has no seed. Surface it and stop.
 - NEVER fabricate a specific real fact. If a draft needs a specific the profile owner has not provided (a number, which tool, what actually happened, a customer detail), leave a `[FILL: ...]` marker in place and surface it to the profile owner. Style can be generated; facts cannot.
 - NEVER use an em dash. NEVER use an AI-tell from the blocklist.
+- NEVER drop a specific from the seed or points; carry it by name (Principle 5).
+- NEVER close on an aphorism; the close lands on a specific from the body or, for a conversation post, a real question.
+- NEVER scaffold a teach post as a list unless the owner's points are a list; explain the mechanism in prose.
 - Shape by silo, on either platform: only the teach-shaped silo and LinkedIn's `promote` may carry an ask; only `teach` on LinkedIn (and `help` on Reddit) holds the 1300-1900 body floor, and `promote` runs 400-900; only the conversation-shaped silo may open with a question (`conversation`, `discuss`); every other silo carries no ask and no length floor. 3 to 5 hooks, each under 10 words, for every silo; on Reddit the first hook is the self-post title (300-char hard cap).
 - The register (platform + tone) is **soft coloring, never a hard rule**: it shifts the language's register and hints at length, but the silo, the voice card, and the doctrine govern. Tone never gates a draft and never enters the mechanical checks. If tone and silo conflict, silo wins.
 - The output is a draft, never a published post.

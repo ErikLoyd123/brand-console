@@ -17,7 +17,8 @@ import { Check, Minus } from 'lucide-react'
 // The per-silo rule summary shown as chips. Mirrors draft's per-silo shaping and the
 // content-reviewer's silo rules; kept short and factual. `ask` (the boolean field) tracks
 // product-adjacency, true only for the teach-shaped silo of each platform (teach on
-// LinkedIn, help on Reddit), matching siloMayBeProductAdjacent in src/core/silos.ts.
+// LinkedIn, help on Reddit, how-to on web) plus LinkedIn's promote, matching
+// siloMayBeProductAdjacent in src/core/silos.ts.
 interface SiloRules {
   ask: boolean
   questionHook: boolean
@@ -43,6 +44,12 @@ const RULES: Record<Silo, SiloRules> = {
     questionHook: false,
     lengthFloor: false,
     note: 'A short, warm story where someone else is the hero — the owner is never the aggressive hero.',
+  },
+  promote: {
+    ask: true,
+    questionHook: false,
+    lengthFloor: false,
+    note: 'The direct ask, once. One plain paragraph on what the product does and for whom, one real specific, then the invitation. Short (400-900 characters).',
   },
   discuss: {
     ask: false,

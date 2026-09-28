@@ -16,11 +16,11 @@ export type QueueStatus = 'new' | 'seeded' | 'drafting' | 'drafted' | 'published
 export type ReviewStatus = 'pending' | 'passed' | 'failed' | 'edited' | 'approved'
 // A post's intent (its job), orthogonal to its pillar (its topic). Platform-keyed
 // roster, server-side source of truth in src/core/silos.ts. LinkedIn: conversation,
-// teach, win, curate. Reddit: discuss, help, share, ask, curate. Web (long-form): the
+// teach, win, curate, promote. Reddit: discuss, help, share, ask, curate. Web (long-form): the
 // five piece kinds. `curate` is shared by LinkedIn and Reddit; every other key belongs
 // to exactly one platform.
 export type Silo =
-  | 'conversation' | 'teach' | 'win' // LinkedIn-only
+  | 'conversation' | 'teach' | 'win' | 'promote' // LinkedIn-only
   | 'discuss' | 'help' | 'share' | 'ask' // Reddit-only
   | 'curate' // shared (LinkedIn + Reddit)
   | 'how-to' | 'explainer' | 'comparison' | 'thought-piece' | 'whitepaper' // web-only

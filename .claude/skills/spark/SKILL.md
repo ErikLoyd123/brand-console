@@ -94,13 +94,30 @@ Above. Needs at least one pillar; platforms are optional.
 Above. Take-origination, never-fabricate, depth-calibration — from
 `.claude/skills/content-doctrine.md`.
 
+### 2b. Read the pillars and their notes
+
+Before proposing anything, read every pillar's key, label, note, and default intent for the
+profile's default platform. The note is the owner's own description of what posts in that
+lane cover and how they read; the default intent is what a spark in that lane usually is.
+From the repo root:
+
+```bash
+npx tsx -e "(async () => { const p = await import('./src/core/pillars'); console.log(JSON.stringify(p.getPillars().map((k) => ({ key: k, label: p.getPillarLabel(k), note: p.getPillarNote(k), default_silo: p.getPillarDefaultSilo(k) })), null, 2)); process.exit(0); })();"
+```
+
+This read feeds Step 3: the pillar is proposed from the notes, and its default intent is the
+first silo candidate.
+
 ### 3. Infer-and-confirm the silo
 
-Read the spark and propose **the single most likely silo in one line, with brief
-reasoning** — "this reads like a teach, not a hot take, right?" The owner nods or redirects.
+Read the spark against the pillar notes from Step 2b and propose, **in one line, the pillar
+and the silo together**, with the note's reason: "this sits in FinOps Education, which is
+normally a teach; sound right?" The pillar's `default_silo` is the first candidate. When the
+spark plainly reads as a different intent than the pillar's default (a raw question in a
+teach-default lane), propose that intent instead and say why. The owner nods or redirects.
 No up-front taxonomy quiz, no silent classification. It is a **proposal, not an assertion**:
-the same take-origination principle applied to the silo choice, so `spark` never decides
-*for* the owner what kind of post this is.
+the same take-origination principle applied to the pillar and silo choice, so `spark` never
+decides *for* the owner what lane or kind of post this is.
 
 The silo roster is platform-keyed in `src/core/silos.ts`: LinkedIn ships
 `conversation | teach | win | curate`, Reddit ships `discuss | help | share | ask | curate`, and
@@ -196,8 +213,8 @@ npx tsx src/ingest/capture.ts "RAW SPARK TEXT" [pillar] \
 
 - The first positional is the owner's original raw spark (recorded verbatim in the `sparks`
   row).
-- `pillar` is optional: pass a profile pillar `key` only if the thought clearly sits in one,
-  otherwise omit it and let capture default to the profile's first pillar.
+- `pillar` is the pillar key the owner confirmed in Step 3. Always pass it; capture's
+  first-pillar default is for bare captures, not for a spark that was walked.
 - `--seed` carries the refined thought the owner converged on.
 - `--silo` sets the detected silo, validated against `src/core/silos.ts`'s roster for the
   resolved `--platform` (LinkedIn's four, Reddit's five, or `web`'s five piece kinds), instead of

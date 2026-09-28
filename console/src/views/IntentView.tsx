@@ -3,6 +3,7 @@ import { useResource } from '../lib/useResource'
 import { PageHeader, SectionHeading, Eyebrow } from '../components/kit'
 import { getConsoleSilos, type SiloMeta } from '../lib/silos'
 import type { Silo } from '../lib/api'
+import { defaultLengthFor, lengthMeta } from '../lib/lengths'
 import { SilosInfoLink } from '../components/SilosInfoLink'
 import { Check, Minus } from 'lucide-react'
 
@@ -14,7 +15,8 @@ import { Check, Minus } from 'lucide-react'
 // platforms. You still SET an item's silo in Discovery and filter by it in Queue. See
 // how-it-fits-together.md and design 2026-07-03-reddit-publishing-channel/01-content-axes.
 
-// The per-silo rule summary shown as chips. Mirrors draft's per-silo shaping and the
+// The per-silo rule summary shown as chips (length is a separate axis: the intent only
+// defaults a band, shown next to the chips). Mirrors draft's per-silo shaping and the
 // content-reviewer's silo rules; kept short and factual. `ask` (the boolean field) tracks
 // product-adjacency, true only for the teach-shaped silo of each platform (teach on
 // LinkedIn, help on Reddit, how-to on web) plus LinkedIn's promote, matching
@@ -22,7 +24,6 @@ import { Check, Minus } from 'lucide-react'
 interface SiloRules {
   ask: boolean
   questionHook: boolean
-  lengthFloor: boolean
   note: string
 }
 
@@ -30,85 +31,71 @@ const RULES: Record<Silo, SiloRules> = {
   conversation: {
     ask: false,
     questionHook: true,
-    lengthFloor: false,
     note: 'Opens a loop instead of closing one — built to pull replies, not deliver a takeaway.',
   },
   teach: {
     ask: true,
     questionHook: false,
-    lengthFloor: true,
     note: 'Leads with the useful, specific thing. The only LinkedIn silo that may carry a product ask.',
   },
   win: {
     ask: false,
     questionHook: false,
-    lengthFloor: false,
     note: 'A short, warm story where someone else is the hero — the owner is never the aggressive hero.',
   },
   promote: {
     ask: true,
     questionHook: false,
-    lengthFloor: false,
     note: 'The direct ask, once. One plain paragraph on what the product does and for whom, one real specific, then the invitation. Short (400-900 characters).',
   },
   discuss: {
     ask: false,
     questionHook: true,
-    lengthFloor: false,
     note: "Opens a genuine discussion instead of closing one — pose the real question you're chewing on and invite disagreement.",
   },
   help: {
     ask: true,
     questionHook: false,
-    lengthFloor: true,
     note: 'Answers a concrete problem as a service. The teach-analog: the only Reddit silo that may be product-adjacent.',
   },
   share: {
     ask: false,
     questionHook: false,
-    lengthFloor: false,
     note: 'A first-person experience or result, told plainly, no flex — where a LinkedIn win relocates, stripped of the brag.',
   },
   ask: {
     ask: false,
     questionHook: true,
-    lengthFloor: false,
     note: "Solicits the community's input, recommendations, or gut-check, and ends on the question — no ask beyond it.",
   },
   curate: {
     ask: false,
     questionHook: false,
-    lengthFloor: false,
     note: 'A generous pointer to someone else’s work, credited explicitly. The owner is a node passing something good along.',
   },
   'how-to': {
     ask: true,
     questionHook: false,
-    lengthFloor: true,
     note: 'Walks the reader through one task in ordered steps until they can do it themselves. The web teach-analog: the only web intent that may be product-adjacent.',
   },
   explainer: {
     ask: false,
     questionHook: false,
-    lengthFloor: true,
     note: 'Makes one concept clear from the ground up — define it, show why it matters, leave the reader able to reason about it.',
   },
   comparison: {
     ask: false,
     questionHook: false,
-    lengthFloor: true,
     note: 'Weighs two or more options against stated criteria, plainly and fairly, so the reader can choose for themselves.',
   },
   'thought-piece': {
     ask: false,
     questionHook: false,
-    lengthFloor: true,
     note: 'Stakes a considered position on where the field is heading and defends it with reasoning, not hype.',
   },
   whitepaper: {
     ask: false,
     questionHook: false,
-    lengthFloor: true,
     note: 'Makes a thorough, evidence-backed case on a substantial topic, structured with sections and a short summary.',
   },
 }
@@ -152,7 +139,15 @@ function SiloCard({ meta, count }: { meta: SiloMeta; count: number }) {
       <div className="flex flex-wrap gap-1.5">
         <RuleChip on={rules.ask} label={rules.ask ? 'Can carry an ask' : 'No ask'} />
         <RuleChip on={rules.questionHook} label="Question hook" />
-        <RuleChip on={rules.lengthFloor} label="Length floor" />
+        {(() => {
+          // Length is a per-post band (src/core/lengths.ts); the intent only sets the default.
+          const d = defaultLengthFor(meta.key)
+          return (
+            <span className="inline-flex items-center gap-1 rounded-full bg-surface-sunken px-2 py-0.5 text-xs text-text-muted">
+              {d ? `Leans ${lengthMeta(d).label.toLowerCase()} (${lengthMeta(d).min}-${lengthMeta(d).max})` : 'Own length target'}
+            </span>
+          )
+        })()}
       </div>
     </div>
   )

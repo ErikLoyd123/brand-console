@@ -171,6 +171,11 @@ recognize.
   Discovery, and that choice is saved to the item. The **Intent** screen browses the
   intents (meaning, rules, live counts); it's read-only because the roster is fixed
   structure that drafting and review depend on.
+- **Length (post band)** — the *bands* are fixed in code (short 300-600, medium 700-1100,
+  long 1300-1900 body characters, `src/core/lengths.ts`), but you **choose** a band per post:
+  `spark` and the queue skill recommend one from the material and ask, and the card's picker
+  writes the same `length` field. Empty means the intent's default band (teach leans medium,
+  the rest lean short). See **How long a post runs**.
 - **Feeds** — your RSS feeds live in the **database** (the `sources` table), not config. The
   **Feeds** screen is where you add them (a form or the AI `feeds` skill) and **run** them —
   a per-feed *Run* button and a *Run all* button pull fresh items into the Discovery inbox. No
@@ -243,6 +248,7 @@ the console is where you then run the pipeline day to day.**
 | Pillars | ✅ (`identity.yaml`: key, label, weight, plus an optional guidance `note` and `default_silo`) | ✅ edit + stats (form / AI `pillars` skill) | — | Editable on Pillars screen, by hand or AI (weights informed by queue depth + coverage). The note is read by spark, discovery, and the reviewer; the default intent files a new spark unless you name one |
 | Feeds | — | ✅ add + run (form / `feeds` skill) | ✅ | DB is source of truth; managed entirely in the console |
 | Silo menu / choice | ✅ menu (code), **per-platform** | ✅ pick per item + Intent view | ✅ stored | Both; roster keyed by platform — LinkedIn / Reddit intents, plus **`web` piece kinds** (how-to, explainer, comparison, thought piece, whitepaper) for long-form |
+| Post length band | ✅ bands (code: short / medium / long) | ✅ pick per item (card picker) | ✅ stored (`length` on the item) | Both; chosen per post from the material, recommended and asked by `spark` and `queue`; empty means the intent's default band. See **How long a post runs** |
 | Register (platform/tone) | ✅ menu (code) + selection (`identity.yaml`) | ✅ edit selection | ✅ per-item pin | Menu read-only, spans LinkedIn **and Reddit**; selection editable |
 | Tags | — | ✅ full CRUD (form / AI `tags` skill) | ✅ | Console-owned; the `tags` skill adds with anti-bloat judgment, rename/recolor/delete stay in the console |
 | Sparks | ✅ (`spark` / plain button) | ✅ Spark screen | ✅ | Raw save or AI-shaped via `spark` |

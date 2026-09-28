@@ -15,6 +15,9 @@ it can carry an ask. It is a **fixed roster per platform** — LinkedIn has five
 ask / curate). You pick one per post, but you don't add or remove them (see "Why the set is
 fixed" below).
 
+How long a post runs is a separate axis from its intent: a per-post length band (short,
+medium, long) that the intent only defaults. See **How long a post runs**.
+
 Long-form has its own roster on the same axis: the `web` platform's **piece kinds**
 (how-to, explainer, comparison, thought piece, whitepaper) are the silos of the long-form web
 lane. They're covered in **Long-form articles** in this Docs section.

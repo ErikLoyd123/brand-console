@@ -11,13 +11,13 @@ import { getDefaultPlatform, type Platform } from './registers';
 
 /**
  * The full set of intent keys across every platform. LinkedIn: conversation, teach,
- * win, curate. Reddit: discuss, help, share, ask, curate. Web: how-to, explainer,
+ * win, curate, promote. Reddit: discuss, help, share, ask, curate. Web: how-to, explainer,
  * comparison, thought-piece, whitepaper. `curate` is intentionally shared by both
  * LinkedIn and Reddit; every other key belongs to exactly one platform, so a stored
  * key is unambiguous about which roster it came from without also storing the platform.
  */
 export type Silo =
-  | 'conversation' | 'teach' | 'win'                                        // LinkedIn-only
+  | 'conversation' | 'teach' | 'win' | 'promote'                            // LinkedIn-only
   | 'discuss' | 'help' | 'share' | 'ask'                                    // Reddit-only
   | 'how-to' | 'explainer' | 'comparison' | 'thought-piece' | 'whitepaper' // web-only
   | 'curate';                                                              // shared (LinkedIn + Reddit)
@@ -57,6 +57,14 @@ const SILO_ROSTERS: PlatformSilos[] = [
         key: 'curate',
         label: 'Curate',
         guidance: "Point at someone else's work with your own framing and credit. Never a bare link.",
+      },
+      {
+        key: 'promote',
+        label: 'Promote',
+        guidance:
+          'Make the ask plainly, once. Say what the product does and who it is for in your own ' +
+          'words, with one real specific. No stacked benefits, no hype. It should read as earned ' +
+          'by the posts around it.',
       },
     ],
   },
@@ -157,10 +165,10 @@ export function getSiloGuidance(key: Silo): string {
 }
 
 /**
- * Product-adjacency is allowed only for the teach-shaped intent of each platform:
- * 'teach' on LinkedIn, 'help' on Reddit, 'how-to' on web. Because intent keys are
- * globally unique, this stays platform-free.
+ * Product-adjacency is allowed for the teach-shaped intent of each platform ('teach' on
+ * LinkedIn, 'help' on Reddit, 'how-to' on web) and for LinkedIn's 'promote', whose whole
+ * job is the ask. Because intent keys are globally unique, this stays platform-free.
  */
 export function siloMayBeProductAdjacent(silo: Silo): boolean {
-  return silo === 'teach' || silo === 'help' || silo === 'how-to';
+  return silo === 'teach' || silo === 'help' || silo === 'how-to' || silo === 'promote';
 }

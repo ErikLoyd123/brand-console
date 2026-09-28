@@ -4,6 +4,7 @@ import { db } from '../../db/client';
 import { articles, drafts, ideaQueueItems, publishedPosts, scheduledPosts } from '../../db/schema';
 import { getActiveProfileId } from '../../profile/loader';
 import { exportArticle } from '../../core/export-article';
+import { getLengths, type PostLength } from '../../core/lengths';
 
 const router = Router();
 
@@ -98,6 +99,26 @@ router.post('/:id/points', (req, res) => {
   const updated = db
     .update(ideaQueueItems)
     .set({ points })
+    .where(eq(ideaQueueItems.id, req.params.id))
+    .returning()
+    .all();
+  if (updated.length === 0) return res.status(404).json({ error: 'not found' });
+  res.json(updated[0]);
+});
+
+// Set the length band on a queue item (src/core/lengths.ts). Body: { length: 'short' |
+// 'medium' | 'long' | null }. null clears it, so drafting falls back to the silo's
+// default band. Written by the card's picker and by the queue skill's HTTP path.
+router.post('/:id/length', (req, res) => {
+  const raw = req.body?.length;
+  const length: PostLength | null =
+    raw === null || raw === undefined || raw === '' ? null : (String(raw) as PostLength);
+  if (length !== null && !getLengths().includes(length)) {
+    return res.status(400).json({ error: `length must be one of ${getLengths().join(', ')} or null` });
+  }
+  const updated = db
+    .update(ideaQueueItems)
+    .set({ length })
     .where(eq(ideaQueueItems.id, req.params.id))
     .returning()
     .all();

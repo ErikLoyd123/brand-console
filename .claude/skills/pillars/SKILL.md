@@ -7,8 +7,11 @@ type: skill
 # pillars
 
 Manage the **pillar axis** — the themes you write from — and save it to your profile. A pillar
-is `{ key, label, weight }`: a stable key, a human label, and a relative weight (the engine
-normalizes weights into target shares). This skill adds, renames (via label), reweights, and
+is `{ key, label, weight, note?, default_silo? }`: a stable key, a human label, a
+relative weight (the engine normalizes weights into target shares), an optional **note** (what
+posts in this lane cover and how they read; spark, discovery, and the reviewer all read it),
+and an optional **default intent** (the silo a new spark in this lane is filed as unless one
+is named). This skill adds, renames (via label), reweights, and
 removes pillars, and — its distinctive job — **rebalances weights against your real numbers**:
 it reads your live pillar stats (published count, queue depth, coverage gaps) and proposes a
 balanced set, so "manage weights" means informed, not guessed.
@@ -62,6 +65,10 @@ keep the summary: the informed opening is the point.
 - **Rename a pillar** — change its label (never its key; see the rule below).
 - **Reweight / rebalance** — change one weight, or propose a balanced set across all of them.
 - **Remove a pillar** — drop a theme (warn about queued items filed under it; see below).
+- **Edit the note** — rewrite what this lane's posts cover and how they read. Ask for it in
+  the owner's words; offer a tightened version; never invent examples they did not give.
+- **Set the default intent** — pick the silo a spark in this lane usually is, from the
+  default platform's roster (`src/core/silos.ts`). Offer the roster with one line each.
 - **…or describe it** — free text; do exactly what they ask.
 
 If the user already said what they want ("add a pillar for X", "Wins is dead, fix the weights"),
@@ -85,9 +92,10 @@ keep. Advise; the owner decides.
 
 ## 3. Add / rename / remove
 
-- **Add:** pick a short kebab-case **key** (stable forever) and a human **label**, and a
-  starting **weight** relative to the others. A brand-new pillar has no posts or queue yet, so
-  it starts as a coverage gap — say so and suggest a discovery pass or a spark to warm it.
+- **Add:** pick a short kebab-case **key** (stable forever), a human **label**, a starting
+  **weight** relative to the others, then ask for a one-paragraph **note** in one question and
+  propose a **default intent** from the roster. A brand-new pillar has no posts or queue yet,
+  so it starts as a coverage gap — say so and suggest a discovery pass or a spark to warm it.
 - **Rename:** change the **label** only. **Never change an existing pillar's key** — queued
   items and feeds are filed under the key, and changing it orphans them. If the user wants a
   truly different theme, that is a remove + add, and they lose the old lane's items.
@@ -103,13 +111,15 @@ every kept pillar's key byte-identical to what you read:
 
 ```bash
 npx tsx src/profile/write-pillars.ts '[
-  { "key": "brewing", "label": "Brewing", "weight": 40 },
-  { "key": "gear", "label": "Gear", "weight": 20 }
+  { "key": "brewing", "label": "Brewing", "weight": 40, "default_silo": "teach",
+    "note": "One brewing variable at a time, with the number that matters." },
+  { "key": "gear", "label": "Gear", "weight": 20, "default_silo": "curate" }
 ]'
 ```
 
 - The CLI validates the whole list (at least one pillar, unique keys, each with a label and a
-  numeric weight >= 0) and writes it through the comment-preserving identity writer. A
+  numeric weight >= 0, and any default_silo a known intent key) and writes it through the
+  comment-preserving identity writer. A
   `ValidationError` is surfaced verbatim — fix and retry, do not guess around it.
 - Write the whole list, not a fragment: this call replaces the pillar block entirely.
 

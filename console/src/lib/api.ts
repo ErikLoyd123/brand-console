@@ -16,11 +16,11 @@ export type QueueStatus = 'new' | 'seeded' | 'drafting' | 'drafted' | 'published
 export type ReviewStatus = 'pending' | 'passed' | 'failed' | 'edited' | 'approved'
 // A post's intent (its job), orthogonal to its pillar (its topic). Platform-keyed
 // roster, server-side source of truth in src/core/silos.ts. LinkedIn: conversation,
-// teach, win, curate. Reddit: discuss, help, share, ask, curate. Web (long-form): the
+// teach, win, curate, promote. Reddit: discuss, help, share, ask, curate. Web (long-form): the
 // five piece kinds. `curate` is shared by LinkedIn and Reddit; every other key belongs
 // to exactly one platform.
 export type Silo =
-  | 'conversation' | 'teach' | 'win' // LinkedIn-only
+  | 'conversation' | 'teach' | 'win' | 'promote' // LinkedIn-only
   | 'discuss' | 'help' | 'share' | 'ask' // Reddit-only
   | 'curate' // shared (LinkedIn + Reddit)
   | 'how-to' | 'explainer' | 'comparison' | 'thought-piece' | 'whitepaper' // web-only
@@ -28,6 +28,10 @@ export type Silo =
 // A content platform — the register axis's key set (src/core/registers.ts). Distinct
 // from PlatformKey below, which is the Connections screen's account roster.
 export type ContentPlatform = 'linkedin' | 'reddit' | 'web'
+
+// How long a post runs: a band key from src/core/lengths.ts. Chosen per post at draft
+// time; null on an item means the silo's default band applies.
+export type PostLength = 'short' | 'medium' | 'long'
 
 // IDs are opaque nanoid strings across every table (phase 01 canonical).
 // A web idea's article, as the queue GET attaches it: the SEO fields plus the whole
@@ -63,6 +67,9 @@ export interface IdeaQueueItem {
   // The register the idea was shaped for (set by spark/discovery; null for older rows).
   platform?: ContentPlatform | null
   tone?: string | null
+  // The length band the post should run in (set by spark, the queue skill, or the card's
+  // picker; null means the silo's default band).
+  length?: PostLength | null
   // The written content riding with the idea (queue GET join): the latest draft for a
   // post idea, the article for a web idea. The queue is the review phase — a card shows,
   // edits, and publishes this content directly.
@@ -274,11 +281,25 @@ export type PlatformKey = 'linkedin' | 'reddit' | 'x' | 'newsletter'
 export interface Connection {
   platform: PlatformKey
   connected: boolean
+  // A connection can be linked and still be dead: LinkedIn access tokens last 60
+  // days and this app can't refresh them silently (programmatic refresh tokens are
+  // limited to approved Marketing Developer Platform partners), so the member has
+  // to re-authorize. `expired` says the stored token is past `expiresAt` and every
+  // API call will 401 until then — the surfaces show identity + Reconnect rather
+  // than pretending the connection is healthy.
+  expired: boolean
+  expiresAt: number | null
   displayName: string | null
   avatarUrl: string | null
   headline: string | null
   connectedAt: number | null
   scopes: string[]
+}
+
+// True when a connection can actually reach its platform's API right now.
+// Every publish affordance gates on this, not on `connected` alone.
+export function connectionUsable(c: Connection | null | undefined): boolean {
+  return c?.connected === true && c.expired !== true
 }
 
 // A profile in the multi-profile registry (GET /api/profiles). name is the display name;
@@ -366,6 +387,10 @@ export interface PillarConfig {
   key: string
   label: string
   weight: number
+  // Guidance the drafter, discovery, and the reviewer read. Omitted when unset.
+  note?: string
+  // The intent a spark in this pillar is filed as unless one is named. Omitted when unset.
+  default_silo?: string | null
 }
 
 // The register axis. The menu is committed structure (src/core/registers.ts), read-only;
@@ -651,6 +676,13 @@ export const api = {
       body: JSON.stringify({ points }),
     }),
 
+  // Set (or clear, with null) the length band on a queue item — the card's picker.
+  setQueueLength: (id: string, length: PostLength | null) =>
+    http<IdeaQueueItem>(`/queue/${id}/length`, {
+      method: 'POST',
+      body: JSON.stringify({ length }),
+    }),
+
   // Pillars come from the active profile (GET /api/pillars) so badges label correctly.
   getPillars: () => http<PillarInfo[]>('/pillars'),
 
@@ -746,11 +778,26 @@ export const api = {
   // Run the mechanical voice checks over draft text (POST /api/review). POST so
   // draft content never lands in a URL/query string. Empty array means clean.
   // isProductAdjacent drives the cta-rule severity (fail for personal posts,
-  // warn for product-adjacent posts carrying more than one ask).
-  postReview: (text: string, isProductAdjacent: boolean, silo?: Silo) =>
+  // warn for product-adjacent posts carrying more than one ask). seed/points
+  // enable the seed-retention check; close enables the aphorism-close check; length
+  // enables the length-band check.
+  postReview: (
+    text: string,
+    isProductAdjacent: boolean,
+    silo?: Silo,
+    extra?: { seed?: string | null; points?: string[]; close?: string; length?: PostLength | null },
+  ) =>
     http<ReviewFinding[]>('/review', {
       method: 'POST',
-      body: JSON.stringify({ text, isProductAdjacent, silo }),
+      body: JSON.stringify({
+        text,
+        isProductAdjacent,
+        silo,
+        seed: extra?.seed ?? undefined,
+        points: extra?.points,
+        close: extra?.close,
+        length: extra?.length ?? undefined,
+      }),
     }),
 
   // Frontend-only health probe. Uses a RAW fetch (NOT http()) against /api/profiles —

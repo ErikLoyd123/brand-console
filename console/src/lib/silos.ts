@@ -3,6 +3,7 @@ import {
   GraduationCap,
   Trophy,
   Share2,
+  Megaphone,
   MessageSquareText,
   HandHelping,
   BookOpen,
@@ -70,6 +71,14 @@ const LINKEDIN_SILOS: SiloMeta[] = [
     fg: '#be123c',
   },
   CURATE,
+  {
+    key: 'promote',
+    label: 'Promote',
+    hint: 'The direct ask, once. One real specific, then the invitation.',
+    icon: Megaphone,
+    bg: '#fee2e2',
+    fg: '#b91c1c',
+  },
 ]
 
 const REDDIT_SILOS: SiloMeta[] = [

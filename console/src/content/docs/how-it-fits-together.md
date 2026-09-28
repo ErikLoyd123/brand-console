@@ -38,14 +38,14 @@ files; some now have console editors too.
   screen shows the card and edits it two ways — by hand in its editor, or with the AI
   `voice` skill — and re-running the `setup` voice interview rebuilds it from scratch.
 - **Your knobs** — `profiles/<slug>/identity.yaml`: your display name, products, protected
-  relationships, **pillars** (topics + weights), **feeds**, CTA policy, discovery lenses,
+  relationships, **pillars** (topics + weights, each with an optional guidance note and default intent), **feeds**, CTA policy, discovery lenses,
   and **platforms + tones** (the register axis). Written by the `setup` knob-walk, or edited
   by hand. It can still list your **Reddit destinations** (the subreddits and `u/` profile you
   post to), but that's now just a personal note — Reddit is a manual copy-paste channel, so
   nothing in the console reads the list.
 - **The fixed menus (code)** — the roster of **silos** (post intents), now **keyed by
-  platform** — LinkedIn: conversation / teach / win / curate; Reddit: discuss / help /
-  share / ask / curate — and the **platform + tone menu**, which now spans **both
+  platform** — LinkedIn: conversation / teach / win / curate / promote; Reddit: discuss /
+  help / share / ask / curate — and the **platform + tone menu**, which now spans **both
   LinkedIn and Reddit** (each platform ships its own tones and neutral starter themes).
   These are product structure; they change only in code, and the same menus ship to
   everyone.
@@ -149,9 +149,11 @@ are stored in the local database.
   three lanes, sliceable by platform: posts link back to the live post, web rows show the
   exported file's path. Clicking a row opens the piece as it shipped — read back from the
   archived draft (or the exported article for web rows), with the images that went with it.
-- **Connections** — the **Connections** screen runs the **LinkedIn** sign-in and disconnect.
-  Reddit shows here too, but only as a note that it's a manual copy-paste channel — there's
-  nothing to connect.
+- **Connections** — the **Connections** screen runs the **LinkedIn** sign-in, reconnect, and
+  disconnect. LinkedIn tokens expire after 60 days and can't be refreshed in the background,
+  so the card shows how long the current one has left and asks for a reconnect before it
+  lapses rather than after a publish fails. Reddit shows here too, but only as a note that
+  it's a manual copy-paste channel — there's nothing to connect.
 - **Raw data** — the **Database** screen is a direct read-only window into the tables.
 
 ## Both — a menu in config, the choices in the console
@@ -164,11 +166,16 @@ recognize.
   directly (add, rename, reweight, remove — it writes the config file) *and* shows live
   stats. You can still edit them via `setup` in the terminal.
 - **Silo (post intent)** — the *menu* is fixed in code (now **keyed by platform**:
-  LinkedIn's conversation / teach / win / curate and Reddit's discuss / help / share /
-  ask / curate), but you **choose** an item's silo in the console when you promote it from
+  LinkedIn's conversation / teach / win / curate / promote and Reddit's discuss / help /
+  share / ask / curate), but you **choose** an item's silo in the console when you promote it from
   Discovery, and that choice is saved to the item. The **Intent** screen browses the
   intents (meaning, rules, live counts); it's read-only because the roster is fixed
   structure that drafting and review depend on.
+- **Length (post band)** — the *bands* are fixed in code (short 300-600, medium 700-1100,
+  long 1300-1900 body characters, `src/core/lengths.ts`), but you **choose** a band per post:
+  `spark` and the queue skill recommend one from the material and ask, and the card's picker
+  writes the same `length` field. Empty means the intent's default band (teach leans medium,
+  the rest lean short). See **How long a post runs**.
 - **Feeds** — your RSS feeds live in the **database** (the `sources` table), not config. The
   **Feeds** screen is where you add them (a form or the AI `feeds` skill) and **run** them —
   a per-feed *Run* button and a *Run all* button pull fresh items into the Discovery inbox. No
@@ -238,9 +245,10 @@ the console is where you then run the pipeline day to day.**
 | Thing | Config | Console | Database | Notes |
 |---|---|---|---|---|
 | Voice card | ✅ (file) | ✅ edit (AI `voice` skill / by hand) | — | First authored by `setup`; edited on the Voice screen after |
-| Pillars | ✅ (`identity.yaml`) | ✅ edit + stats (form / AI `pillars` skill) | — | Editable on Pillars screen, by hand or AI (weights informed by queue depth + coverage) |
+| Pillars | ✅ (`identity.yaml`: key, label, weight, plus an optional guidance `note` and `default_silo`) | ✅ edit + stats (form / AI `pillars` skill) | — | Editable on Pillars screen, by hand or AI (weights informed by queue depth + coverage). The note is read by spark, discovery, and the reviewer; the default intent files a new spark unless you name one |
 | Feeds | — | ✅ add + run (form / `feeds` skill) | ✅ | DB is source of truth; managed entirely in the console |
 | Silo menu / choice | ✅ menu (code), **per-platform** | ✅ pick per item + Intent view | ✅ stored | Both; roster keyed by platform — LinkedIn / Reddit intents, plus **`web` piece kinds** (how-to, explainer, comparison, thought piece, whitepaper) for long-form |
+| Post length band | ✅ bands (code: short / medium / long) | ✅ pick per item (card picker) | ✅ stored (`length` on the item) | Both; chosen per post from the material, recommended and asked by `spark` and `queue`; empty means the intent's default band. See **How long a post runs** |
 | Register (platform/tone) | ✅ menu (code) + selection (`identity.yaml`) | ✅ edit selection | ✅ per-item pin | Menu read-only, spans LinkedIn **and Reddit**; selection editable |
 | Tags | — | ✅ full CRUD (form / AI `tags` skill) | ✅ | Console-owned; the `tags` skill adds with anti-bloat judgment, rename/recolor/delete stay in the console |
 | Sparks | ✅ (`spark` / plain button) | ✅ Spark screen | ✅ | Raw save or AI-shaped via `spark` |
@@ -255,7 +263,7 @@ the console is where you then run the pipeline day to day.**
 | Brand look (imagery) | ✅ (`profiles/<slug>/brand/`) | ✅ Brand page (form + uploads + live preview / AI `brand` skill) | — | `brand.yaml` colors/fonts/logo/style notes + `refs/` example images + optional `.md`/`.html` brand docs (brand book, tone guide); read by `imagery`; optional (neutral default) |
 | Profiles / active profile | ✅ (`profiles/<slug>/`, via `setup`) | ✅ switcher | ✅ setting | Disk holds each profile; the sidebar switcher sets the active one and re-scopes the console |
 | Scheduled / published | — | ✅ | ✅ | Console-owned |
-| LinkedIn connection | — | ✅ Connections | ✅ token | OAuth in the console |
+| LinkedIn connection | — | ✅ Connections (connect / reconnect / disconnect) | ✅ token + expiry | OAuth in the console; the token lasts 60 days and is reconnected by hand — LinkedIn grants background refresh only to approved Marketing Developer Platform partners |
 | Reddit posting | — | ✅ Copy + Publish on the queue card | — | Manual copy-paste channel; no API, no connection, no token — Publish just records it |
 | Reddit destinations | ✅ (`identity.yaml`, optional) | — | — | A personal note of where you post; nothing in the console reads it |
 | Skills / agents / review rules | ✅ (code) | ▶ run only | — | Structure, not edited in UI |

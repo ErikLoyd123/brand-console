@@ -11,13 +11,14 @@ import { writePillars, writePlatforms, ValidationError } from '../../profile/wri
 // server-only-secrets boundary.
 const router = Router();
 
-// GET /api/config/pillars — full pillar records (key, label, weight) for editing.
-// Empty for a skeleton profile awaiting setup (no identity.yaml yet).
+// GET /api/config/pillars — full pillar records (key, label, weight, note, default_silo)
+// for editing. Empty for a skeleton profile awaiting setup (no identity.yaml yet).
 router.get('/pillars', (_req, res) => {
   res.json({ pillars: tryLoadIdentity()?.pillars ?? [] });
 });
 
-// PUT /api/config/pillars — replace the pillar list. Body: { pillars: [{key,label,weight}] }.
+// PUT /api/config/pillars — replace the pillar list.
+// Body: { pillars: [{key,label,weight,note?,default_silo?}] }.
 router.put('/pillars', (req, res) => {
   try {
     const pillars = writePillars(req.body?.pillars);

@@ -18,11 +18,19 @@ export interface VoiceCheckOptions {
   isProductAdjacent: boolean;
   protectedRelationships?: string[];
   products?: string[];
-  // The draft's silo. When present, product-adjacency is derived from it: only `teach`
-  // may be product-adjacent, so a `conversation`/`win`/`curate` post can never carry an
-  // ask no matter what the caller passes. Absent for legacy callers, which fall back to
-  // the raw `isProductAdjacent` flag. See design 04-silo-aware-review.
+  // The draft's silo. When present, product-adjacency is derived from it: only the
+  // teach-shaped intents and LinkedIn's promote may be product-adjacent, so a
+  // conversation/win/curate post can never carry an ask no matter what the caller passes.
+  // Absent for legacy callers, which fall back to the raw `isProductAdjacent` flag.
   silo?: Silo;
+  // The owner's take and beats for the idea the draft came from. When either is present,
+  // seed retention runs; absent (take-only scans, legacy callers) it is skipped.
+  // See design 2026-09-28-strategy-pillars-anti-slop/03-anti-slop-checks.
+  seed?: string;
+  points?: string[];
+  // The draft's close, separately from `text` (the body). When present, the aphorism
+  // check runs; absent, it is skipped.
+  close?: string;
 }
 
 // Only the teach-shaped intent of each platform ('teach' on LinkedIn, 'help' on Reddit)
@@ -67,6 +75,70 @@ function contextsFor(text: string, pattern: RegExp): string[] {
     out.push(text.slice(start, end).replace(/\s+/g, " ").trim());
   }
   return out;
+}
+
+// Specifics: the concrete things a seed names that a draft must carry by name. Numerals
+// with their unit, capitalized terms not at sentence start, all-caps acronyms, and the
+// items of a parenthesized capitalized list. See design 03-anti-slop-checks, Check A.
+const NUMERAL = /\$?\d[\d,.]*(?:-\d[\d,.]*)?(?:%|x|k|m|ms|s)?\b/gi;
+const ACRONYM = /\b[A-Z][A-Z0-9]{1,5}\b/g;
+const CAPITALIZED_RUN = /(?<![.!?]\s|^)(?<=\s|\(|,)((?:[A-Z][a-zA-Z0-9'-]*)(?:\s[A-Z][a-zA-Z0-9'-]*)*)/g;
+const SPECIFIC_STOPLIST = new Set([
+  "I", "The", "A", "An", "But", "And", "So", "Then", "Here", "This", "That", "What", "Why",
+  "How", "When", "If", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday",
+  "Sunday", "January", "February", "March", "April", "May", "June", "July", "August",
+  "September", "October", "November", "December",
+]);
+
+function isBareSingleDigit(token: string): boolean {
+  return /^\d$/.test(token);
+}
+
+export function extractSpecifics(...sources: (string | undefined)[]): string[] {
+  const found = new Set<string>();
+  for (const source of sources) {
+    if (!source) continue;
+    for (const m of source.matchAll(NUMERAL)) {
+      if (!isBareSingleDigit(m[0])) found.add(m[0]);
+    }
+    for (const m of source.matchAll(ACRONYM)) {
+      if (!SPECIFIC_STOPLIST.has(m[0])) found.add(m[0]);
+    }
+    for (const m of source.matchAll(CAPITALIZED_RUN)) {
+      for (const part of m[1].split(/,\s*/)) {
+        const term = part.trim();
+        if (term && !SPECIFIC_STOPLIST.has(term)) found.add(term);
+      }
+    }
+  }
+  return [...found];
+}
+
+// A specific is retained when it appears in the body with word boundaries, allowing an
+// s/es plural and ignoring thousands separators in numerals.
+function bodyHasSpecific(body: string, specific: string): boolean {
+  const normalizedBody = body.replace(/(\d),(\d)/g, "$1$2");
+  const normalized = specific.replace(/(\d),(\d)/g, "$1$2");
+  const pattern = new RegExp(`(?<![\\w-])${escapeRegExp(normalized)}(?:e?s)?(?![\\w-])`, "i");
+  return pattern.test(normalizedBody);
+}
+
+// Check A: every specific in the seed and points must survive into the body.
+export function checkSeedRetention(
+  body: string,
+  seed?: string,
+  points?: string[],
+): Finding | null {
+  if (!seed?.trim() && !(points && points.length > 0)) return null;
+  const specifics = extractSpecifics(seed, ...(points ?? []));
+  const missing = specifics.filter((s) => !bodyHasSpecific(body, s));
+  if (missing.length === 0) return null;
+  return {
+    rule: "seed-retention",
+    severity: "fail",
+    message: `Dropped ${missing.length} specific(s) from your seed. Every concrete thing you gave the drafter is load-bearing; put it back by name or edit the seed.`,
+    matches: missing,
+  };
 }
 
 // Hard rule 1: no em dashes. Also flags en dashes and spaced double hyphens

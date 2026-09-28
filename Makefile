@@ -3,13 +3,21 @@
 # and the Claude Code skills/agents. There is no remote deploy.
 #
 #   API     → http://localhost:5174   (Express, src/server)
-#   console → http://localhost:3001   (Vite, proxies /api to the API)
+#   console → http://localhost:3001   (Vite, proxies /api to the API — or the next
+#                                      free port up if 3001 is already taken)
 
 SHELL := /bin/bash
 .DEFAULT_GOAL := help
 
 API_PORT := 5174
 WEB_PORT := 3001
+
+# First free TCP port at or above WEB_PORT, scanning 20 candidates. Recursive (=),
+# so it re-scans every time a recipe uses it rather than being fixed at parse time.
+# The API port stays pinned: the console's Vite proxy targets 5174 by name, so the
+# API moving would break it, and a busy 5174 means an API is already up. Empty if
+# the whole range is busy; recipes check for that.
+FREE_WEB_PORT = $(shell for p in $$(seq $(WEB_PORT) $$(($(WEB_PORT) + 19))); do lsof -i tcp:$$p -sTCP:LISTEN -t >/dev/null 2>&1 || { echo $$p; break; }; done)
 
 .PHONY: help install dev api console discover typecheck build db-migrate db-generate profile-check pillars stop image-gen image-model
 
@@ -22,18 +30,23 @@ install: ## Install deps (root + console)
 	npm install
 	cd console && npm install
 
-dev: ## Run API (:5174) + console (:3001) together; Ctrl-C stops both
-	@echo "API → http://localhost:$(API_PORT)   console → http://localhost:$(WEB_PORT)"
-	@trap 'kill 0' EXIT; \
+dev: ## Run API (:5174) + console (:3001, or the next free port) together; Ctrl-C stops both
+	@web=$(FREE_WEB_PORT); \
+		[ -n "$$web" ] || { echo "no free console port in $(WEB_PORT)-$$(($(WEB_PORT) + 19))"; exit 1; }; \
+		echo "API → http://localhost:$(API_PORT)   console → http://localhost:$$web"; \
+		trap 'kill 0' EXIT; \
 		npm run server & \
-		( cd console && npm run dev ) & \
+		( cd console && npm run dev -- --port $$web ) & \
 		wait
 
 api: ## Run the Express API only (:5174)
 	npm run server
 
-console: ## Run the Vite console only (:3001)
-	cd console && npm run dev
+console: ## Run the Vite console only (:3001, or the next free port)
+	@web=$(FREE_WEB_PORT); \
+		[ -n "$$web" ] || { echo "no free console port in $(WEB_PORT)-$$(($(WEB_PORT) + 19))"; exit 1; }; \
+		echo "console → http://localhost:$$web"; \
+		cd console && npm run dev -- --port $$web
 
 discover: ## Refresh the idea queue (RSS engine)
 	npx tsx src/ingest/discover-rss.ts

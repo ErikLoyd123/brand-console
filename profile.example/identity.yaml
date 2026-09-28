@@ -7,22 +7,47 @@ protected_relationships:
   - Harbor Roasters
   - Harbor Roasters founder
 
+# Each pillar is a topic lane: a stable key, a label, and a relative weight. Two optional
+# fields carry guidance the engine reads: `note` (what posts in this lane cover and how
+# they should read; spark, discovery, and the reviewer all read it) and `default_silo`
+# (the intent a new spark in this lane is filed as unless one is named; a key from
+# src/core/silos.ts).
 pillars:
   - key: brewing
     label: Brewing
     weight: 40
+    default_silo: teach
+    note: >
+      One brewing variable at a time, with the number that matters (ratio, temperature,
+      grind). Instead of "5 tips for better pour-over", write "Your kettle is lying to you
+      by about four degrees."
   - key: sourcing
     label: Green Sourcing
     weight: 20
+    default_silo: conversation
+    note: >
+      Where beans come from and what that costs the farmer, the importer, and the cup.
+      Honest questions about price and provenance; never a lecture.
   - key: gear
     label: Gear
     weight: 20
+    default_silo: curate
+    note: >
+      Pointing at a tool someone else made, credited, with one line on why it earned a
+      place on the bench.
   - key: wins
     label: Wins
     weight: 15
+    default_silo: win
+    note: >
+      Someone else's good cup or good call. They are the hero; the writer's role is
+      inferred, never claimed.
   - key: business
     label: Business
     weight: 5
+    default_silo: teach
+    note: >
+      What running a small roastery actually costs. One real mechanism per post.
 
 # RSS feeds are NOT configured here — they live in the database (the `sources` table)
 # and are managed entirely from the console: the Feeds page (add form + run buttons) or

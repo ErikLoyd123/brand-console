@@ -38,7 +38,7 @@ files; some now have console editors too.
   screen shows the card and edits it two ways — by hand in its editor, or with the AI
   `voice` skill — and re-running the `setup` voice interview rebuilds it from scratch.
 - **Your knobs** — `profiles/<slug>/identity.yaml`: your display name, products, protected
-  relationships, **pillars** (topics + weights), **feeds**, CTA policy, discovery lenses,
+  relationships, **pillars** (topics + weights, each with an optional guidance note and default intent), **feeds**, CTA policy, discovery lenses,
   and **platforms + tones** (the register axis). Written by the `setup` knob-walk, or edited
   by hand. It can still list your **Reddit destinations** (the subreddits and `u/` profile you
   post to), but that's now just a personal note — Reddit is a manual copy-paste channel, so
@@ -240,7 +240,7 @@ the console is where you then run the pipeline day to day.**
 | Thing | Config | Console | Database | Notes |
 |---|---|---|---|---|
 | Voice card | ✅ (file) | ✅ edit (AI `voice` skill / by hand) | — | First authored by `setup`; edited on the Voice screen after |
-| Pillars | ✅ (`identity.yaml`) | ✅ edit + stats (form / AI `pillars` skill) | — | Editable on Pillars screen, by hand or AI (weights informed by queue depth + coverage) |
+| Pillars | ✅ (`identity.yaml`: key, label, weight, plus an optional guidance `note` and `default_silo`) | ✅ edit + stats (form / AI `pillars` skill) | — | Editable on Pillars screen, by hand or AI (weights informed by queue depth + coverage). The note is read by spark, discovery, and the reviewer; the default intent files a new spark unless you name one |
 | Feeds | — | ✅ add + run (form / `feeds` skill) | ✅ | DB is source of truth; managed entirely in the console |
 | Silo menu / choice | ✅ menu (code), **per-platform** | ✅ pick per item + Intent view | ✅ stored | Both; roster keyed by platform — LinkedIn / Reddit intents, plus **`web` piece kinds** (how-to, explainer, comparison, thought piece, whitepaper) for long-form |
 | Register (platform/tone) | ✅ menu (code) + selection (`identity.yaml`) | ✅ edit selection | ✅ per-item pin | Menu read-only, spans LinkedIn **and Reddit**; selection editable |

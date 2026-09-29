@@ -128,7 +128,10 @@ are stored in the local database.
 - **Images on a card** — each queue card has an **Images** strip: what's attached, where
   each image came from (AI image / AI graphic / screenshot / Unsplash with photographer
   credit / upload), an **Image with AI** button, and a hand-upload affordance (alt text
-  required). Image with AI proposes the image types that fit the piece and produces one — a
+  required). Image with AI starts from your piece's argument, proposes 2-3 concepts (one that
+  demonstrates the point, one that complements it, or a joke), and critiques every render
+  before showing it; say yes to its **loop mode** and it keeps rendering, critiquing, and
+  fixing, with each round landing on the strip, until one clears the bar. It produces — a
   locally generated image in any style, photoreal or illustrated (the default model from
   `image-generation.config.json` via `mflux`, no key; the skill proposes candidate prompts
   from your piece), a bare composed graphic

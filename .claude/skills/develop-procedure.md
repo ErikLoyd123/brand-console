@@ -82,7 +82,12 @@ Interview at the depth the idea needs. The substance is the owner's:
   a position; if they can't supply the substance, stop rather than fill it in. When a beat is
   a category ("the right packages", "a few regions"), ask for the name. The seed and points are
   where the specifics have to live: the drafter carries them by name and the reviewer fails a
-  draft that loses one (doctrine Principle 5).
+  draft that loses one (doctrine Principle 5). One of the beats is always the intent's
+  **floor** (Principle 3): the mechanism for a `teach` (what is the step, where does it live),
+  the question the owner cannot answer for a `conversation`, the named hero and the outcome
+  for a `win`, the credited source and the reason for a `curate`, the one specific for a
+  `promote`. Ask for it directly when the take does not contain it; if the owner does not
+  have it, say the item is not that kind of post yet and name the kind it is.
 - Keep it to 2-4 beats. More than that is a draft, not a developed idea. Fewer than two is still
   a bare angle — push gently for at least two unless the piece is genuinely a single move.
 

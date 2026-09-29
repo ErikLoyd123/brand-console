@@ -35,6 +35,12 @@ so the post says Y instead"), never in the post, the seed, or a beat. A `[FILL: 
 marker in saved text is a failure, mechanically caught by `no-fill-markers` in
 `src/review/voice-checks.ts`; an unmarked invented specific fails on judgment.
 
+The line is the owner's *own* facts. Public, documented product behavior (the name of a
+console page, what a setting does, a documented default) is not a private fact: a skill that
+is certain of it may write it, and must flag every such addition in its report as its own
+("added from AWS's documented behavior; confirm") so the owner verifies it. Anything about
+the owner's numbers, tools, customers, or history stays theirs to supply.
+
 ## Principle 3 — depth-calibration
 
 **A post's depth is a function of silo × register, never a constant.** Not every post
@@ -52,6 +58,18 @@ needs to be profound; demanding depth a post's purpose does not want deforms it.
 - **Register** (tone/platform — the menu in `src/core/registers.ts`, selected per user in
   `identity.yaml`) *colors* that depth — how the calibrated thought sounds on the chosen
   platform — but never overrides the silo's shape.
+- **Every intent has a floor**: the one concrete thing a post of that kind must carry, or it
+  is not that kind of post yet. A `teach` carries one mechanism the reader can act on: a
+  step, meaning what to do and where ("activate the key on the Billing console's Cost
+  allocation tags page"), or a number, a command, a before-and-after, a named failure mode.
+  Naming a place without the action is not a mechanism. A
+  `conversation` carries one question the owner genuinely cannot answer and the experience
+  that raised it. A `win` carries a named hero other than the owner and one specific about
+  the outcome. A `curate` carries the source by name and one reason it earned the share. A
+  `promote` carries one plain sentence of what the product does, one real specific, one ask.
+  The floor is drawn out in the interview and written into `points`, so the drafter carries
+  it by name (Principle 5) and the reviewer can see whether it landed. Missing the floor is
+  not a length problem; it is the wrong intent, or no post.
 - **Length** (the band roster in `src/core/lengths.ts`, chosen per post) sets how much room
   the depth gets. The silo only defaults it (`teach`/`help` lean medium, the rest lean short);
   the material decides it: one gap or one claim is short, a mechanism is medium, a mechanism

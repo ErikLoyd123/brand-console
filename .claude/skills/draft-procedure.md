@@ -99,7 +99,11 @@ curl -s -X POST http://localhost:5174/api/queue/<ITEM_ID>/length -H 'Content-Typ
 ```
 
 The band is a target, not a floor: a few characters either side is fine, and no silo carries
-a floor beyond its band any more. The console's `length-band` check warns when the body lands
+a character floor any more; the floor is the intent's concrete thing (Step 3). When the
+item's band cannot hold that thing (a short `teach` whose points carry the mechanism, the
+trap, and the check), say so in one line, recommend the next band, and in decide-for-me mode
+take it: set it with the same `POST /api/queue/<ITEM_ID>/length` call and write to it. Never
+compress the floor to fit a band. The console's `length-band` check warns when the body lands
 outside it.
 
 ## Step 3, write the draft, shaped by the item's silo, colored by the register
@@ -146,7 +150,10 @@ on the page; a hook composed before the body is the one the body never pays off.
 
 - **teach.** Body sized to the item's band (medium by default; long only when the mechanism,
   the mistake, and the fix all belong in one post); show, do not tell; lead with the useful,
-  specific thing, then explain the one mechanism behind it in prose. No First/Second/Third, no "three
+  specific thing, then explain the one mechanism behind it in prose. The floor: the body names
+  the mechanism from `points` as a step, what to do and where (or a number, a command, a
+  before-and-after), so the reader could act on it; naming a place without the action is not
+  a step, and a body that only asserts a gap exists is not a teach: stop and say so. The close carries an address (where to look), never a bare instruction. No First/Second/Third, no "three
   things", no numbered list unless the owner's points are themselves a list of three or more,
   and prose is still preferred then (the `list-cadence` check flags the scaffolding). Close is
   a soft, honest wrap that restates the specific, never a moral. Apart from `promote`, this
@@ -157,15 +164,21 @@ on the page; a hook composed before the body is the one the body never pays off.
   tone). If the profile lists no products, or the policy forbids an ask here, the close
   carries none. No desperate call to action.
 - **conversation.** Opens a loop instead of closing one: the body is the owner's thought
-  or experience, built to pull replies, not to deliver a takeaway. Short band by default;
+  or experience, built to pull replies, not to deliver a takeaway. The floor: the experience
+  that raised the question is told, and the close is a question the owner genuinely cannot
+  answer; a takeaway smuggled into the close makes it a teach. Short band by default;
   shorter and tighter is good. The close is an invitation to reply and carries
   **no product ask, ever**. Keep the invitation in the owner's plain voice, never
   engagement bait ("agree? comment below" and "thoughts? comment below" are banned).
 - **win.** A short, warm story. The hero is someone else, or, for a self-story, the owner
-  is the one held accountable (never the aggressive hero). Short band by default; brief is
+  is the one held accountable (never the aggressive hero). The floor: the hero is named (or
+  the owner's own mistake is), what they did is told, and one specific about the outcome is
+  in the body; the owner's role is inferred, never claimed. Short band by default; brief is
   the target. No ask.
 - **curate** (shared by LinkedIn and Reddit). A generous pointer to someone else's tool,
-  idea, or post; credit the source explicitly. Low-effort framing on purpose (the owner is
+  idea, or post; credit the source explicitly. The floor: the source by name and the one
+  reason it earned the share, in the owner's words; without the reason it is a bare pointer,
+  stop and say so. Low-effort framing on purpose (the owner is
   a node passing something good along) — but never a **bare link-drop**: at least a line
   of the owner's own framing around the link (Reddit treats bare links as spam, and the
   mechanical check flags it on both platforms). Short; no length floor. No ask, no product
@@ -259,6 +272,8 @@ Nothing here publishes.
 - NEVER scaffold a teach post as a list unless the owner's points are a list; explain the mechanism in prose.
 - Shape by silo, on either platform: only the teach-shaped silo and LinkedIn's `promote` may carry an ask; only the conversation-shaped silo may open with a question (`conversation`, `discuss`); every other silo carries no ask. Length is the item's band, never a silo floor: short 300-600, medium 700-1100, long 1300-1900 body characters (`src/core/lengths.ts`); `teach`/`help` default to medium, everything else to short, and `promote` runs 400-900. 3 to 5 hooks, each under 10 words, mined from the finished body, for every silo; on Reddit the first hook is the self-post title (300-char hard cap).
 - NEVER write the hook first. Write the body and the close, then promote the line a stranger would stop on. A hook the body never pays off is a tell.
+- NEVER lift a hook from the voice card's own example sentences; they are shapes to learn from, not lines to reuse.
+- NEVER write a post below its intent's floor (doctrine Principle 3; the mechanism, the real question, the named hero, the credited reason, the one specific). If the item's `points` do not carry it, stop and say what is missing and which kind the item actually is.
 - Obey the shared interaction rules (`.claude/skills/interaction-rules.md`): the hand-off shows the saved hook, body, and close in full, and a run in decide-for-me mode takes the recommended band and hook without asking.
 - Save once per run. The self-check runs before Step 4; if something still needs fixing after the save, fix it on the saved draft with `npx tsx src/draft/update-draft.ts` (the revise procedure's writer), never with a second `draft-store.ts` save. Two draft rows for one run leave the card showing whichever landed last.
 - The register (platform + tone) is **soft coloring, never a hard rule**: it shifts the language's register and hints at length, but the silo, the voice card, and the doctrine govern. Tone never gates a draft and never enters the mechanical checks. If tone and silo conflict, silo wins.

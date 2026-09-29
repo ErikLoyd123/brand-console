@@ -46,6 +46,39 @@ uses; this one call is the whole read.
 
 If the message already says what to change, act on it. If it does not, ask **exactly one**
 free-text question: what do you want changed? That is the only question a revision asks.
+
+When the instruction is vague ("make it better", "tighten it", "it feels flat"), run the
+intent's checklist against the draft and fix every item that fails, then say which ones in
+the report:
+
+- **teach / help:** the mechanism is a step the reader could take, what to do and where
+  ("activate the key on the Billing console's Cost allocation tags page"), or a number, a
+  command, a before-and-after; naming a place ("it lives in billing settings") is not a step.
+  The close has an address, not a bare instruction; no idea is stated twice; the strongest
+  line is the first line; the hook is not a voice card example sentence. **Check the floor
+  first.** If neither the draft nor `idea.points` carries a step, the first line of the report
+  says the post was below its floor and what was missing. Then either supply the step
+  yourself, when it is public documented product behavior you are certain of (a console page,
+  what a setting does), flagged in the report as your addition for the owner to confirm; or,
+  when the step would be the owner's own fact (their number, their tool, what happened),
+  recommend they supply it (Refine again with it) or file the item as `conversation`. Never
+  present a wording fix as having supplied a mechanism.
+- **conversation / discuss:** the close is a question the owner cannot answer; the experience
+  that raised it is told; no takeaway is smuggled in; the opening is the experience or the
+  question, not a lesson.
+- **win / share:** the hero is named and is not the owner (or the owner's own mistake is the
+  story); one specific about the outcome; the owner's role inferred, never claimed.
+- **curate:** the source is credited by name; the one reason it earned the share is in the
+  owner's words; no bare link.
+- **promote:** one plain sentence of what it does and for whom; one real specific; exactly one
+  ask, in the close; under 900 characters.
+
+**The band.** Read `idea.length` from the loader. When the requested change grows the post
+past its band (adding the step, the trap, the "because"), do not cram: say so in the report,
+recommend the next band, and in a console run take it, setting it with
+`curl -s -X POST http://localhost:5174/api/queue/<idea.id>/length -H 'Content-Type: application/json' -d '{"length":"medium"}'`
+before you write. When the change shrinks the post below its band, leave the band alone and
+say the body now runs short of it; the owner may want it that way.
 Never ask which item or which draft (the loader decided), never ask the owner to pick among
 options you could recommend, and never ask them to confirm the text before you write it
 (`.claude/skills/interaction-rules.md`): the console's question cards cannot carry a draft,
@@ -98,6 +131,11 @@ session is another `update-draft` on the same id, never a `draft-store.ts` save 
 add a second row and the card would show whichever landed last).
 
 ## 5. Report: the before and after, in full
+
+After the write there is nothing left to ask. Do not call `ask_user` again, not for "anything
+else?", not to offer options: the console's own Refine again box handles the next round, and
+a question here leaves the run hanging on a card instead of finishing. The report is the last
+message of the run.
 
 The final message is the console's result card, and it is the only place the owner sees what
 you did. It carries, for every field you changed, the text before and the text after, in

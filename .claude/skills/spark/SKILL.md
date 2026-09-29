@@ -188,15 +188,34 @@ quotas.
 
 | Silo | Depth | Question budget | What spark mines |
 |------|-------|-----------------|-----------------|
-| `conversation` | Deepest | 1-3 sharp questions | Cross-domain friction — the "seam" where the owner's roles, domains, and eras disagree |
-| `teach` | Light | Usually one question | The single useful takeaway + the concrete example that proves it |
-| `win` | Light | One question | Whose win / what happened and why it mattered; keep the owner accountable, never the aggressive hero |
-| `curate` | Minimal | One question | What the owner adds by passing this along, and who gets credit |
-| `promote` | Minimal | One or two questions | What is the one thing to show, and what is the ask; then stop |
+| `conversation` | Deepest | 1-3 sharp questions | Cross-domain friction — the "seam" where the owner's roles, domains, and eras disagree — and the one question the owner cannot answer |
+| `teach` | Light | Usually one question | The mechanism: what is the step, and where does it live (what to do and where; or a number, a command, a before-and-after). A place with no action is not a step |
+| `win` | Light | One question | Who the hero is (never the owner), what they did, and one specific about the outcome |
+| `curate` | Minimal | One question | Who gets credit, by name, and the one reason this earned a share |
+| `promote` | Minimal | One or two questions | The one real specific to show (a finding, a number, a screenshot), and the ask; then stop |
 | `discuss` (Reddit) | Deepest | 1-3 sharp questions | Cross-domain friction — the Reddit analog of `conversation` |
-| `help` (Reddit) | Light | Usually one question | The concrete problem and the concrete answer — the teach-analog |
-| `share` (Reddit) | Light | One question | What happened and why it mattered, told plainly — the win-analog, no hero framing |
-| `ask` (Reddit-only) | Minimal | One question | What exactly the owner wants the community's read on |
+| `help` (Reddit) | Light | Usually one question | The concrete problem and the concrete answer — the teach-analog, same mechanism floor |
+| `share` (Reddit) | Light | One question | What happened, plainly, with one specific — the win-analog, no hero framing |
+| `ask` (Reddit-only) | Minimal | One question | The exact question the owner wants answered, as they would put it to a colleague |
+
+**The floor per intent.** Every intent has one concrete thing it must carry, or it is not that
+kind of post yet (doctrine Principle 3). The interview's job is to get it, and to write it into
+`points` as a beat, so the drafter carries it by name and the reviewer can see it landed:
+
+| Intent | The floor (the one concrete thing it must carry) | When it is missing |
+|---|---|---|
+| `teach` / `help` | One mechanism the reader can act on: a step (what to do, and where: "activate the key on the Billing console's Cost allocation tags page"), a number, a command, a before-and-after, or a named failure mode ("spend lands under no tag key"). Naming a place without the action is not a step | It is a claim, not a lesson yet: get the mechanism, or file it as `conversation` |
+| `conversation` / `discuss` | One question the owner genuinely cannot answer, plus the experience that raised it | If the owner knows the answer it is a `teach`; if there is no experience behind it there is no post |
+| `win` / `share` | A named person or team other than the owner (or, for a self-story, the owner's own mistake), what they did, and one specific about the outcome | No hero and no outcome is not a win; it is a `share` on Reddit or a `conversation` |
+| `curate` | The source credited by name and one reason it earned the share (what it gets right, or what it changes) | No reason is a bare pointer: do not post it |
+| `promote` | What the product does in one plain sentence, for whom, one real specific, and the single ask | No specific means no post; ask for the finding, the number, or the screenshot |
+| `ask` (Reddit) | The exact question as the owner would put it to a colleague, and one or two sentences of honest context | If the owner does not actually want the answer, it is engagement bait |
+
+When the floor is missing after the question, say so in one plain line ("that is a claim, not
+a lesson yet: what is the step, and where does it live?") and offer the exit from the table.
+Never write a post below its floor; a well-formed shell that passes every check is the failure
+this step exists to prevent. Take-origination still holds: the floor comes from the owner, or
+the post changes kind.
 
 **The conversation branch (deepest).** Keep the seam-mining. The richest questions press on
 the owner's cross-domain friction — the places where the different selves in the voice card
@@ -223,11 +242,22 @@ kind, not these two questions.
 How long the post runs is its own axis (bands in `src/core/lengths.ts`: short 300 to 600,
 medium 700 to 1100, long 1300 to 1900 body characters). Recommend one, **in one line with the
 reason, and ask**. Start from the silo's default (`teach`/`help` lean medium; every other
-post intent leans short) and move it by what the interview actually produced: one gap or one
-claim is short; a mechanism is medium; a mechanism plus the mistake people make plus the fix
-is long. "You gave me one gap and one number, so short; sound right?" The owner nods or
-picks another. The band is a target the drafter writes to, not a floor. Skip this step for
-`web` (the article carries its own length target).
+post intent leans short), then read the shape of what the interview produced, not the count:
+
+- **Short** when the floor is one specific that needs no "because" to be believed: a number
+  with its unit, a credited pointer and its reason, a single question with its experience.
+- **Medium** when the floor needs explaining to be usable: a mechanism (where it lives, what
+  it does, what goes wrong), or an experience that has to be told before the question lands.
+- **Long** only when the post carries the mechanism, the mistake people make, and the check
+  or fix, all three.
+
+"You gave me the checkbox, the case-sensitivity trap, and the backfill, so medium; sound
+right?" The owner nods or picks another. **Up-recommend when the pick will not hold the
+floor:** if the owner says short and the points carry a mechanism, say the band cannot fit it
+and recommend medium, with the reason; if they still want short, write the one specific and
+drop the rest rather than compressing all of it. The band is a target the drafter writes to,
+never a reason to leave the floor out. Skip this step for `web` (the article carries its own
+length target).
 
 ### 6. Angle-finder, calibrated by silo and colored by tone
 
@@ -350,6 +380,10 @@ annotated screenshot, or an Unsplash pick. If the owner wants one, follow
   happened, a customer) is asked for in the interview; if the owner does not have it, the
   seed drops the claim. Never a guess, never a placeholder in saved text.
 - One converged thought per invocation. A second post means a second spark.
+- Never write a post below its intent's floor (Step 5). A teach with no mechanism, a
+  conversation with no real question, a win with no hero, a curate with no reason, a promote
+  with no specific: get the missing thing or change the kind. Never pad a short band to hide
+  a missing floor, and never choose short when the floor will not fit.
 - With nothing in hand, propose only from the owner's own written material (`interview.md`,
   the voice card's samples): three candidates, one round, every one traceable to a line they
   said. Never manufacture a take to fill the gap, and never draft one nobody picked.

@@ -5,103 +5,104 @@ existing piece in the loaded profile's voice. It is referenced by the `queue` pa
 (the Queue is the review phase, so revision lives there), not run directly as a button. The
 page skill routes here when the request is to revise/sharpen written content.
 
-Work a **draft** into shape with the owner — the hook options, the body, the close, the media
-suggestion — in the loaded profile's voice, and write the changes back. This is the revise
-motion on the Queue card: the piece already exists (a first pass from a draft procedure, or
-hand-typed), and this skill helps make it *good* — punch up a weak hook, tighten a baggy body, fix a close
-that fizzles, restructure around the owner's points. It refines; it does not review (the voice
-gate is `content-reviewer`) and it does not publish.
+Work a **draft** into shape — the first line, the body, the close — in the loaded profile's
+voice, and write the change back to the row the card shows. The piece already exists (a first
+pass from a draft procedure, or hand-typed); this procedure makes it *better*: punch up a weak
+opener, tighten a baggy body, fix a close that fizzles, cut what the owner asks to cut. It
+refines; it does not review (the voice gate is `content-reviewer`) and it does not publish.
 
-It **never invents an opinion** and never contradicts the owner's take. The argument is theirs —
-carried in the idea's `seed` and `points` — and the voice is fixed by the voice card. This skill
+It **never invents an opinion** and never contradicts the owner's take. The argument is theirs,
+carried in the idea's `seed` and `points`; the voice is fixed by the voice card. This procedure
 sharpens the expression, not the position.
 
-**Invoke with:** "revise this draft", "punch up the hook", "the body buries the lede", "tighten
-this", "the close is weak", or from a Queue card's **"Write with AI"** button when content
-already exists (it passes the item id in the first message and says to use it — take that id
-directly, do not ask which).
+**Invoke with:** "revise this", "punch up the hook", "tighten this", "the close is weak", "cut
+the last paragraph", or from a Queue card's **Revise with AI** button, whose first message
+names the item and the draft to use and says what to change (or that it will say next).
 
-## Onboarding gate (run before revising)
+## 1. Load everything in one call
 
-A draft is written in the owner's voice, so the voice card must exist:
-
-```bash
-npx tsx -e "import('./src/profile/completeness.js').then(m => console.log(JSON.stringify(m.checkCompleteness(), null, 2)))"
-```
-
-If the active profile's `voice-card.md` is missing/incomplete, say so and offer `setup`; stop gracefully if
-declined. Do not revise in a voice that does not exist.
-
-## Rule one — load the voice card
-
-Load the voice card (via the `voice-card` skill / read the active profile's `voice-card.md`) before touching
-a word. It is the source of truth: the em-dash ban, the AI-tells blocklist, show-don't-tell, the
-generous tone, the CTA rule, the hook formulas and banned hooks, and the protected-relationship
-guardrail. Every revision must obey it. If it will not load, stop.
-
-## 1. Pick the draft
-
-If the first message gives a draft id (the console's "Revise with AI" button passes one and says
-not to ask), **use it directly.** Otherwise resolve the draft the user means, or list recent
-drafts and ask.
-
-## 2. Read the draft and its idea
-
-Load the draft and the idea it came from so the revision stays true to the owner's argument:
+One command gives you the draft the card shows, its idea, the register, the identity bits the
+checks need, and the whole voice card. Pass the queue-item id from the message (a draft id
+works too). From the repo root:
 
 ```bash
-# The draft itself (hook options, body, close, media, reviewStatus).
-npx tsx -e "import('./src/db/client.js').then(async ({db})=>{const {drafts}=await import('./src/db/schema.js');const {eq}=await import('drizzle-orm');console.log(JSON.stringify(db.select().from(drafts).where(eq(drafts.id, process.argv[1])).get(),null,2))})" "<draftId>"
-# The originating idea — the owner's take and the beats the body should carry.
-npx tsx -e "import('./src/db/client.js').then(async ({db})=>{const {drafts,ideaQueueItems}=await import('./src/db/schema.js');const {eq}=await import('drizzle-orm');const d=db.select().from(drafts).where(eq(drafts.id, process.argv[1])).get();console.log(JSON.stringify(d?db.select().from(ideaQueueItems).where(eq(ideaQueueItems.id,d.ideaId)).get():null,null,2))})" "<draftId>"
+npx tsx src/draft/revise-context.ts "<itemId>"
 ```
 
-Note the idea's `seed` (the take — never contradict it), `points` (the beats the body should
-work in order), `silo` (the intent — it governs shape and the hook rule), and `platform`/`tone`
-(the register to color it). The draft's current `body`/`hookOptions`/`close` are what you edit.
+Read the JSON: `draft` (`id`, `hookOptions`, `body`, `close`; **`draft.id` is the row you will
+write**, the newest for the idea, resolved here so a revision never lands on an older row),
+`idea` (`seed` and `points`, the take never to contradict; `silo`, which governs shape and the
+hook rule; `length`, the band the body should sit in), `register` (tone guidance, soft
+coloring), `identity`, and `voiceCard`. Read the voice card in full before touching a word:
+the em-dash ban, the AI-tells blocklist, show-don't-tell, the generous tone, the CTA rule,
+the hook formulas and banned hooks, the protected-relationship guardrail. A non-zero exit
+means there is no draft yet (that is a write, not a revise) or no voice card (offer `setup`);
+say so and stop. There is no separate onboarding gate: the loader is the gate.
 
-## 3. Refine what the owner asked — and only that
+Do not query the drafts table yourself, and do not run the other lookups the draft procedure
+uses; this one call is the whole read.
 
-Interview lightly, or act on the directive they already gave. Common moves:
+## 2. Know what to change
 
-- **Hook** — offer 2-3 fresh options that fit the voice card's hook formulas (and avoid the
-  banned hooks: no question hooks except a `conversation`/`discuss` post, no engagement bait).
-- **Body** — tighten, cut filler, restructure around the `points` in order, strengthen the
-  specific/concrete (show-don't-tell), scrub every AI-tell and em-dash.
-- **Close** — make it land without an engagement-bait ask; honor the CTA rule (most posts carry
-  no ask).
+If the message already says what to change, act on it. If it does not, ask **exactly one**
+free-text question: what do you want changed? That is the only question a revision asks.
+Never ask which item or which draft (the loader decided), never ask the owner to pick among
+options you could recommend, and never ask them to confirm the text before you write it
+(`.claude/skills/interaction-rules.md`): the console's question cards cannot carry a draft,
+so the confirmation would show nothing, and the report at the end shows everything.
 
-Preserve everything the owner did not ask you to change. Do not add a beat, an opinion, or a
-claim that is not in the take/points. When you propose a rewrite, show the before and after
-of every changed field, in full, then confirm before writing; an "approve the edits?" with no
-text above it is a defect (`.claude/skills/interaction-rules.md`). In decide-for-me mode
-("just go"), write it without the confirm round and show the same before-and-after in the
-report. Either way the owner's judgment governs what the post argues.
+## 3. Make the change, and only that
+
+Common moves, each obeying the voice card:
+
+- **First line (hook).** Mine it from the body, as the draft procedure does: promote the line a
+  stranger would stop on; no question hooks except a `conversation`/`discuss` post, no
+  engagement bait. `hookOptions[0]` is what publishes (on Reddit, the title).
+- **Body.** Tighten, cut filler, keep the `points` in order, strengthen the specific (every
+  specific in the seed stays by name), scrub every AI-tell and em dash, stay in the band.
+- **Close.** Land on one concrete thing from the body, or a real question for a conversation
+  post; never a moral, never an ask the CTA rule forbids.
+
+Preserve everything the owner did not ask you to change, byte for byte. Do not add a beat, an
+opinion, or a claim that is not in the take or points; if the requested change would shift
+what the post argues, say so in the report and make the smaller change that keeps the
+argument. Never a `[FILL: ...]` placeholder: a fact you do not have is written around.
+
+Self-check once before writing, with the changed fields:
+
+```bash
+DRAFT="<revised body>" CLOSE="<revised close>" SEED="<idea.seed>" POINTS='<idea.points as JSON>' SILO=<idea.silo> LENGTH=<idea.length> ADJACENT=<0|1> npx tsx -e "(async () => { const { loadIdentity } = await import('./src/profile/loader.ts'); const identity = loadIdentity(); const m = await import('./src/review/voice-checks.ts'); const points = process.env.POINTS ? JSON.parse(process.env.POINTS) : []; console.log(JSON.stringify(m.runVoiceChecks(process.env.DRAFT ?? '', { isProductAdjacent: process.env.ADJACENT === '1', silo: process.env.SILO, seed: process.env.SEED || undefined, points, close: process.env.CLOSE || undefined, length: process.env.LENGTH || undefined, protectedRelationships: identity.protected_relationships ?? [], products: identity.products ?? [] }), null, 2)); })()"
+```
+
+Fix any `fail` before writing. A `warn` is reported, not blocking.
 
 ## 4. Write it back
 
-Write the refined fields to the draft. Because a body can be long and multi-line, write the
-payload to a temp file and pass its path (never a shell arg), exactly like the draft procedure does:
+Write the changed fields to **`draft.id` from Step 1**, through a temp file so a multi-line
+body never has to survive shell escaping:
 
 ```bash
 cat > /tmp/revise-<draftId>.json <<'JSON'
-{ "id": "<draftId>",
-  "hookOptions": ["<strongest>", "<alt>"],
+{ "id": "<draft.id>",
+  "hookOptions": ["<first line>", "<alt>"],
   "body": "<the revised body>",
   "close": "<the revised close>" }
 JSON
 npx tsx src/draft/update-draft.ts /tmp/revise-<draftId>.json
 ```
 
-Include only the fields you changed. Writing any of hook/body/close resets the draft's
-`reviewStatus` to `pending` (a revised draft is no longer covered by a prior review) — the
-console re-runs the mechanical checks and the `content-reviewer` gate is still the pass/fail
-authority. An unknown id is surfaced verbatim — fix and retry.
+Include only the fields you changed. The CLI prints `Updated draft <id>: <fields>.`; anything
+else is a failure to surface verbatim, not to paper over. Writing hook, body, or close resets
+the draft's `reviewStatus` to `pending`. One write per run: a follow-up change in the same
+session is another `update-draft` on the same id, never a `draft-store.ts` save (that would
+add a second row and the card would show whichever landed last).
 
-## 5. Report
+## 5. Report: the before and after, in full
 
-Report plainly what you changed — which parts, and the gist of the revision — so the owner sees
-it at a glance. This is the console's result card: one clear, human sentence.
+The final message is the console's result card, and it is the only place the owner sees what
+you did. It carries, for every field you changed, the text before and the text after, in
+full, then one line on why. Fields you did not touch are named as untouched. End with the CLI's
+`Updated draft ...` line so the write is on record. No summary in place of the text.
 
 ## Web (long-form) variant
 
@@ -110,7 +111,7 @@ When the idea under revision is a **web piece** (its `silo` is a piece kind / `p
 The same discipline applies, with these substitutions:
 
 - **Read** the article and its idea (the lookup in
-  `.claude/skills/article-draft-procedure.md` step 1) instead of the draft.
+  `.claude/skills/article-draft-procedure.md` step 1) instead of the loader above.
 - **Refine only what the owner asked** — a named section (a `##` block of the body), the
   opening, the close, the meta description — and preserve every untouched part of the
   document byte-for-byte.
@@ -118,17 +119,19 @@ The same discipline applies, with these substitutions:
   `{ "id": "<articleId>", "body": "<the full revised document>" }` (plus
   `metaDescription`/`slug`/`title` only if asked). A body write resets the article's
   `reviewStatus` to `pending`, exactly like a draft revision.
-- **Report** what changed the same way. The piece stays on its Queue card for review;
-  Publish/export remains the owner's action.
+- **Report** the changed section before and after, the same way. Publish/export remains the
+  owner's action.
 
 ## Rules
 
-- **Only the drafts table** (`body`, `hookOptions`, `close`, `mediaSuggestion`) — or, for
-  the web variant, only the articles row via `update-article`. Read the idea
-  and the voice card for context; never write them, the queue, or code.
+- **One read, one write.** `revise-context.ts` in, `update-draft.ts` out, on the draft id the
+  loader returned. Never query drafts yourself; never `draft-store.ts`.
+- **One question at most**, and only "what do you want changed?" when the message did not say.
+  Never a confirmation of text; the report shows it.
+- **Only the drafts table** (`body`, `hookOptions`, `close`, `mediaSuggestion`) — or, for the
+  web variant, only the articles row. Never the voice card, pillars, register, feeds, or code.
 - **Never invent or shift the opinion.** The take and points are the owner's; you sharpen the
-  expression, never the position. If a revision would change what the post argues, stop and ask.
-- **Obey the voice card**, every rule — em-dash ban, AI-tells, show-don't-tell, hook formulas,
-  CTA rule, protected relationships. A revision that breaks one is worse than the original.
-- **Show, then confirm before writing** (full before and after; in decide-for-me mode, write and show), preserve everything untouched, one draft per run, then report.
-  Never review your own work (that is `content-reviewer`) and never publish.
+  expression, never the position. Never a placeholder.
+- **Obey the voice card**, every rule. A revision that breaks one is worse than the original.
+- **Report before and after in full.** Never review your own work (that is `content-reviewer`)
+  and never publish.

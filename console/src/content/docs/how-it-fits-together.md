@@ -114,9 +114,11 @@ are stored in the local database.
   turns into a revise once content exists. The card's **content box** is the plain floor —
   a real post preview (LinkedIn chrome, or Reddit title + body with the 300-char title cue),
   an editor for the text (and, for web, the meta description and slug) with live voice checks
-  while you type, a **review badge** showing the gate's verdict, and **Review with AI**, which
-  runs the `content-reviewer` gate on the piece and writes the verdict back (any edit resets
-  it to pending). When it's good to go,
+  while you type, a **review badge** showing the verdict, **Mark reviewed** to sign it off
+  yourself, and **Revise with AI**, which asks one thing (what to change), writes the change
+  to the draft on the card, and reports the before and after (any edit resets the badge to
+  pending; the `content-reviewer` gate still runs from the terminal with "review it"). The
+  editor is two boxes, the first line and the post. When it's good to go,
   **Publish** on the card: LinkedIn posts via the API behind a type-`PUBLISH` gate (or Copy +
   record it manually), Reddit is Copy + record (a manual copy-paste channel), and a web piece
   **exports the Markdown file** (with SEO frontmatter, to `data/exports/`) — export *is* the

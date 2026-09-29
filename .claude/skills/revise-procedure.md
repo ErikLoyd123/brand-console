@@ -51,12 +51,16 @@ When the instruction is vague ("make it better", "tighten it", "it feels flat"),
 intent's checklist against the draft and fix every item that fails, then say which ones in
 the report:
 
-- **teach / help:** the mechanism is named (a place, a setting, a number, a command, a
-  before-and-after) and the reader could act on it; the close has an address, not a bare
-  instruction; no idea is stated twice; the strongest line is the first line; the hook is not
-  a voice card example sentence. If there is no mechanism in the draft or in `idea.points`,
-  the fix is not wording: report that the post is below its floor and recommend filing it as
-  `conversation` or asking the owner for the mechanism.
+- **teach / help:** the mechanism is a step the reader could take, what to do and where
+  ("activate the key on the Billing console's Cost allocation tags page"), or a number, a
+  command, a before-and-after; naming a place ("it lives in billing settings") is not a step.
+  The close has an address, not a bare instruction; no idea is stated twice; the strongest
+  line is the first line; the hook is not a voice card example sentence. **Check the floor
+  first.** If neither the draft nor `idea.points` carries a step, the first line of the report
+  says the post is below its floor and what is missing, then the wording fixes follow, and
+  the report ends by recommending the owner supply the step (Refine again with it) or file
+  the item as `conversation`. Wording cannot fix a missing mechanism, so never present it as
+  having done so.
 - **conversation / discuss:** the close is a question the owner cannot answer; the experience
   that raised it is told; no takeaway is smuggled in; the opening is the experience or the
   question, not a lesson.

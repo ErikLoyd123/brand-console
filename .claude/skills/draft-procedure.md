@@ -151,9 +151,9 @@ on the page; a hook composed before the body is the one the body never pays off.
 - **teach.** Body sized to the item's band (medium by default; long only when the mechanism,
   the mistake, and the fix all belong in one post); show, do not tell; lead with the useful,
   specific thing, then explain the one mechanism behind it in prose. The floor: the body names
-  the mechanism from `points` (a place, a setting, a number, a command, a before-and-after) so
-  the reader could act on it; a body that only asserts a gap exists is not a teach, stop and
-  say so. The close carries an address (where to look), never a bare instruction. No First/Second/Third, no "three
+  the mechanism from `points` as a step, what to do and where (or a number, a command, a
+  before-and-after), so the reader could act on it; naming a place without the action is not
+  a step, and a body that only asserts a gap exists is not a teach: stop and say so. The close carries an address (where to look), never a bare instruction. No First/Second/Third, no "three
   things", no numbered list unless the owner's points are themselves a list of three or more,
   and prose is still preferred then (the `list-cadence` check flags the scaffolding). Close is
   a soft, honest wrap that restates the specific, never a moral. Apart from `promote`, this

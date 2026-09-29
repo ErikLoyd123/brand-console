@@ -189,7 +189,7 @@ quotas.
 | Silo | Depth | Question budget | What spark mines |
 |------|-------|-----------------|-----------------|
 | `conversation` | Deepest | 1-3 sharp questions | Cross-domain friction — the "seam" where the owner's roles, domains, and eras disagree — and the one question the owner cannot answer |
-| `teach` | Light | Usually one question | The mechanism: what is the step, and where does it live (a place, a setting, a number, a command, a before-and-after) |
+| `teach` | Light | Usually one question | The mechanism: what is the step, and where does it live (what to do and where; or a number, a command, a before-and-after). A place with no action is not a step |
 | `win` | Light | One question | Who the hero is (never the owner), what they did, and one specific about the outcome |
 | `curate` | Minimal | One question | Who gets credit, by name, and the one reason this earned a share |
 | `promote` | Minimal | One or two questions | The one real specific to show (a finding, a number, a screenshot), and the ask; then stop |
@@ -204,7 +204,7 @@ kind of post yet (doctrine Principle 3). The interview's job is to get it, and t
 
 | Intent | The floor (the one concrete thing it must carry) | When it is missing |
 |---|---|---|
-| `teach` / `help` | One mechanism the reader can act on: a place (a console page, a setting, a file), a number, a command, a before-and-after, or a named failure mode ("spend lands under no tag key") | It is a claim, not a lesson yet: get the mechanism, or file it as `conversation` |
+| `teach` / `help` | One mechanism the reader can act on: a step (what to do, and where: "activate the key on the Billing console's Cost allocation tags page"), a number, a command, a before-and-after, or a named failure mode ("spend lands under no tag key"). Naming a place without the action is not a step | It is a claim, not a lesson yet: get the mechanism, or file it as `conversation` |
 | `conversation` / `discuss` | One question the owner genuinely cannot answer, plus the experience that raised it | If the owner knows the answer it is a `teach`; if there is no experience behind it there is no post |
 | `win` / `share` | A named person or team other than the owner (or, for a self-story, the owner's own mistake), what they did, and one specific about the outcome | No hero and no outcome is not a win; it is a `share` on Reddit or a `conversation` |
 | `curate` | The source credited by name and one reason it earned the share (what it gets right, or what it changes) | No reason is a bare pointer: do not post it |

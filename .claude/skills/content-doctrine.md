@@ -53,8 +53,10 @@ needs to be profound; demanding depth a post's purpose does not want deforms it.
   `identity.yaml`) *colors* that depth — how the calibrated thought sounds on the chosen
   platform — but never overrides the silo's shape.
 - **Every intent has a floor**: the one concrete thing a post of that kind must carry, or it
-  is not that kind of post yet. A `teach` carries one mechanism the reader can act on (a
-  place, a setting, a number, a command, a before-and-after, a named failure mode). A
+  is not that kind of post yet. A `teach` carries one mechanism the reader can act on: a
+  step, meaning what to do and where ("activate the key on the Billing console's Cost
+  allocation tags page"), or a number, a command, a before-and-after, a named failure mode.
+  Naming a place without the action is not a mechanism. A
   `conversation` carries one question the owner genuinely cannot answer and the experience
   that raised it. A `win` carries a named hero other than the owner and one specific about
   the outcome. A `curate` carries the source by name and one reason it earned the share. A

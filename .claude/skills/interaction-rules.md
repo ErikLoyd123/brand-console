@@ -45,6 +45,9 @@ the final result card. Two consequences, and they override the defaults below:
 - **No approval of text, ever.** A question card cannot carry a draft, so "save this?" would
   show nothing. The skill writes, then the result card shows what it wrote: the full new text,
   or the before and after of every changed field. Showing replaces asking.
+- **Nothing after the write.** Once the piece is saved, the run ends with its report. No
+  "anything else?", no menu of next steps: a question after the write leaves the run hanging
+  on a card and the result never renders. The surface's own Refine again box is the next round.
 
 ## Rule 2 — Show before you ask for approval
 

@@ -57,10 +57,12 @@ the report:
   The close has an address, not a bare instruction; no idea is stated twice; the strongest
   line is the first line; the hook is not a voice card example sentence. **Check the floor
   first.** If neither the draft nor `idea.points` carries a step, the first line of the report
-  says the post is below its floor and what is missing, then the wording fixes follow, and
-  the report ends by recommending the owner supply the step (Refine again with it) or file
-  the item as `conversation`. Wording cannot fix a missing mechanism, so never present it as
-  having done so.
+  says the post was below its floor and what was missing. Then either supply the step
+  yourself, when it is public documented product behavior you are certain of (a console page,
+  what a setting does), flagged in the report as your addition for the owner to confirm; or,
+  when the step would be the owner's own fact (their number, their tool, what happened),
+  recommend they supply it (Refine again with it) or file the item as `conversation`. Never
+  present a wording fix as having supplied a mechanism.
 - **conversation / discuss:** the close is a question the owner cannot answer; the experience
   that raised it is told; no takeaway is smuggled in; the opening is the experience or the
   question, not a lesson.
@@ -129,6 +131,11 @@ session is another `update-draft` on the same id, never a `draft-store.ts` save 
 add a second row and the card would show whichever landed last).
 
 ## 5. Report: the before and after, in full
+
+After the write there is nothing left to ask. Do not call `ask_user` again, not for "anything
+else?", not to offer options: the console's own Refine again box handles the next round, and
+a question here leaves the run hanging on a card instead of finishing. The report is the last
+message of the run.
 
 The final message is the console's result card, and it is the only place the owner sees what
 you did. It carries, for every field you changed, the text before and the text after, in

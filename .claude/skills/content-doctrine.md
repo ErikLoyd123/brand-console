@@ -35,6 +35,12 @@ so the post says Y instead"), never in the post, the seed, or a beat. A `[FILL: 
 marker in saved text is a failure, mechanically caught by `no-fill-markers` in
 `src/review/voice-checks.ts`; an unmarked invented specific fails on judgment.
 
+The line is the owner's *own* facts. Public, documented product behavior (the name of a
+console page, what a setting does, a documented default) is not a private fact: a skill that
+is certain of it may write it, and must flag every such addition in its report as its own
+("added from AWS's documented behavior; confirm") so the owner verifies it. Anything about
+the owner's numbers, tools, customers, or history stays theirs to supply.
+
 ## Principle 3 — depth-calibration
 
 **A post's depth is a function of silo × register, never a constant.** Not every post

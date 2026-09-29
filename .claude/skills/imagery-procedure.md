@@ -63,7 +63,53 @@ fallback:**
   - **`exists: false`** — nothing at all: fully unbranded. Say once, plainly, that no brand
     is set up and the Brand page (or the `brand` skill) creates one.
 
-## 2. Propose from the six-type menu
+## 2. Find the concept before the type
+
+**The type menu is the last decision, not the first.** An image that starts from "what type
+fits this topic?" comes out as the five-second image: three rounded cards joined by arrows,
+each restating a paragraph as a label. It is on-topic and says nothing. An image that starts
+from the piece's argument comes out as something only this piece could carry. Do this
+thinking before touching the menu or any tool, and do it even when the producer is
+pre-picked (a pre-pick fixes the producer, not the idea):
+
+1. **Name the piece's one move** in a sentence: the turn, the surprise, the gap, the
+   punchline. Not the topic ("new-hire onboarding") but the claim ("the access request is
+   filed on day one; it sits for a week because nobody owns the approval").
+2. **Pick the image's role.** It does one of these, or a deliberate mix:
+   - **Demonstrate:** show the mechanism or moment the piece describes, so the reader sees
+     it happen (the real screen before and after, the actual artifact, the failure in
+     place).
+   - **Complement:** add what the text can't carry: the scale, the feeling, the view from
+     the other side, the number the prose only mentions.
+   - **Land the joke:** a meme or deadpan when the piece's tone allows it. The joke must
+     *be* the piece's point, not a garnish on it.
+3. **Reach for the subject's real vernacular.** Every audience lives in specific artifacts:
+   a console page, a spreadsheet, a chat thread, an invoice, a terminal, a whiteboard, a
+   job site. A faithful recreation of the thing the reader touches every day reads as
+   thought; a generic diagram reads as filler. Ask what the reader would recognize at a
+   glance, then show *that*, set to the state the piece is about.
+4. **Show the thinking, not just the thing.** When the piece is about noticing something,
+   let the image notice it too: a margin note, a circle around the one row that matters,
+   an arrow that says "this is why." One point per mark, written in plain words in the
+   profile's voice (its punctuation rules hold here as well).
+5. **Pass the expert test.** Someone who works in this domain every day should find
+   nothing false: no state the real product can't show, no numbers that don't add up
+   (bars match axis values match totals), no mislabeled screen. A joke that is technically
+   wrong gets a wince from the experts, not a laugh. Fix it or drop it.
+6. **Write each concept down** before producing anything: its role, what the viewer sees,
+   and why it serves the move. Propose **2-3 concepts that differ in role or idea** (say, a
+   demonstration and a joke), not three stylings of one idea. Then pick the type and
+   producer for each from the menu below.
+
+**Say the concepts in the ask, not the types.** "A marked-up walk through the three
+screens: the request filed, the approval queue with the one stuck row circled, the new
+hire's empty dashboard" tells the owner what they would get; "Explainer diagram, Claude, 10/10" does not. The type, producer,
+and score ride along in one line under each concept. This is the same single ask as the
+menu in step 3, not an extra one: concepts first (one marked recommended), each with its
+type line, plus one line offering loop mode (see *Critique every render — and loop mode*
+in step 4).
+
+## 3. Propose from the six-type menu
 
 An image does one of a few **jobs** for a piece. Read the piece, then propose the 1-3 types
 that genuinely fit *this* argument — each in one plain sentence saying what the viewer sees
@@ -236,7 +282,7 @@ npx tsx -e "import('./src/db/client.js').then(async ({db})=>{const {appSettings}
 
 Never block the run on this — every other type keeps working regardless of the answer.
 
-## 3. Produce — per type
+## 4. Produce — per type
 
 All producers are payload-file CLIs; each prints the stored image row as JSON. **Alt text
 is mandatory everywhere** — write what the image shows, plainly.
@@ -248,7 +294,7 @@ is mandatory everywhere** — write what the image shows, plainly.
 FLUX.1 [schnell], **`drawthings`** driving the Draw Things app's local API, or any
 bring-your-own mflux model as further entries); the payload's optional `"model"` names an
 entry, omitted = the config's default. Use the default unless the owner asks for a specific
-one. (Availability and the install/defer offer are handled in step 2 — by the time you're
+one. (Availability and the install/defer offer are handled in step 3 — by the time you're
 here the default model works.)
 
 **Not everything is photoreal.** One model does every treatment: photoreal photography,
@@ -377,6 +423,66 @@ npx tsx src/images/render-image.ts .image-payload.json
 # attach: same payload with "ideaId" + "alt", "out" removed
 ```
 
+Craft notes that separate a considered figure from a templated one:
+
+- **Recreate the real surface when the concept calls for it.** A faithful, simplified
+  rebuild of the screen, sheet, or document the reader knows (its breadcrumb, its column
+  headers, its disabled button, its real empty state) set to the exact state the piece is
+  about. Use generic names and plausible values; never a real person's or company's data,
+  and no third-party logos.
+- **Annotations belong to what they mark.** Put each circle or arrow's SVG *inside* the
+  element it points at (absolutely positioned), so it moves with that panel's rotation and
+  layout instead of drifting when the page shifts. A slight tilt on panels (under 1.5°) and
+  a hand-drawn stroke read as a person working through it; keep them subtle.
+- **Fonts:** Google Fonts `<link>`s load before the shot (the renderer waits for the
+  network to go idle), so a handwriting face (Caveat, Kalam) or a real UI face is
+  available; name a system fallback anyway.
+- **Aspect:** for a LinkedIn feed image, portrait 4:5 (`"width": 1200, "height": 1500`)
+  takes the most feed space; 1:1 (1200×1200) and landscape 4:3 (1200×900) suit wide
+  content. Set `height` explicitly so the canvas is the shape you composed for.
+
+### Critique every render — and loop mode
+
+Every render gets at least one honest critique before anyone sees it: look at it with the
+Read tool and check it against **the bar**. Name each failure specifically ("the circle
+spans two rows", "the arrow ends in empty space"), not as a vague "could be tighter".
+
+**The bar** (a render ships only when all of these hold):
+
+1. **The move lands.** Someone who read only the post's first line could say what the
+   image is showing and why it matters.
+2. **It passes the expert test** (step 2): nothing false, numbers consistent.
+3. **Every mark hits its target.** Circles surround exactly one thing, arrows end on what
+   they point at, labels sit next to what they name.
+4. **Nothing collides or clips.** No text over lines or other text, nothing running off
+   the canvas, no truncated words.
+5. **The composition is balanced.** No dead band of empty background, no cramped corner;
+   the focal point is where the eye lands first.
+6. **It isn't the five-second image.** If a generic template would produce roughly the
+   same picture for any post on this topic, the concept is wrong; go back to step 2.
+
+**Loop mode** repeats that critique until the bar is cleared, without stopping to ask
+between rounds. It is opt-in, never entered on its own: offer it once, as one line in the
+concept ask ("or I can loop: render, critique, fix, and show you each round until it
+clears the bar"). The owner can also ask for it directly ("loop on it", "keep going until
+it's good"), which skips the offer. Once it's on:
+
+- **Each round:** render → look → write the critique in two or three plain lines → fix
+  exactly those failures → render again. Name rounds `<concept>-r<N>` (e.g.
+  `demo-r3.png`) and write them into `data/images/previews/<ideaId>/` so every round lands
+  live on the Queue card; in a chat session, also show each round inline as it lands, with
+  its critique. The owner watches the work, not only the result.
+- **A fundamental failure resets the concept,** not the pixels. If the critique finds the
+  concept itself is false or generic (it fails bar item 2 or 6), say so in the round's
+  note and rework the idea instead of polishing it.
+- **Run 2-3 concepts in parallel** when the ask proposed several, each looping on its own.
+- **Stop when a concept clears the bar** or after **6 rounds** for a composed figure
+  (**3** for a generated image, where each round is a background generation of minutes:
+  rewrite the prompt or change the seed from the critique, never re-roll blindly). At the
+  cap, show the best round and say plainly what still falls short.
+- **Loop mode never attaches.** It ends in the normal pick: one gallery ask with each
+  concept's final round (plus the start-over escape), and only the owner's pick attaches.
+
 ### Annotated screenshot — the look-then-annotate loop
 
 Never eyeball annotation coordinates blind. Preview (`capture-image.ts` with `out`), look at
@@ -392,7 +498,7 @@ candidates (photographer + description + preview URL); attach the pick with
 `{ "ideaId", "photoId", "alt" }`. Attribution is recorded automatically. Requires
 `UNSPLASH_ACCESS_KEY`; if unset, say so and continue with the other types.
 
-## 4. Place it in the piece
+## 5. Place it in the piece
 
 - **LinkedIn post** — no inline placement; the Publish modal offers every card image as a
   pick (several makes a multi-photo post). Nothing to write into the draft.
@@ -405,7 +511,7 @@ candidates (photographer + description + preview URL); attach the pick with
   right for a hero the site places itself); say which are inline and which are
   frontmatter-only when reporting.
 
-## 5. Report and stop
+## 6. Report and stop
 
 Report what was attached (type, dimensions, alt text), where it was placed, and that it
 shows on the idea's **Queue card**, where the owner can review or delete it. Publish ships
@@ -415,6 +521,11 @@ it with the piece — the owner's click, never this procedure's.
 
 - **The image depicts the piece's idea; it is a supporting visual, never a cover.** No
   typeset-a-headline cards, no lone-number posters, no logos on content images unless asked.
+- **Concept before type.** Name the piece's move, pick the image's role (demonstrate,
+  complement, land the joke), and pass the expert test before choosing a type or producer.
+- **Every render clears the bar before anyone sees it** (step 4's critique). Loop mode
+  repeats the critique round after round, showing each round, but only when the owner
+  opts in, and it never attaches on its own.
 - **Every render gets looked at before it attaches** — composed figures, composites, and
   screenshots alike; a render that fails the eye gets fixed, not shipped.
 - **Image models garble text and swing run-to-run** — never depend on legible words in a raw
@@ -424,7 +535,7 @@ it with the piece — the owner's click, never this procedure's.
   with previews written to `data/images/previews/<ideaId>/` so they appear live on the
   Queue card; tell the owner the expected wait up front, and delete the folder once a pick
   is attached (or the owner moves on).
-- **Graceful degradation.** Source availability is checked in step 2, before the menu. A
+- **Graceful degradation.** Source availability is checked in step 3, before the menu. A
   missing generator triggers the one-time set-up-or-defer offer (persisted as
   `image_gen_setup=deferred` in app settings — deferred means omit silently); a missing
   `UNSPLASH_ACCESS_KEY` just drops the stock type with a one-line mention. Never block.

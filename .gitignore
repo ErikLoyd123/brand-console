@@ -51,3 +51,8 @@ docs/superpowers/
 
 # Local generative-image backend config (machine-specific; see .example)
 image-generation.config.json
+
+# Cadence planning config (the owner's machine-local planning setup: absolute
+# paths into a personal notes vault, local worktrees). Not part of the generic
+# engine; stays on disk locally, never committed.
+/.cadence/

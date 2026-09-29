@@ -42,8 +42,8 @@ operated through a local **brand-console** web UI.
   `registers.ts` (platform/tone menu), and pillars; per-user selection layers on top in
   the active profile's `identity.yaml` (under gitignored `profiles/<slug>/`, resolved by
   `src/profile/loader.ts` — never hardcode a profile path).
-- **Cadence** — planning system; config `.cadence/config.yaml`, docs under
-  `~/Projects/notes/brand-console/`.
+- **Cadence** — optional planning system; its config `.cadence/config.yaml` is
+  machine-local and gitignored (it points at the owner's own notes location).
 
 ## Running it
 

@@ -42,9 +42,9 @@ export type ImageEngine =
 // The Claude tiers offered for composed graphics — the pick pins the whole imagery
 // session's model (it authors the figure itself).
 const CLAUDE_TIERS: { id: string; label: string }[] = [
-  { id: 'claude-fable-5', label: 'Claude Fable' },
-  { id: 'claude-opus-4-8', label: 'Claude Opus' },
-  { id: 'claude-sonnet-5', label: 'Claude Sonnet' },
+  { id: 'claude-fable-5-1', label: 'Claude Fable' },
+  { id: 'claude-opus-5-5', label: 'Claude Opus' },
+  { id: 'claude-sonnet-5-5', label: 'Claude Sonnet' },
 ]
 
 const SOURCE_LABEL: Record<ImageSource, string> = {

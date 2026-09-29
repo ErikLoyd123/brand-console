@@ -46,6 +46,33 @@ uses; this one call is the whole read.
 
 If the message already says what to change, act on it. If it does not, ask **exactly one**
 free-text question: what do you want changed? That is the only question a revision asks.
+
+When the instruction is vague ("make it better", "tighten it", "it feels flat"), run the
+intent's checklist against the draft and fix every item that fails, then say which ones in
+the report:
+
+- **teach / help:** the mechanism is named (a place, a setting, a number, a command, a
+  before-and-after) and the reader could act on it; the close has an address, not a bare
+  instruction; no idea is stated twice; the strongest line is the first line; the hook is not
+  a voice card example sentence. If there is no mechanism in the draft or in `idea.points`,
+  the fix is not wording: report that the post is below its floor and recommend filing it as
+  `conversation` or asking the owner for the mechanism.
+- **conversation / discuss:** the close is a question the owner cannot answer; the experience
+  that raised it is told; no takeaway is smuggled in; the opening is the experience or the
+  question, not a lesson.
+- **win / share:** the hero is named and is not the owner (or the owner's own mistake is the
+  story); one specific about the outcome; the owner's role inferred, never claimed.
+- **curate:** the source is credited by name; the one reason it earned the share is in the
+  owner's words; no bare link.
+- **promote:** one plain sentence of what it does and for whom; one real specific; exactly one
+  ask, in the close; under 900 characters.
+
+**The band.** Read `idea.length` from the loader. When the requested change grows the post
+past its band (adding the step, the trap, the "because"), do not cram: say so in the report,
+recommend the next band, and in a console run take it, setting it with
+`curl -s -X POST http://localhost:5174/api/queue/<idea.id>/length -H 'Content-Type: application/json' -d '{"length":"medium"}'`
+before you write. When the change shrinks the post below its band, leave the band alone and
+say the body now runs short of it; the owner may want it that way.
 Never ask which item or which draft (the loader decided), never ask the owner to pick among
 options you could recommend, and never ask them to confirm the text before you write it
 (`.claude/skills/interaction-rules.md`): the console's question cards cannot carry a draft,

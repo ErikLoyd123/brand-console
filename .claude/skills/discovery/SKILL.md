@@ -142,6 +142,19 @@ questions mining the cross-domain friction; light for `teach`/`win`/`curate` —
 well-aimed question). One question per turn, in the interview style of `spark` and `setup`;
 never a wall of questions.
 
+The one question is aimed at the intent's **floor**, the concrete thing that kind of post must
+carry (doctrine Principle 3; the full table is in `spark` Step 5): a `teach` needs the
+mechanism (what is the step, and where does it live: a place, a setting, a number, a command,
+a before-and-after); a `conversation` needs the question you genuinely cannot answer and the
+experience behind it; a `win` needs a named hero other than you and one specific about the
+outcome; a `curate` needs the source by name and the one reason it earned the share. Write the
+floor into the points as a beat. When it is missing, say so in a line and offer the exit
+(a teach with no mechanism is a `conversation`; a curate with no reason is not posted).
+Then recommend the length band from the shape of the material, as `spark` Step 5b does:
+short for one specific that needs no "because", medium for a mechanism or an experience that
+has to be explained, long only for mechanism plus mistake plus fix; and say when a short pick
+cannot hold the floor.
+
 - **The take (`seed`).** Draw out the one thing you actually believe in reaction to this piece —
   one or two sentences, your words. This is required: a queued item with no take is a bare
   angle, which is what the plain Promote button already makes.

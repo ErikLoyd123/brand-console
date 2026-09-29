@@ -52,6 +52,16 @@ needs to be profound; demanding depth a post's purpose does not want deforms it.
 - **Register** (tone/platform — the menu in `src/core/registers.ts`, selected per user in
   `identity.yaml`) *colors* that depth — how the calibrated thought sounds on the chosen
   platform — but never overrides the silo's shape.
+- **Every intent has a floor**: the one concrete thing a post of that kind must carry, or it
+  is not that kind of post yet. A `teach` carries one mechanism the reader can act on (a
+  place, a setting, a number, a command, a before-and-after, a named failure mode). A
+  `conversation` carries one question the owner genuinely cannot answer and the experience
+  that raised it. A `win` carries a named hero other than the owner and one specific about
+  the outcome. A `curate` carries the source by name and one reason it earned the share. A
+  `promote` carries one plain sentence of what the product does, one real specific, one ask.
+  The floor is drawn out in the interview and written into `points`, so the drafter carries
+  it by name (Principle 5) and the reviewer can see whether it landed. Missing the floor is
+  not a length problem; it is the wrong intent, or no post.
 - **Length** (the band roster in `src/core/lengths.ts`, chosen per post) sets how much room
   the depth gets. The silo only defaults it (`teach`/`help` lean medium, the rest lean short);
   the material decides it: one gap or one claim is short, a mechanism is medium, a mechanism

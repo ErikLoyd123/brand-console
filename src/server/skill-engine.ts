@@ -23,6 +23,14 @@ import type {
 
 const SKILLS_DIR = resolve(REPO_ROOT, '.claude', 'skills');
 
+// The Claude model every headless skill run uses unless the page pins one (the queue
+// card's image picker offering Fable / Opus / Sonnet). Pinned here on purpose: the Agent
+// SDK does not read the operator's own CLI settings, so without this the console's AI
+// buttons would run on whatever the SDK's built-in default happens to be, which can
+// differ from the model the terminal runs. Override per machine with SKILL_MODEL in .env
+// (an exact model id such as claude-fable-5-1); see .env.example.
+const DEFAULT_SKILL_MODEL = process.env.SKILL_MODEL?.trim() || 'claude-opus-5-5';
+
 // One-line instruction prepended to the skill so the model routes its questions
 // through the ask_user tool instead of printing them. The skill markdown itself
 // is loaded verbatim and never edited.
@@ -390,9 +398,9 @@ function driveSession(
           cwd: REPO_ROOT,
           abortController,
           // The page may pin the session's Claude model (e.g. the queue card's
-          // image picker offering Opus/Sonnet for composed graphics); omitted =
-          // the SDK's default.
-          ...(model ? { model } : {}),
+          // image picker offering Fable/Opus/Sonnet for composed graphics); otherwise
+          // every skill runs on DEFAULT_SKILL_MODEL, never the SDK's own default.
+          model: model ?? DEFAULT_SKILL_MODEL,
           mcpServers: { 'skill-surface': askServer },
           // Headless, single-user, local: no human is present to approve each
           // step, so the session runs the skill's own commands (e.g. spark's

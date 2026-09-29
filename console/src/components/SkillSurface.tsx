@@ -34,7 +34,8 @@ export interface SkillSurfaceProps {
   initialInput?: string
   /**
    * Optional Claude model override for the session (alias or full id, e.g.
-   * "claude-opus-4-8"). Omitted = the engine's default. Applies to the whole run.
+   * "claude-opus-5-5"). Omitted = the engine's default (SKILL_MODEL in .env, else
+   * claude-opus-5-5). Applies to the whole run.
    */
   model?: string
   /** Fired once on the terminal `result`. */

@@ -401,6 +401,10 @@ function driveSession(
           // image picker offering Fable/Opus/Sonnet for composed graphics); otherwise
           // every skill runs on DEFAULT_SKILL_MODEL, never the SDK's own default.
           model: model ?? DEFAULT_SKILL_MODEL,
+          // Isolation mode: load no filesystem settings. Since SDK 0.3 an omitted
+          // settingSources loads every source like the CLI (the operator's ~/.claude
+          // hooks, plugins, and CLAUDE.md), which would leak into every skill run.
+          settingSources: [],
           mcpServers: { 'skill-surface': askServer },
           // Headless, single-user, local: no human is present to approve each
           // step, so the session runs the skill's own commands (e.g. spark's

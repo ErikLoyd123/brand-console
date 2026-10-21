@@ -518,6 +518,20 @@ export interface ImagePreview {
   mtimeMs: number
 }
 
+// A server-owned generation job for one candidate (src/images/preview-jobs.ts). The
+// strip polls these so a wave keeps showing progress after the session that queued it
+// has ended, and so a failed candidate says why.
+export interface ImagePreviewJob {
+  id: string
+  ideaId: string
+  name: string
+  status: 'queued' | 'running' | 'done' | 'failed'
+  error?: string
+  createdAt: number
+  startedAt?: number
+  finishedAt?: number
+}
+
 export function imagePreviewUrl(ideaId: string, name: string): string {
   return `/api/images/previews/${encodeURIComponent(ideaId)}/${encodeURIComponent(name)}`
 }
@@ -585,6 +599,9 @@ export const api = {
   // Unattached candidates from a running imagery session (see ImagePreview above).
   getImagePreviews: (ideaId: string) =>
     http<ImagePreview[]>(`/images/previews?ideaId=${encodeURIComponent(ideaId)}`),
+  // Generation jobs queued on the server for this idea's candidates.
+  getImagePreviewJobs: (ideaId: string) =>
+    http<ImagePreviewJob[]>(`/images/previews/jobs?ideaId=${encodeURIComponent(ideaId)}`),
   // Promote a candidate into a real attachment (alt required); removes the preview.
   attachImagePreview: (ideaId: string, name: string, alt: string) =>
     http<ImageAttachment>('/images/previews/attach', {

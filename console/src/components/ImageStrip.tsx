@@ -6,6 +6,7 @@ import {
   type GeneratorStatus,
   type ImageAttachment,
   type ImagePreview,
+  type ImagePreviewJob,
   type ImageSource,
 } from '../lib/api'
 import { Button } from './ui/button'
@@ -93,6 +94,9 @@ export function ImageStrip({
 }) {
   const [images, setImages] = useState<ImageAttachment[]>([])
   const [previews, setPreviews] = useState<ImagePreview[]>([])
+  // Server-owned generation jobs for this idea's candidates. They outlive the session
+  // that queued them, so the strip keeps polling while any is queued or running.
+  const [jobs, setJobs] = useState<ImagePreviewJob[]>([])
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [confirmingDelete, setConfirmingDelete] = useState<string | null>(null)
@@ -147,21 +151,32 @@ export function ImageStrip({
       .getImagePreviews(ideaId)
       .then(setPreviews)
       .catch(() => setPreviews([]))
+    api
+      .getImagePreviewJobs(ideaId)
+      .then(setJobs)
+      .catch(() => setJobs([]))
   }, [ideaId])
+
+  const activeJobs = jobs.filter((j) => j.status === 'queued' || j.status === 'running')
+  // The server keeps finished jobs for 30 minutes, so a failure stays visible long enough
+  // to read why, then drops off on its own.
+  const failedJobs = jobs.filter((j) => j.status === 'failed')
+  const generating = activeJobs.length > 0
 
   // One effect covers mount, live polling during an imagery session (attachments
   // and candidates both move while the terminal session generates, and a run can
   // take minutes), and a final refresh when `working` flips off.
+  // Server-side generation jobs (`generating`) keep the poll alive after the session ends.
   useEffect(() => {
     reload()
     reloadPreviews()
-    if (!working) return
+    if (!working && !generating) return
     const timer = setInterval(() => {
       reload()
       reloadPreviews()
     }, 4000)
     return () => clearInterval(timer)
-  }, [working, reload, reloadPreviews])
+  }, [working, generating, reload, reloadPreviews])
 
   async function onFileSelected(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -391,6 +406,29 @@ export function ImageStrip({
         </div>
       )}
 
+      {generating && (
+        <div className="flex items-start gap-2 rounded-md bg-surface px-3 py-2">
+          <Loader2 className="mt-0.5 size-3.5 shrink-0 animate-spin text-primary" />
+          <p className="text-xs text-text-muted">
+            <span className="font-medium text-text">
+              Generating {activeJobs.length} candidate{activeJobs.length === 1 ? '' : 's'} on this
+              machine.
+            </span>{' '}
+            The API server runs these one at a time, so they keep going even after the AI session
+            ends. Each one shows up below as it finishes.
+          </p>
+        </div>
+      )}
+
+      {!generating && failedJobs.length > 0 && (
+        <p className="rounded-md bg-surface px-3 py-2 text-xs text-text-muted">
+          <span className="font-medium text-text">
+            {failedJobs.length} candidate{failedJobs.length === 1 ? '' : 's'} failed to generate:
+          </span>{' '}
+          {failedJobs[failedJobs.length - 1].error ?? 'unknown error'}
+        </p>
+      )}
+
       {previews.length > 0 && (
         <div className="flex flex-col gap-1.5">
           <div className="flex items-center justify-between gap-2">
@@ -503,7 +541,7 @@ export function ImageStrip({
         </div>
       )}
 
-      {images.length === 0 && previews.length === 0 && !pendingFile && !working && (
+      {images.length === 0 && previews.length === 0 && !pendingFile && !working && !generating && (
         <p className="text-xs text-text-muted">
           No images yet. <span className="font-medium">Image with AI</span> makes one for this
           piece — a generated image (photoreal or illustrated, made locally), a graphic in your

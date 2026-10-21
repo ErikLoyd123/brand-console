@@ -28,8 +28,20 @@ const SKILLS_DIR = resolve(REPO_ROOT, '.claude', 'skills');
 // SDK does not read the operator's own CLI settings, so without this the console's AI
 // buttons would run on whatever the SDK's built-in default happens to be, which can
 // differ from the model the terminal runs. Override per machine with SKILL_MODEL in .env
-// (an exact model id such as claude-fable-5-1); see .env.example.
-const DEFAULT_SKILL_MODEL = process.env.SKILL_MODEL?.trim() || 'claude-opus-5-5';
+// (an exact model id such as claude-fable-5-1); see .env.example. A value that doesn't
+// look like a model id is ignored with a warning, so a typo in .env falls back to the
+// default instead of failing every run later.
+const BUILT_IN_SKILL_MODEL = 'claude-opus-5-5';
+const DEFAULT_SKILL_MODEL = resolveDefaultSkillModel(process.env.SKILL_MODEL);
+
+function resolveDefaultSkillModel(raw: string | undefined): string {
+  const value = raw?.trim();
+  if (!value) return BUILT_IN_SKILL_MODEL;
+  const model = sanitizeModel(value);
+  if (model) return model;
+  console.warn(`SKILL_MODEL="${value}" is not a valid model id; using ${BUILT_IN_SKILL_MODEL}.`);
+  return BUILT_IN_SKILL_MODEL;
+}
 
 // One-line instruction prepended to the skill so the model routes its questions
 // through the ask_user tool instead of printing them. The skill markdown itself
@@ -109,6 +121,21 @@ export function probeClaudeAvailable(): boolean {
     // homedir/statting failed — fall through to unavailable.
   }
   return false;
+}
+
+// A run that dies because Claude cannot authenticate (an expired or revoked sign-in, a
+// bad API key) is not a skill problem, and the raw SDK text ("Failed to authenticate:
+// OAuth session expired…") does not tell the owner what to do. The liveness probe above
+// cannot catch this without spawning a session, so the failure is named here instead,
+// with the one command that fixes it.
+const AUTH_FAILURE_PATTERN =
+  /failed to authenticate|oauth|not logged in|please run \/login|invalid api key|authentication_error|\b401\b/i;
+
+export const AUTH_FAILURE_MESSAGE =
+  "Claude's sign-in has expired, so the AI can't run. Run `claude /login` in a terminal, then try again.";
+
+export function isAuthFailure(reason: string): boolean {
+  return AUTH_FAILURE_PATTERN.test(reason);
 }
 
 // Read a skill's SKILL.md verbatim, selected by frontmatter/dir name. Reuses the
@@ -492,7 +519,13 @@ function driveSession(
       disarmRunTimer();
       if (torndown) return;
       const reason = err instanceof Error ? err.message : String(err);
-      send({ type: 'error', conversationId, message: reason, kind: 'died_midrun' });
+      const auth = isAuthFailure(reason);
+      send({
+        type: 'error',
+        conversationId,
+        message: auth ? AUTH_FAILURE_MESSAGE : reason,
+        kind: auth ? 'auth' : 'died_midrun',
+      });
       teardown();
       ws.close();
     }

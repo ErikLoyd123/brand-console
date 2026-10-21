@@ -29,6 +29,7 @@ import {
   modelEnabled,
   modelWeightsCached,
 } from '../../images/generate';
+import { enqueuePreviewJob, listPreviewJobs, type PreviewJobRequest } from '../../images/preview-jobs';
 
 const router = Router();
 
@@ -106,6 +107,39 @@ router.get('/previews', (req, res) => {
     .map((name) => ({ name, mtimeMs: statSync(join(dir, name)).mtimeMs }))
     .sort((a, b) => a.mtimeMs - b.mtimeMs);
   res.json(rows);
+});
+
+// POST /api/images/previews/generate — queue candidate generation on the server:
+// { ideaId, prompt, seeds?: number[], seed?, name?, model?, width?, height?, steps? }.
+// One job per seed (or one job for a single seed/name). The server owns the work, so a
+// console skill session can end its run without killing the wave; each candidate lands
+// under data/images/previews/<ideaId>/ as it finishes. Returns 202 with the queued jobs.
+router.post('/previews/generate', (req, res) => {
+  const body = (req.body ?? {}) as PreviewJobRequest & { seeds?: unknown };
+  try {
+    if (body.seeds !== undefined) {
+      if (!Array.isArray(body.seeds) || body.seeds.length === 0 || body.seeds.length > 8) {
+        throw new Error('"seeds" must be an array of 1 to 8 numbers');
+      }
+      if (body.name !== undefined) throw new Error('pass "name" with a single "seed", not "seeds"');
+    }
+    const seeds = (body.seeds as number[] | undefined) ?? [body.seed];
+    const queued = seeds.map((seed) => enqueuePreviewJob({ ...body, seed }));
+    res.status(202).json(queued);
+  } catch (e) {
+    res.status(400).json({ error: (e as Error).message });
+  }
+});
+
+// GET /api/images/previews/jobs?ideaId=… — the idea's generation jobs (queued,
+// running, and recently finished), so the strip and the skill can tell a wave is still
+// working and see why a candidate failed.
+router.get('/previews/jobs', (req, res) => {
+  const ideaId = req.query.ideaId as string | undefined;
+  if (!ideaId || !SAFE_SEGMENT.test(ideaId)) {
+    return res.status(400).json({ error: 'a valid ideaId query param is required' });
+  }
+  res.json(listPreviewJobs(ideaId));
 });
 
 // POST /api/images/previews/attach — promote a candidate into a real attachment:

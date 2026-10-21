@@ -311,63 +311,77 @@ materials, mood, treatment. Image models **garble text** (FLUX.2 less than FLUX.
 depend on it), so don't rely on legible words in the image. The owner picks one, edits one,
 or redirects.
 
-**Generate in the background; previews land on the card.** A generation takes roughly one to
-a few minutes per image — and a model whose weights were never pre-downloaded (setup's
-`make image-model`) **fetches them on its first-ever run as a failsafe (~13–24 GB for the
-FLUX defaults), which can take much longer**. Two hard rules:
+**Generate through the API's job queue; previews land on the card.** A generation takes
+roughly one to a few minutes per image — and a model whose weights were never pre-downloaded
+(setup's `make image-model`) **fetches them on its first-ever run as a failsafe (~13–24 GB for
+the FLUX defaults), which can take much longer**. Three hard rules:
 
-- **Never run generation as a plain foreground command** — the default shell timeout will
-  kill it mid-run. Launch it in the background, keep talking, and report as each candidate
-  lands. Before starting, tell the owner the expected wait (and the one-time download, if
-  this is the first run) so silence never reads as broken — and scale the estimate to the
-  wave: a three-image plan at two candidates each is six generations, say that math.
-- **Write previews into `data/images/previews/<ideaId>/`** (create the folder first; simple
-  safe filenames like `candidate-1-seed42.png`). The console's Images strip polls that folder
-  during the session, so candidates appear on the idea's card as they finish — say so.
+- **Queue the wave on the API server, never as a background shell.** A console session tears
+  down everything it spawned the moment its run ends, so a background `generate-image.ts`
+  launched from one dies with it and the strip waits forever. The API server owns these jobs
+  instead (`POST /api/images/previews/generate`), runs them one at a time, and writes each
+  candidate to `data/images/previews/<ideaId>/` whatever happens to this session. Before
+  starting, tell the owner the expected wait (and the one-time download, if this is the first
+  run) so silence never reads as broken — and scale the estimate to the wave: a three-image
+  plan at two candidates each is six generations, say that math.
+- **Wait for the wave in the session, then ask.** Do not end the run after queuing: the pick
+  is the point. Block on `preview-jobs-cli.ts wait`, which returns when nothing is queued or
+  running (or after 8 minutes; run it again while `pending` is non-empty). The console's
+  Images strip shows the wave's progress and each candidate as it lands — say so.
+- **Never run `generate-image.ts` preview mode as a plain foreground command** — the default
+  shell timeout kills it mid-run. If the API is unreachable (`preview-jobs-cli.ts` exits 2),
+  you are in an interactive terminal session: fall back to launching
+  `generate-image.ts` in the background with an `"out"` under the previews folder, one
+  payload file per candidate.
 
 ```bash
-# One candidate: repeat with a different "seed" (and filename) for a small batch of the
-# winning prompt — output swings run-to-run, so give the owner 2-3 takes to pick from.
-mkdir -p data/images/previews/<ideaId>
+# One wave of the winning prompt: output swings run-to-run, so give the owner 2-3 takes.
+# Filenames default to candidate-seed<seed>.png; pass "name" with a single "seed" for a
+# custom one (slot1-a.png, …).
 cat > .image-payload.json <<'JSON'
-{ "prompt": "<the winning prompt>", "width": 1024, "seed": 42,
-  "out": "data/images/previews/<ideaId>/candidate-1-seed42.png" }
+{ "ideaId": "<ideaId>", "prompt": "<the winning prompt>", "width": 1024, "seeds": [42, 7, 1234] }
 JSON
-npx tsx src/images/generate-image.ts .image-payload.json   # ← run in the background
+npx tsx src/images/preview-jobs-cli.ts start .image-payload.json
+npx tsx src/images/preview-jobs-cli.ts wait <ideaId>   # → { done, failed, pending }
 ```
 
-Look at each candidate with the Read tool as it lands. When the batch is in, put the pick to
+A `failed` entry carries the generator's own one-line error (a missing backend, a model that
+isn't installed): relay it and continue, per the failure rule below.
+
+Look at each candidate with the Read tool (`data/images/previews/<ideaId>/<name>`). When the batch is in, put the pick to
 the owner as **one gallery ask showing every candidate**: one option per candidate with that
 candidate's file path on the option's `imageFile` (they all render side by side, labeled —
 never show just one image for a three-candidate pick), **plus one explicit escape option**
 along the lines of *"None of these — start over"* (description: iterate on one candidate's
 prompt or seed, write a fresh prompt, or switch to another image type). A tweak or restart
-regenerates in the background into the same previews folder; iterate until the owner picks —
+queues another wave into the same previews folder; iterate until the owner picks —
 their taste decides, not the batch.
 
 **Multi-image plans pick per slot, never across slots.** When the plan has several images
-(a web article), launch **every slot's candidates in one background wave** — name the
-previews by slot (`slot1-a.png`, `slot1-b.png`, `slot2-a.png`, …) so the card's strip reads
-sensibly — then run **one gallery ask per planned image**, in article order, each showing
-only that slot's candidates (its two-plus takes side by side, plus the same start-over
-escape, naming the section it's for). Ask as each slot's batch completes rather than
-holding everything for the slowest; three planned images means three picks of two, never
-one six-way pick. Attach each winner as its slot resolves. Attach a winner (same payload
-with `ideaId` + `alt` added, `out` removed):
+(a web article), queue **every slot's candidates in one wave** (one `start` per candidate,
+each with its own `"name"` and single `"seed"`) — name the previews by slot (`slot1-a.png`,
+`slot1-b.png`, `slot2-a.png`, …) so the card's strip reads sensibly — then run **one gallery
+ask per planned image**, in article order, each showing only that slot's candidates (its
+two-plus takes side by side, plus the same start-over escape, naming the section it's for).
+Ask as each slot's candidates are all in rather than holding everything for the slowest;
+three planned images means three picks of two, never one six-way pick. Attach each winner as
+its slot resolves, straight from its preview file (no regeneration; this also removes the
+preview from the strip):
 
 ```bash
-cat > .image-payload.json <<'JSON'
-{ "ideaId": "<ideaId>", "alt": "<what the image shows>", "prompt": "<the winning prompt>", "seed": <the winning seed>, "width": 1024 }
-JSON
-npx tsx src/images/generate-image.ts .image-payload.json
+curl -s -X POST http://localhost:5174/api/images/previews/attach -H 'Content-Type: application/json' \
+  -d '{"ideaId":"<ideaId>","name":"<candidate filename>","alt":"<what the image shows>"}'
 ```
+
+With the API unreachable (the terminal fallback above), attach by regenerating the winner
+in attach mode instead: the same prompt and seed with `ideaId` + `alt` and no `out`, passed
+to `generate-image.ts`, run in the background.
 
 Then **delete the previews folder** (`rm -rf data/images/previews/<ideaId>`) — also when the
 owner walks away without attaching — so stale candidates never linger on the card. The same
 end-of-run sweep removes the scratch files: payloads and working HTML are always written at
 the repo root as `.image-payload*.json` / `.image-graphic*.html` / `.image-card*.html`
-(numbered variants when candidates run in parallel — each background run needs its own
-payload file). They are gitignored, but leaving them behind is still litter — `rm -f
+(numbered variants when several payloads are in flight at once). They are gitignored, but leaving them behind is still litter — `rm -f
 .image-payload*.json .image-graphic*.html .image-card*.html` when the run ends.
 
 **If generation still fails** (the backend went away mid-session), the CLI exits with a clear
@@ -531,9 +545,9 @@ it with the piece — the owner's click, never this procedure's.
 - **Image models garble text and swing run-to-run** — never depend on legible words in a raw
   scene; generate a batch of seeds and let the owner pick the best. And generation is not only
   photoreal — propose illustrated/stylized treatments too, per the brand look and variety.
-- **Generation runs in the background, never foreground into the default shell timeout,**
-  with previews written to `data/images/previews/<ideaId>/` so they appear live on the
-  Queue card; tell the owner the expected wait up front, and delete the folder once a pick
+- **Generation runs on the API's job queue (`preview-jobs-cli.ts`), never as a background
+  shell and never foreground into the default shell timeout,** with previews written to
+  `data/images/previews/<ideaId>/` so they appear live on the Queue card; tell the owner the expected wait up front, and delete the folder once a pick
   is attached (or the owner moves on).
 - **Graceful degradation.** Source availability is checked in step 3, before the menu. A
   missing generator triggers the one-time set-up-or-defer offer (persisted as

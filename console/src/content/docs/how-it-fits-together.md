@@ -139,9 +139,11 @@ are stored in the local database.
   arrows, click marks, privacy blurs, scroll composites), or a stock photo (needs
   `UNSPLASH_ACCESS_KEY` in `.env`) —
   rows live in the database, files under `data/images/`. Generation runs take minutes, so
-  they run in the background and **candidates appear live on the strip** ("not attached
-  yet") while the session works — nothing attaches until you pick, in the session or right
-  on the strip: each candidate has **Attach** (alt text required) and discard, plus a
+  the **API server runs them as jobs**, one at a time (`POST /api/images/previews/generate`,
+  progress at `GET /api/images/previews/jobs`), and **candidates appear live on the strip**
+  ("not attached yet") with a "Generating N candidates" note while they work, even after the
+  AI session that asked for them has ended; a candidate that fails says why. Nothing
+  attaches until you pick, in the session or right on the strip: each candidate has **Attach** (alt text required) and discard, plus a
   discard-all for leftovers from an ended session. **Where images go:** a LinkedIn
   image sits below the post text — the publish modal offers the card's images as picks,
   and picking several makes a multi-photo post; a web article places images **inline in

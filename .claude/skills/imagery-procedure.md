@@ -111,12 +111,13 @@ in step 4).
 
 ## 3. Propose from the six-type menu
 
-An image does one of a few **jobs** for a piece. Read the piece, then propose the 1-3 types
-that genuinely fit *this* argument — each in one plain sentence saying what the viewer sees
-and how it serves the piece (not the topic in general). **Always mark one as recommended,
-with a one-line why** — a menu with no point of view makes the owner do the thinking; the
-recommendation is advice, never a default that self-selects. One short ask; the owner picks
-or redirects. If they already asked for something specific, skip the menu and do it.
+An image does one of a few **jobs** for a piece. This menu is where each concept from
+step 2 gets its type and producer: pick the type that genuinely fits the concept and put it
+in the one line under that concept in step 2's ask (type, producer, score). You do not ask
+about types separately. **Always mark one concept as recommended, with a one-line why** — a
+menu with no point of view makes the owner do the thinking; the recommendation is advice,
+never a default that self-selects. If the owner already asked for something specific, skip
+the concepts and the menu and do it.
 
 **A pre-picked producer skips the menu entirely.** The console's Image with AI action
 carries a model picker, and when the opening message says the owner pre-picked the
@@ -128,7 +129,7 @@ content (e.g. a text-dense table forced into a generated image), say so in one l
 proceeding — flag, never veto.
 
 **A web article gets an image *plan*, not a single image.** Long-form pieces carry several
-images inline, so before the type menu, read the article's sections and ask **how many
+images inline, so before step 2's concepts, read the article's sections and ask **how many
 images it should carry and where** — one line per proposed image naming the section it
 supports and what the viewer would see, **with a recommended count and why** ("six
 sections; I recommend three — the storage-types comparison, the pricing walk, and the
@@ -457,7 +458,7 @@ Craft notes that separate a considered figure from a templated one:
 
 ### Critique every render — and loop mode
 
-Every render gets at least one honest critique before anyone sees it: look at it with the
+Every render gets at least one honest critique before it is offered for a pick: look at it with the
 Read tool and check it against **the bar**. Name each failure specifically ("the circle
 spans two rows", "the arrow ends in empty space"), not as a vague "could be tighter".
 
@@ -491,8 +492,10 @@ it's good"), which skips the offer. Once it's on:
   note and rework the idea instead of polishing it.
 - **Run 2-3 concepts in parallel** when the ask proposed several, each looping on its own.
 - **Stop when a concept clears the bar** or after **6 rounds** for a composed figure
-  (**3** for a generated image, where each round is a background generation of minutes:
-  rewrite the prompt or change the seed from the critique, never re-roll blindly). At the
+  (**3** for a generated image, where each round takes minutes: queue it on the API's job
+  queue with `preview-jobs-cli.ts start`, using `"name": "<concept>-r<N>.png"` and a single
+  `"seed"`, then `wait`; rewrite the prompt or change the seed from the critique, never
+  re-roll blindly). At the
   cap, show the best round and say plainly what still falls short.
 - **Loop mode never attaches.** It ends in the normal pick: one gallery ask with each
   concept's final round (plus the start-over escape), and only the owner's pick attaches.
@@ -537,7 +540,7 @@ it with the piece — the owner's click, never this procedure's.
   typeset-a-headline cards, no lone-number posters, no logos on content images unless asked.
 - **Concept before type.** Name the piece's move, pick the image's role (demonstrate,
   complement, land the joke), and pass the expert test before choosing a type or producer.
-- **Every render clears the bar before anyone sees it** (step 4's critique). Loop mode
+- **Every render clears the bar before it is offered for a pick** (step 4's critique). Loop mode
   repeats the critique round after round, showing each round, but only when the owner
   opts in, and it never attaches on its own.
 - **Every render gets looked at before it attaches** — composed figures, composites, and

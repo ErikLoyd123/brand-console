@@ -130,7 +130,7 @@ are stored in the local database.
   credit / upload), an **Image with AI** button, and a hand-upload affordance (alt text
   required). Image with AI starts from your piece's argument, proposes 2-3 concepts (one that
   demonstrates the point, one that complements it, or a joke), and critiques every render
-  before showing it; say yes to its **loop mode** and it keeps rendering, critiquing, and
+  before offering it for a pick (candidates still appear on the strip as they finish); say yes to its **loop mode** and it keeps rendering, critiquing, and
   fixing, with each round landing on the strip, until one clears the bar. It produces — a
   locally generated image in any style, photoreal or illustrated (the default model from
   `image-generation.config.json` via `mflux`, no key; the skill proposes candidate prompts

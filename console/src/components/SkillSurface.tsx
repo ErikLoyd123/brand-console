@@ -288,6 +288,7 @@ export function SkillSurface({
             <p className="text-center text-xs text-text-muted">
               The AI run stopped — starting again picks up where it left off.
             </p>
+            <StopReason reason={phase.reason} />
           </div>
         )
       }
@@ -312,9 +313,12 @@ export function SkillSurface({
         />
         {fallback({ start: handleStart, disabled: false })}
         {phase.kind === 'error' && (
-          <p className="text-center text-xs text-text-muted">
-            The AI stopped — your spark is still here. Save it below, or switch back to AI to retry.
-          </p>
+          <>
+            <p className="text-center text-xs text-text-muted">
+              The AI stopped — your spark is still here. Save it below, or switch back to AI to retry.
+            </p>
+            <StopReason reason={phase.reason} />
+          </>
         )}
       </div>
     )
@@ -697,5 +701,18 @@ function ResultCard({
         </Button>
       </div>
     </div>
+  )
+}
+
+// Why the run stopped, in the engine's own words (e.g. an expired Claude sign-in and the
+// command that fixes it). Without it every failure reads as the same generic "stopped",
+// and the owner cannot tell a dead sign-in from a flaky run.
+function StopReason({ reason }: { reason: string }) {
+  if (reason.trim() === '') return null
+  return (
+    <p className="mx-auto max-w-prose rounded-md bg-surface px-3 py-2 text-center text-xs text-text">
+      <span className="font-medium">Why: </span>
+      {reason}
+    </p>
   )
 }

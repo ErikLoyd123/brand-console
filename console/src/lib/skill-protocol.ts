@@ -72,7 +72,7 @@ export interface ErrorMessage {
   type: 'error'
   conversationId: string
   message: string
-  kind: 'spawn_failed' | 'died_midrun' | 'unreachable'
+  kind: 'spawn_failed' | 'died_midrun' | 'unreachable' | 'auth'
 }
 
 export type DownstreamMessage = AskChoice | AskText | Status | Result

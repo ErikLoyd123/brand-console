@@ -54,5 +54,7 @@ image-generation.config.json
 
 # Cadence planning config (the owner's machine-local planning setup: absolute
 # paths into a personal notes vault, local worktrees). Not part of the generic
-# engine; stays on disk locally, never committed.
+# engine; never committed. An existing checkout that tracked it loses the file on the
+# pull that untracks it: back it up first and copy it back (or restore it with
+# `git show 5b0e7cd:.cadence/config.yaml > .cadence/config.yaml`).
 /.cadence/

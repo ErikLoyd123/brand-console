@@ -58,11 +58,18 @@ Run this first. This is the shared detect-and-offer gate (`.claude/skills/onboar
 
 `discovery` obeys the shared content doctrine (`.claude/skills/content-doctrine.md`) — the single
 source for **take-origination** (never invent an opinion), **never-fabricate-a-fact**
-(`[FILL: ...]` markers, never a plausible guess), **depth-calibration** (depth is a
-function of silo × register), and **voice-rules-everywhere** (every string you save — the
+(ask before writing, else write around the gap; never a guess and never a placeholder),
+**depth-calibration** (depth is a function of silo × register), and **voice-rules-everywhere** (every string you save — the
 seed, the angle, the beats, not just the piece — follows the voice card's hard mechanical
 rules: no em dashes, no AI-tells). The **seed** is the unit that must stay your own thought;
-any `[FILL: ...]` goes in the seed or a beat. The doctrine binds every step below.
+a missing specific is asked for, else left out of the seed or the beat, never placeholdered.
+The doctrine binds every step below.
+
+`discovery` also obeys the shared interaction rules (`.claude/skills/interaction-rules.md`):
+"just go" switches the run to decide-for-me mode (the pick, the silo, the beats, and the length
+band take the recommended answer and say so in a line; only a missing take or a fact that
+cannot be written around still stops), and nothing is put up for approval without its full
+text shown first.
 
 ## 3. Pick the feed item
 
@@ -135,6 +142,19 @@ questions mining the cross-domain friction; light for `teach`/`win`/`curate` —
 well-aimed question). One question per turn, in the interview style of `spark` and `setup`;
 never a wall of questions.
 
+The one question is aimed at the intent's **floor**, the concrete thing that kind of post must
+carry (doctrine Principle 3; the full table is in `spark` Step 5): a `teach` needs the
+mechanism (what is the step, and where does it live: a place, a setting, a number, a command,
+a before-and-after); a `conversation` needs the question you genuinely cannot answer and the
+experience behind it; a `win` needs a named hero other than you and one specific about the
+outcome; a `curate` needs the source by name and the one reason it earned the share. Write the
+floor into the points as a beat. When it is missing, say so in a line and offer the exit
+(a teach with no mechanism is a `conversation`; a curate with no reason is not posted).
+Then recommend the length band from the shape of the material, as `spark` Step 5b does:
+short for one specific that needs no "because", medium for a mechanism or an experience that
+has to be explained, long only for mechanism plus mistake plus fix; and say when a short pick
+cannot hold the floor.
+
 - **The take (`seed`).** Draw out the one thing you actually believe in reaction to this piece —
   one or two sentences, your words. This is required: a queued item with no take is a bare
   angle, which is what the plain Promote button already makes.
@@ -143,12 +163,14 @@ never a wall of questions.
   **drawn from your take and the source**, then have you confirm or rewrite each. Do not invent
   a position; if you cannot supply the substance, stop rather than fill it in.
 - Keep it to 2-4 beats. Any specific real detail you have not provided (a number, which tool,
-  what actually happened) is a `[FILL: ...]` marker, surfaced — never a guess.
+  what actually happened) is asked for; if you do not have it, the beat drops the claim.
+  Never a guess, never a placeholder.
 
 **Web only — capture the two SEO inputs.** When the confirmed silo is a `web` piece kind, also draw
 out, one plain question each, the **target keyword** (the single phrase the piece targets) and the
 **search intent** (who is searching and why, in the owner's words). These are the owner's, never
-invented; an unknown keyword is a `[FILL: ...]` marker. They ride onto the `articles` row in Step 7.
+invented; an unknown keyword is left empty and named in the report, never a placeholder. They
+ride onto the `articles` row in Step 7.
 
 ## 7. Promote it into the queue
 
@@ -175,7 +197,7 @@ inputs from Step 6, via the shared create CLI:
 ```bash
 npx tsx src/articles/create-article.ts "<ideaId>" '{
   "title": "<a working title from your take>",
-  "targetKeyword": "<the target keyword, or a [FILL: ...] marker>",
+  "targetKeyword": "<the target keyword, or empty if you have none yet>",
   "searchIntent": "<the search intent in your words>"
 }'
 ```

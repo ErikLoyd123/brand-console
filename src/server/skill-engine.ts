@@ -103,6 +103,21 @@ export function probeClaudeAvailable(): boolean {
   return false;
 }
 
+// A run that dies because Claude cannot authenticate (an expired or revoked sign-in, a
+// bad API key) is not a skill problem, and the raw SDK text ("Failed to authenticate:
+// OAuth session expired…") does not tell the owner what to do. The liveness probe above
+// cannot catch this without spawning a session, so the failure is named here instead,
+// with the one command that fixes it.
+const AUTH_FAILURE_PATTERN =
+  /failed to authenticate|oauth|not logged in|please run \/login|invalid api key|authentication_error|\b401\b/i;
+
+export const AUTH_FAILURE_MESSAGE =
+  "Claude's sign-in has expired, so the AI can't run. Run `claude /login` in a terminal, then try again.";
+
+export function isAuthFailure(reason: string): boolean {
+  return AUTH_FAILURE_PATTERN.test(reason);
+}
+
 // Read a skill's SKILL.md verbatim, selected by frontmatter/dir name. Reuses the
 // same on-disk layout GET /api/skills scans. Returns null when the skill is unknown.
 function loadSkillMarkdown(skillName: string): string | null {
@@ -480,7 +495,13 @@ function driveSession(
       disarmRunTimer();
       if (torndown) return;
       const reason = err instanceof Error ? err.message : String(err);
-      send({ type: 'error', conversationId, message: reason, kind: 'died_midrun' });
+      const auth = isAuthFailure(reason);
+      send({
+        type: 'error',
+        conversationId,
+        message: auth ? AUTH_FAILURE_MESSAGE : reason,
+        kind: auth ? 'auth' : 'died_midrun',
+      });
       teardown();
       ws.close();
     }

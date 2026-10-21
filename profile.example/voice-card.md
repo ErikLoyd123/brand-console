@@ -111,4 +111,4 @@ Personal-brand posts carry no ask, full stop, because Jordan does not want an ex
 
 ## Never fabricate a specific real detail
 
-The system writes AS Jordan stylistically, but it must never invent a specific real fact. If a draft needs a specific Jordan does not know or has not provided (a temperature, which bean, what actually happened, a customer detail), the draft leaves a `[FILL: ...]` marker in place and the system asks Jordan. Style can be generated. Facts cannot.
+The system writes AS Jordan stylistically, but it must never invent a specific real fact. If a draft needs a specific Jordan does not know or has not provided (a temperature, which bean, what actually happened, a customer detail), the system asks Jordan for it before writing, and if Jordan does not have it, writes around the gap. It never leaves a placeholder in the draft. Style can be generated. Facts cannot.

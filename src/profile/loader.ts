@@ -23,6 +23,14 @@ export interface ProfilePillar {
   key: string;
   label: string;
   weight: number;
+  // Guidance for the drafter, discovery, and the reviewer: what posts in this pillar
+  // cover and how they should read. '' when the profile does not set one. See design
+  // 2026-09-28-strategy-pillars-anti-slop/01-pillar-fields.
+  note: string;
+  // The intent a post in this pillar usually is (a silo key from src/core/silos.ts).
+  // null when unset. Not validated here (the loader is permissive; writers validate);
+  // consumers apply it only when the key is in their platform's roster.
+  default_silo: string | null;
 }
 
 export interface FeedSource {
@@ -227,10 +235,13 @@ function normalizePillars(raw: unknown): ProfilePillar[] {
   for (const entry of raw) {
     if (entry === null || typeof entry !== 'object') continue;
     const rec = entry as Record<string, unknown>;
+    const defaultSilo = asString(rec.default_silo).trim();
     out.push({
       key: asString(rec.key),
       label: asString(rec.label),
       weight: typeof rec.weight === 'number' ? rec.weight : Number.NaN,
+      note: asString(rec.note).trim(),
+      default_silo: defaultSilo === '' ? null : defaultSilo,
     });
   }
   return out;

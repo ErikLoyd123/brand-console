@@ -26,10 +26,20 @@ An agent does not get to decide what the profile owner thinks.
 ## Principle 2 — never-fabricate-a-fact
 
 **Style can be generated; facts cannot.** A specific real detail the owner did not
-provide — a number, a named tool, a customer, what actually happened — must never be
-invented. When a draft or a seed needs such a detail, leave a `[FILL: ...]` marker in
-place and surface it to the owner rather than filling it with a plausible guess. An
-unmarked invented specific is a failure.
+provide — a number, a named tool, a customer, what actually happened — is never invented,
+and it is never placeholdered either. When a piece needs such a detail, **ask for it before
+writing**, one plain question in the interview or the develop step. If the owner does not
+have it, **write around the gap**: drop the claim that needed it and build the piece on the
+specifics they did supply. The gap belongs in the report to the owner ("no number for X,
+so the post says Y instead"), never in the post, the seed, or a beat. A `[FILL: ...]`
+marker in saved text is a failure, mechanically caught by `no-fill-markers` in
+`src/review/voice-checks.ts`; an unmarked invented specific fails on judgment.
+
+The line is the owner's *own* facts. Public, documented product behavior (the name of a
+console page, what a setting does, a documented default) is not a private fact: a skill that
+is certain of it may write it, and must flag every such addition in its report as its own
+("added from AWS's documented behavior; confirm") so the owner verifies it. Anything about
+the owner's numbers, tools, customers, or history stays theirs to supply.
 
 ## Principle 3 — depth-calibration
 
@@ -39,14 +49,32 @@ needs to be profound; demanding depth a post's purpose does not want deforms it.
 - **Silo** (intent — the platform-keyed roster in `src/core/silos.ts`) sets the *floor and
   shape* of depth. `conversation` (LinkedIn) and its Reddit analog `discuss` are the deepest
   silos: they live in the owner's cross-domain seam and earn seam-mining. Every other silo —
-  `teach`/`win`/`curate` on LinkedIn, `help`/`share`/`ask`/`curate` on Reddit — is lighter and
-  purpose-fit: a teach (or its Reddit analog, `help`) delivers one useful thing, a win (or
-  `share`) is a short plain story, a curate is a generous pointer shared by both platforms,
-  and an ask (Reddit-only) puts one real question to the community. None of them demands a
-  profound thought.
+  `teach`/`win`/`curate`/`promote` on LinkedIn, `help`/`share`/`ask`/`curate` on Reddit — is
+  lighter and purpose-fit: a teach (or its Reddit analog, `help`) delivers one useful thing, a
+  win (or `share`) is a short plain story, a curate is a generous pointer shared by both
+  platforms, an ask (Reddit-only) puts one real question to the community, and a promote
+  (LinkedIn-only, the lightest) states one thing the product does and one real specific, then
+  asks once. No thought-leadership, no lesson. None of them demands a profound thought.
 - **Register** (tone/platform — the menu in `src/core/registers.ts`, selected per user in
   `identity.yaml`) *colors* that depth — how the calibrated thought sounds on the chosen
   platform — but never overrides the silo's shape.
+- **Every intent has a floor**: the one concrete thing a post of that kind must carry, or it
+  is not that kind of post yet. A `teach` carries one mechanism the reader can act on: a
+  step, meaning what to do and where ("activate the key on the Billing console's Cost
+  allocation tags page"), or a number, a command, a before-and-after, a named failure mode.
+  Naming a place without the action is not a mechanism. A
+  `conversation` carries one question the owner genuinely cannot answer and the experience
+  that raised it. A `win` carries a named hero other than the owner and one specific about
+  the outcome. A `curate` carries the source by name and one reason it earned the share. A
+  `promote` carries one plain sentence of what the product does, one real specific, one ask.
+  The floor is drawn out in the interview and written into `points`, so the drafter carries
+  it by name (Principle 5) and the reviewer can see whether it landed. Missing the floor is
+  not a length problem; it is the wrong intent, or no post.
+- **Length** (the band roster in `src/core/lengths.ts`, chosen per post) sets how much room
+  the depth gets. The silo only defaults it (`teach`/`help` lean medium, the rest lean short);
+  the material decides it: one gap or one claim is short, a mechanism is medium, a mechanism
+  plus the mistake plus the fix is long. A teach post is as long as its mechanism, never as
+  long as a floor.
 
 Read depth off the axes; do not apply it uniformly.
 
@@ -59,6 +87,28 @@ live checks scan it. An em dash or an AI-tell in a take reads exactly as badly a
 post, and makes the checks look broken besides. Follow the voice card's hard mechanical
 rules (no em dashes, no AI-tells, plain language) in every string you save, at every stage.
 
+## Principle 5 — specifics-are-load-bearing
+
+**Every specific the owner gave is carried by name, the close lands on one, and a teach
+post explains rather than enumerates.** Style can be generated; the concrete things cannot,
+and they are also what makes a post read as a person's. Three rules follow.
+
+- **Carry the specifics.** A tool name, a number, a proper noun, a named mechanism in the
+  seed or the points appears in the body by name. Generalizing it away ("the right packages"
+  for "Polars and Arrow") is a failure, mechanically caught by `seed-retention` in
+  `src/review/voice-checks.ts` (severity `fail`).
+- **Close on something.** The last line restates one concrete thing from the body, or, for a
+  conversation-shaped post, asks one real question. It is never a moral, an encouragement, or
+  a summary of the genre ("stay curious", "worth a second look"). Mechanically flagged by
+  `aphorism-close` (severity `warn`); the reviewer decides.
+- **Prose over scaffolding in teach.** A teach post explains one mechanism in paragraphs.
+  First/Second/Third, "three things", and numbered lines appear only when the owner's own
+  points are a list, and even then prose is preferred. Mechanically flagged by `list-cadence`
+  (severity `warn`); the reviewer decides. The reflexive three-item sentence is the same tell
+  in miniature; break it or cut one. It is a judgment call, not a mechanical one.
+
+See design `2026-09-28-strategy-pillars-anti-slop/03-anti-slop-checks`.
+
 ## How skills link this fragment
 
 Each consuming skill restates the doctrine at its choke point and links back here as the
@@ -67,11 +117,15 @@ mirrors `onboarding-gate.md`'s `REQUIRED`/`DEGRADATION` fill table.
 
 | Skill | Where it embeds | Per-skill fill (what varies) |
 |-------|-----------------|------------------------------|
-| `spark` | Rules section, before writing the seed | The **seed** is the unit that must stay the owner's own thought; `[FILL: ...]` goes in the seed; depth is set by the inferred silo before the interview runs. **Adopted now.** |
-| `queue` | Step 2 guardrail + Rules | `[FILL: ...]` goes in the draft body; unseeded `needs-your-take` is a hard stop; depth read off `idea_queue_items.silo` drives Step 3 shaping. *Follow-on.* |
+| `spark` | Rules section, before writing the seed | The **seed** is the unit that must stay the owner's own thought; a missing specific is asked for in the interview, else the seed drops the claim (no placeholders); depth is set by the inferred silo before the interview runs. **Adopted now.** |
+| `queue` | Step 2 guardrail + Rules | a missing specific is asked for before writing, else written around (no placeholders in the draft body); unseeded `needs-your-take` is a hard stop; depth read off `idea_queue_items.silo` drives Step 3 shaping. *Follow-on.* |
 | `setup` | Distillation stage | Take-origination applied to persona-building: name patterns shown, never manufacture a voice. *Follow-on.* |
-| `content-reviewer` | Soft-rule checks | Enforces, not authors: "No fabricated specifics" (unmarked invented fact fails) and silo-appropriate depth (no teach-takeaway demand on a `conversation`/`discuss` post). *Follow-on.* |
+| `content-reviewer` | Soft-rule checks | Enforces, not authors: "No fabricated specifics" (unmarked invented fact fails) and silo-appropriate depth (no teach-takeaway demand on a `conversation`/`discuss` post). *Follow-on.* Principle 5: reads the three findings and applies judgment (specifics carried, close lands, prose over scaffolding). **Adopted now.** |
+| `draft` (via `draft-procedure.md`) | The "Produce four fields" block and the per-silo teach block | Principle 5 only: carry every specific from `seed`/`points`; the close lands on one; teach is prose. **Adopted now.** |
+| `develop` (via `develop-procedure.md`) | The take-and-beats interview | Principle 5 only: when a beat is a category, ask for the name, because the seed is where specifics must live. **Adopted now.** |
 
-> Only the `spark` row is adopted today. The other four skills keep their current (correct
-> but duplicated) inline wording; retrofitting them to link this fragment is follow-on
-> work, recorded in the design's `99-out-of-scope`.
+> The `spark` row is adopted for Principles 1 to 4; the `draft`, `develop`, and
+> `content-reviewer` rows are adopted for Principle 5 (design
+> `2026-09-28-strategy-pillars-anti-slop`). Retrofitting `queue`, `setup`, and
+> `content-reviewer` to link Principles 1 to 4 remains follow-on work, recorded in the
+> register-axis design's `99-out-of-scope`.

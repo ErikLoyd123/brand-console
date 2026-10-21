@@ -66,3 +66,15 @@ The connection asks for four scopes: `openid`, `profile`, `email`, and `w_member
 ## Where the secrets live
 
 The `.env` file and the tokens LinkedIn issues stay server-side. They never reach the browser, and the console never displays them. If you need to rotate the secret, update `.env` and restart the server; there's nothing to change in the console itself.
+
+## Staying connected — the 60-day reconnect
+
+LinkedIn access tokens expire after **60 days**, and this app cannot renew one in the background. Automatic token refresh is limited to approved **Marketing Developer Platform** partners — a partner program for marketing and advertising businesses, not a product you can request on the Products tab. So there is nothing to enable in the developer portal: a personal app re-approves by hand, roughly every two months.
+
+The console makes that visible instead of letting you find out mid-publish:
+
+- The **Connections** card shows `expires in N days` next to `connected N days ago`, straight from the stored token.
+- Inside the last week it turns amber and offers **Reconnect now**.
+- Once it lapses, the card reads **Session expired**, publishing affordances turn into **Reconnect LinkedIn**, and the queue card says so before you open the publish dialog.
+
+Reconnecting is the same one-click OAuth as the first connection, and it replaces the stored token in place. Your posts, permalinks, and history are untouched — nothing is re-published and nothing is lost. If a token happens to lapse while a publish dialog is already open, the dialog says so and hands you the same Reconnect button; nothing goes out.

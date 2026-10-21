@@ -49,7 +49,24 @@ function initials(name: string): string {
     .join('')
 }
 
-type LinkedInState = 'not-connected' | 'connected' | 'error'
+// How close to expiry the card starts warning. LinkedIn tokens last 60 days, so a
+// week is enough notice to reconnect before a publish is blocked by it.
+const EXPIRY_WARNING_DAYS = 7
+
+// Forward-looking counterpart to relativeTime, for the token's expiry. Returns
+// null when there is no expiry on record (LinkedIn always sends one, but the
+// column is nullable).
+function expiresInDays(epochMs: number | null): number | null {
+  if (epochMs == null) return null
+  return Math.ceil((epochMs - Date.now()) / 86_400_000)
+}
+
+// Why the connection dies on a timer, in one sentence. Stated wherever we ask for
+// a reconnect so it reads as a known limit of LinkedIn's API rather than a bug.
+const EXPIRY_EXPLAINER =
+  "LinkedIn access tokens last 60 days and can't be renewed in the background — LinkedIn limits automatic token refresh to approved Marketing Developer Platform partners, so re-approving by hand is the only path for a personal app. Reconnecting takes one click and keeps the same posts and history."
+
+type LinkedInState = 'not-connected' | 'connected' | 'expired' | 'error'
 
 // The numbered steps to get a working LinkedIn app before Connect will succeed.
 // Kept short and secondary — this is not a substitute for the full Docs guide.
@@ -145,7 +162,20 @@ function LinkedInCard({
   const [disconnecting, setDisconnecting] = useState(false)
 
   const isConnected = connection?.connected === true
-  const state: LinkedInState = isConnected ? 'connected' : hadError ? 'error' : 'not-connected'
+  const isExpired = connection?.expired === true
+  const state: LinkedInState = isConnected
+    ? isExpired
+      ? 'expired'
+      : 'connected'
+    : hadError
+      ? 'error'
+      : 'not-connected'
+  // Both live states show the identity block — an expired connection still knows
+  // who you are, and hiding that would read as "you were never connected".
+  const showsIdentity = state === 'connected' || state === 'expired'
+  const daysLeft = expiresInDays(connection?.expiresAt ?? null)
+  const expiringSoon =
+    state === 'connected' && daysLeft != null && daysLeft <= EXPIRY_WARNING_DAYS
 
   function onConnect() {
     // A real OAuth handshake, not a fetch: navigate a new tab to the server
@@ -182,7 +212,16 @@ function LinkedInCard({
       </CardHeader>
 
       <CardContent>
-        {state === 'connected' && connection && (
+        {state === 'expired' && (
+          <div className="mb-4 flex flex-col gap-1 rounded-lg bg-warning-bg p-3 text-sm text-warning-fg">
+            <span className="flex items-center gap-2 font-medium">
+              <AlertCircle className="size-4 shrink-0" /> Session expired — publishing is paused.
+            </span>
+            <span className="text-xs">{EXPIRY_EXPLAINER}</span>
+          </div>
+        )}
+
+        {showsIdentity && connection && (
           <div className="flex items-center gap-3">
             {connection.avatarUrl && !avatarBroken ? (
               <img
@@ -199,21 +238,35 @@ function LinkedInCard({
             <div className="flex min-w-0 flex-col gap-0.5">
               <div className="flex items-center gap-2">
                 <span className="truncate font-medium text-text-strong">{connection.displayName}</span>
-                <Badge className="bg-success-bg text-success-fg">Connected</Badge>
+                {state === 'expired' ? (
+                  <Badge className="bg-warning-bg text-warning-fg">Session expired</Badge>
+                ) : (
+                  <Badge className="bg-success-bg text-success-fg">Connected</Badge>
+                )}
               </div>
               {connection.headline && (
                 <span className="truncate text-sm text-text-muted">{connection.headline}</span>
               )}
-              {connection.connectedAt != null && (
-                <span className="font-mono text-xs text-text-subtle">
-                  connected {relativeTime(connection.connectedAt)}
-                </span>
-              )}
+              {/* Provenance for the dates: both come from the stored token row, so
+                  the expiry is never a surprise at publish time. */}
+              <span className="font-mono text-xs text-text-subtle">
+                {connection.connectedAt != null && <>connected {relativeTime(connection.connectedAt)}</>}
+                {connection.connectedAt != null && daysLeft != null && ' · '}
+                {daysLeft != null && (
+                  <span className={cn(expiringSoon && 'text-warning-fg', state === 'expired' && 'text-warning-fg')}>
+                    {state === 'expired'
+                      ? `expired ${relativeTime(connection.expiresAt!)}`
+                      : daysLeft <= 1
+                        ? 'expires today'
+                        : `expires in ${daysLeft} days`}
+                  </span>
+                )}
+              </span>
             </div>
           </div>
         )}
 
-        {state === 'connected' && connection && connection.scopes.length > 0 && (
+        {showsIdentity && connection && connection.scopes.length > 0 && (
           <div className="mt-4 flex flex-wrap gap-1.5">
             {connection.scopes.map((scope) => (
               <Badge key={scope} className="bg-surface-sunken font-mono text-text-muted">
@@ -223,8 +276,24 @@ function LinkedInCard({
           </div>
         )}
 
-        {state === 'connected' && connection && (
+        {showsIdentity && connection && (
           <CapabilityList platform={connection.platform} scopes={connection.scopes} />
+        )}
+
+        {/* Ahead of the deadline, not after it: the point of this card is that a
+            reconnect never has to be discovered by a failed publish. */}
+        {expiringSoon && (
+          <div className="mt-4 flex flex-col gap-1 rounded-lg bg-warning-bg p-3 text-sm text-warning-fg">
+            <span className="flex items-center gap-2 font-medium">
+              <AlertCircle className="size-4 shrink-0" />
+              {daysLeft != null && daysLeft <= 1
+                ? 'This session expires today.'
+                : `This session expires in ${daysLeft} days.`}
+            </span>
+            <span className="text-xs">
+              Reconnect any time before then and publishing never stops. {EXPIRY_EXPLAINER}
+            </span>
+          </div>
         )}
 
         {state === 'not-connected' && <p className="text-sm text-text-muted">Not connected.</p>}
@@ -238,10 +307,28 @@ function LinkedInCard({
 
       <CardFooter className="flex flex-col items-start gap-4">
         <div className="flex items-center gap-3">
-          {state === 'connected' ? (
-            <Button type="button" variant="outline" onClick={onDisconnect} disabled={disconnecting}>
-              {disconnecting && <Loader2 className="size-4 animate-spin" />} Disconnect
-            </Button>
+          {state === 'expired' ? (
+            // Reconnect is the same OAuth route as Connect — LinkedIn re-approves
+            // and the callback replaces the stored token row in place.
+            <>
+              <Button type="button" onClick={onConnect}>
+                Reconnect LinkedIn
+              </Button>
+              <Button type="button" variant="outline" onClick={onDisconnect} disabled={disconnecting}>
+                {disconnecting && <Loader2 className="size-4 animate-spin" />} Disconnect
+              </Button>
+            </>
+          ) : state === 'connected' ? (
+            <>
+              {expiringSoon && (
+                <Button type="button" onClick={onConnect}>
+                  Reconnect now
+                </Button>
+              )}
+              <Button type="button" variant="outline" onClick={onDisconnect} disabled={disconnecting}>
+                {disconnecting && <Loader2 className="size-4 animate-spin" />} Disconnect
+              </Button>
+            </>
           ) : state === 'error' ? (
             <Button type="button" variant="outline" onClick={onRefetch}>
               Try again
@@ -253,7 +340,10 @@ function LinkedInCard({
           )}
         </div>
 
-        {state !== 'connected' && (
+        {/* First-time setup only. An expired session means the app is already set
+            up correctly — showing the checklist there would send you to fix
+            something that isn't broken. */}
+        {(state === 'not-connected' || state === 'error') && (
           <>
             <p className="text-xs text-text-subtle">
               If Connect doesn't work, the app is probably not set up yet — see the checklist below.

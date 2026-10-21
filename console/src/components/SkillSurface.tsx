@@ -60,7 +60,16 @@ export interface SkillSurfaceProps {
    * the result carries a link); `resetLabel` labels the start-over button. Defaults to
    * spark's ("Open in Queue" / "New spark").
    */
-  resultActions?: { linkLabel?: string; resetLabel?: string }
+  resultActions?: {
+    linkLabel?: string
+    resetLabel?: string
+    /**
+     * A follow-up box on the result card: the user types the next instruction and the
+     * page starts another run with it (the engine is one run per session, so "keep
+     * refining" is a fresh session carrying the instruction in its first message).
+     */
+    followUp?: { label: string; placeholder: string; onSubmit: (text: string) => void }
+  }
   /**
    * AI-only surface: suppress the AI/plain toggle, and when the engine is unreachable or a
    * run errors, render a one-line "edit directly below" note instead of a fallback form.
@@ -279,6 +288,7 @@ export function SkillSurface({
             <p className="text-center text-xs text-text-muted">
               The AI run stopped — starting again picks up where it left off.
             </p>
+            <StopReason reason={phase.reason} />
           </div>
         )
       }
@@ -303,9 +313,12 @@ export function SkillSurface({
         />
         {fallback({ start: handleStart, disabled: false })}
         {phase.kind === 'error' && (
-          <p className="text-center text-xs text-text-muted">
-            The AI stopped — your spark is still here. Save it below, or switch back to AI to retry.
-          </p>
+          <>
+            <p className="text-center text-xs text-text-muted">
+              The AI stopped — your spark is still here. Save it below, or switch back to AI to retry.
+            </p>
+            <StopReason reason={phase.reason} />
+          </>
         )}
       </div>
     )
@@ -631,17 +644,52 @@ function ResultCard({
 }: {
   result: Result
   onReset: () => void
-  actions?: { linkLabel?: string; resetLabel?: string }
+  actions?: {
+    linkLabel?: string
+    resetLabel?: string
+    followUp?: { label: string; placeholder: string; onSubmit: (text: string) => void }
+  }
 }) {
   // Every content run ends on the Queue (the review phase), so the unconfigured label
   // says so; a tenant with a different destination passes its own linkLabel.
   const derivedLabel = 'Open in Queue'
+  const [followText, setFollowText] = useState('')
+  const followUp = actions?.followUp
+  const submitFollowUp = () => {
+    const text = followText.trim()
+    if (!followUp || text === '') return
+    followUp.onSubmit(text)
+  }
   return (
     <div className="flex flex-col items-center gap-4 rounded-lg bg-surface p-6 text-center shadow-sm">
       <div className="flex size-11 items-center justify-center rounded-full bg-success-bg text-success-fg">
         <Check className="size-5" />
       </div>
-      <p className="text-sm text-text">{result.summary}</p>
+      <div className="w-full text-left text-sm text-text">
+        <Markdown>{result.summary}</Markdown>
+      </div>
+      {followUp && (
+        <div className="flex w-full flex-col gap-2 text-left">
+          <label className="font-mono text-[11px] font-medium uppercase tracking-wide text-text-subtle">
+            {followUp.label}
+          </label>
+          <Textarea
+            value={followText}
+            onChange={(e) => setFollowText(e.target.value)}
+            placeholder={followUp.placeholder}
+            className="min-h-0 bg-surface-nested font-sans text-sm normal-case tracking-normal"
+            onKeyDown={(e) => {
+              if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+                e.preventDefault()
+                submitFollowUp()
+              }
+            }}
+          />
+          <Button size="sm" className="self-start" disabled={followText.trim() === ''} onClick={submitFollowUp}>
+            <Sparkles className="size-3.5" /> {followUp.label}
+          </Button>
+        </div>
+      )}
       <div className="flex items-center gap-2">
         {result.link && (
           <Button asChild variant="outline">
@@ -653,5 +701,18 @@ function ResultCard({
         </Button>
       </div>
     </div>
+  )
+}
+
+// Why the run stopped, in the engine's own words (e.g. an expired Claude sign-in and the
+// command that fixes it). Without it every failure reads as the same generic "stopped",
+// and the owner cannot tell a dead sign-in from a flaky run.
+function StopReason({ reason }: { reason: string }) {
+  if (reason.trim() === '') return null
+  return (
+    <p className="mx-auto max-w-prose rounded-md bg-surface px-3 py-2 text-center text-xs text-text">
+      <span className="font-medium">Why: </span>
+      {reason}
+    </p>
   )
 }

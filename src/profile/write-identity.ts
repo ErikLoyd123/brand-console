@@ -9,11 +9,14 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { parseDocument, type Document } from 'yaml';
 import { identityPath } from './loader';
 import { getPlatforms, type Platform } from '../core/registers';
+import { getSilos } from '../core/silos';
 
 export interface PillarInput {
   key: string;
   label: string;
   weight: number;
+  note?: string;
+  default_silo?: string | null;
 }
 
 export interface ToneInput {
@@ -54,25 +57,47 @@ function cleanTones(tones: ToneInput[] | undefined): { key: string; note: string
   return out;
 }
 
+// Every silo key across every platform roster. A pillar is platform-agnostic, so any
+// known key is accepted here; consumers apply it per platform (getPillarDefaultSilo).
+function allSiloKeys(): Set<string> {
+  const keys = new Set<string>();
+  for (const platform of getPlatforms()) {
+    for (const silo of getSilos(platform as Platform)) keys.add(silo);
+  }
+  return keys;
+}
+
 // Replace the whole pillars list. At least one pillar with a unique key, a label, and a
-// numeric weight is required, matching the completeness contract.
+// numeric weight is required, matching the completeness contract. `note` and
+// `default_silo` are optional; a non-blank default_silo must be a known silo key.
 export function writePillars(pillars: PillarInput[]): PillarInput[] {
   if (!Array.isArray(pillars) || pillars.length === 0) {
     throw new ValidationError('At least one pillar is required.');
   }
+  const silos = allSiloKeys();
   const seen = new Set<string>();
   const clean = pillars.map((p, i) => {
     const key = String(p?.key ?? '').trim();
     const label = String(p?.label ?? '').trim();
     const weight = Number(p?.weight);
+    const note = String(p?.note ?? '').trim();
+    const defaultSilo = String(p?.default_silo ?? '').trim();
     if (!key) throw new ValidationError(`Pillar ${i + 1} needs a key.`);
     if (!label) throw new ValidationError(`Pillar "${key}" needs a label.`);
     if (!Number.isFinite(weight) || weight < 0) {
       throw new ValidationError(`Pillar "${key}" needs a numeric weight of 0 or more.`);
     }
+    if (defaultSilo !== '' && !silos.has(defaultSilo)) {
+      throw new ValidationError(
+        `Pillar "${key}" default_silo "${defaultSilo}" is not a known intent (${[...silos].join(', ')}).`,
+      );
+    }
     if (seen.has(key)) throw new ValidationError(`Duplicate pillar key "${key}".`);
     seen.add(key);
-    return { key, label, weight };
+    const out: PillarInput = { key, label, weight };
+    if (note !== '') out.note = note;
+    if (defaultSilo !== '') out.default_silo = defaultSilo;
+    return out;
   });
 
   const doc = loadDoc();

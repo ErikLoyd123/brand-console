@@ -14,9 +14,9 @@ never publishes (the card's Publish button is your action, gated in the console)
 | Ask | Procedure it runs | What it does |
 |-----|-------------------|--------------|
 | develop / flesh out / "what are the points" | `.claude/skills/develop-procedure.md` | Draw out your take + 2-4 points on a queue item |
-| write / draft / "write the full post/article" | post idea → `.claude/skills/draft-procedure.md` · web idea → `.claude/skills/article-draft-procedure.md` | Write the full piece from your take + points and save it onto the idea's card |
+| write / draft / "write the full post/article" | post idea → `.claude/skills/draft-procedure.md` · web idea → `.claude/skills/article-draft-procedure.md` | Write the full piece from your take + points and save it onto the idea's card. When a post idea has no `length` band, recommend one from the silo's default and the material, ask, and set it (`POST /api/queue/:id/length`) before writing |
 | revise / sharpen / "rewrite the intro" | `.claude/skills/revise-procedure.md` (its web variant for a web idea) | Refine the written piece in your voice, write it back |
-| review / "run the gate" / "is this good to publish" | `.claude/agents/content-reviewer.md` — follow it exactly as a procedure | Judge the written piece against the voice card (and, for web, the SEO checks), write the verdict, report pass or the fix list |
+| review / "run the gate" / "is this good to publish" | `.claude/agents/content-reviewer.md` — follow it exactly as a procedure | Judge the written piece against the voice card (and, for web, the SEO checks), write the verdict, report pass or the fix list. Hand the reviewer the item's `seed` and `points` and the draft's `close` alongside silo, platform, and tone, so the seed-retention and aphorism-close checks run |
 | image / visual / "add an image" / "screenshot this" | `.claude/skills/imagery-procedure.md` | Put an image on the idea's card — composed brand graphic, annotated screenshot, or Unsplash pick — in the profile's brand look |
 
 **Lane detection:** read the item first. `platform = 'web'` (equivalently, a piece-kind
@@ -32,12 +32,13 @@ web idea or article-draft a post.
    - **"Write with AI"** passes a queue-item id: when nothing is written yet it asks to write
      the full piece → **draft-procedure** or **article-draft-procedure** by lane; when content
      already exists it asks to revise → **revise-procedure**.
-   - **"Review with AI"** passes a queue-item id and asks to review its written content →
-     follow **`.claude/agents/content-reviewer.md`** exactly, as a procedure: the short-form
-     path for a post's draft, the long-form path (voice + kind judgment + SEO checks) for a
-     web idea's article. It writes the verdict (`reviewStatus`, and the article stage on a
-     pass) exactly as that file specifies, reports PASS or the fix list, and **never rewrites
-     the content** — the owner decides what to change.
+   - **"Revise with AI"** passes the queue-item id and the draft id the card shows, and either
+     says what to change or says the owner will answer that next → **revise-procedure**
+     (one loader call, at most one question, one write, before-and-after in the report).
+   - There is no review button. "Review it" / "run the gate" from the terminal follows
+     **`.claude/agents/content-reviewer.md`** exactly, as a procedure (short-form path for a
+     post's draft, long-form path for a web article), writes the verdict, and **never rewrites
+     the content**; the card's **Mark reviewed** is the owner's own sign-off.
    In words: "develop item N" / "what are the points" → develop; "write this" / "draft the
    full post/article" → write; "revise/sharpen/tighten it" → revise; "review it" / "run the
    gate" → review. If the ask is ambiguous, ask once which you mean.
@@ -72,6 +73,10 @@ must supply the context a person would want:
 - One branch, one item, per run. Never silently do two. Follow-up questions and tweaks on
   the same item in the same session are fine; a different branch or item is a new run.
 - Never invent the opinion, the beats, or a fact — the procedures spell this out; it binds here too.
+- Obey the shared interaction rules (`.claude/skills/interaction-rules.md`) on every branch:
+  "just go" means take your own recommendations and stop asking (only a missing take or a
+  fact that cannot be written around still stops), and never ask the owner to approve or
+  save text they cannot see in the same message; a revision shows before and after in full.
 - Only ever writes through the procedures' CLIs (`develop-idea.ts` / `draft-store.ts` /
   `update-draft.ts` / `update-article.ts`) — plus, in the review branch only, the verdict
   writes the content-reviewer spec itself prescribes (`reviewStatus`, article stage). Never

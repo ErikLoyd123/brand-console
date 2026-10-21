@@ -62,13 +62,22 @@ router.get('/profile', (_req, res) => {
 // Reddit has no OAuth — it's a manual copy-paste channel — and x/newsletter have
 // no OAuth wired up yet. No token field is ever included in this response — that's
 // the secrets boundary between server and browser.
+//
+// `connected` means a token row exists (we know who you are); `expired` means that
+// token is past its expiry and every LinkedIn API call will 401 until you reconnect.
+// The two are reported separately on purpose: an expired connection keeps its
+// identity on screen and asks for a reconnect, rather than silently reverting to
+// the never-connected state and its first-time setup checklist.
 router.get('/connections', (_req, res) => {
   const pid = getActiveProfileId();
   const [linkedin] = db.select().from(linkedinTokens).where(eq(linkedinTokens.profileId, pid)).all();
+  const linkedinExpiresAt = linkedin?.expiresAt ?? null;
   res.json([
     {
       platform: 'linkedin',
       connected: Boolean(linkedin),
+      expired: Boolean(linkedin) && linkedinExpiresAt != null && linkedinExpiresAt < Date.now(),
+      expiresAt: linkedinExpiresAt,
       displayName: linkedin?.name ?? null,
       avatarUrl: linkedin?.avatarUrl ?? null,
       headline: linkedin?.headline ?? null,
@@ -78,6 +87,8 @@ router.get('/connections', (_req, res) => {
     {
       platform: 'x',
       connected: false,
+      expired: false,
+      expiresAt: null,
       displayName: null,
       avatarUrl: null,
       headline: null,
@@ -87,6 +98,8 @@ router.get('/connections', (_req, res) => {
     {
       platform: 'newsletter',
       connected: false,
+      expired: false,
+      expiresAt: null,
       displayName: null,
       avatarUrl: null,
       headline: null,

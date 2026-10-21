@@ -1,6 +1,6 @@
 ---
 name: spark
-description: Shape a raw spark into a finished piece on the queue. Reads the spark, infers its intent (silo) from the target platform's roster and confirms with you, interviews you at the depth that kind needs, offers a few tone-colored angles to pick from — then writes the full piece (a post, or a long-form web article as one markdown document) and lands it on the Queue card for your review. Never invents an opinion, never publishes.
+description: Shape a raw spark into a finished piece on the queue. Reads the spark, infers its intent (silo) from the target platform's roster and confirms with you, interviews you at the depth that kind needs, offers a few tone-colored angles and a length band to pick from — then writes the full piece (a post, or a long-form web article as one markdown document) and lands it on the Queue card for your review. Invoked with nothing in hand, it proposes three sparks from your own interview material (your words, never invented) and you pick one. Never invents an opinion, never publishes.
 type: skill
 ---
 
@@ -21,7 +21,8 @@ spark verbatim and drops a seeded needs-your-take idea, via the same `src/ingest
 this skill uses). `spark` is the slower, deliberate sibling for when a spark is worth shaping.
 
 **Invoke with:** "spark on this", "spark:", "help me shape this thought", "turn this into a
-post".
+post". With nothing in hand: "spark", "I've got nothing, give me options", or the Spark
+screen's button with an empty box, and Step 2c proposes three from your own material.
 
 ## Onboarding gate (run before sparking)
 
@@ -54,13 +55,20 @@ Run this first. This is the shared detect-and-offer gate (`.claude/skills/onboar
 
 `spark` obeys the shared content doctrine (`.claude/skills/content-doctrine.md`) — the single
 source for **take-origination** (never invent an opinion), **never-fabricate-a-fact**
-(`[FILL: ...]` markers, never a plausible guess), **depth-calibration** (depth is a
-function of silo × register, not every post must be profound), and **voice-rules-everywhere**
+(ask before writing, else write around the gap; never a guess and never a placeholder),
+**depth-calibration** (depth is a function of silo × register, not every post must be profound), and **voice-rules-everywhere**
 (every string you save — the seed, the angle, the points, not just the piece — follows the
 voice card's hard mechanical rules: no em dashes, no AI-tells). Riff's fill on that doctrine:
-the **seed** is the unit that must stay the owner's own thought, any `[FILL: ...]` goes in
-the seed, and depth is set by the silo inferred in Step 3 *before* the interview runs. The
+the **seed** is the unit that must stay the owner's own thought, a missing specific is asked
+for in the interview or left out of the seed (never a placeholder), and depth is set by the
+silo inferred in Step 3 *before* the interview runs. The
 doctrine binds every step below; this file does not restate it.
+
+`spark` also obeys the shared interaction rules (`.claude/skills/interaction-rules.md`).
+"Just go" (or "decide for me", "no questions") switches the run to decide-for-me mode: Steps
+2c, 3, 4, 5b, and 6 take their own recommended pick and say so in one line instead of asking;
+only a missing take or a fact that cannot be written around still stops. And nothing is ever
+put up for approval, the finished piece in Step 9 included, without its full text shown first.
 
 ## The flow
 
@@ -94,16 +102,67 @@ Above. Needs at least one pillar; platforms are optional.
 Above. Take-origination, never-fabricate, depth-calibration — from
 `.claude/skills/content-doctrine.md`.
 
+### 2b. Read the pillars and their notes
+
+Before proposing anything, read every pillar's key, label, note, and default intent for the
+profile's default platform. The note is the owner's own description of what posts in that
+lane cover and how they read; the default intent is what a spark in that lane usually is.
+From the repo root:
+
+```bash
+npx tsx -e "(async () => { const p = await import('./src/core/pillars'); console.log(JSON.stringify(p.getPillars().map((k) => ({ key: k, label: p.getPillarLabel(k), note: p.getPillarNote(k), default_silo: p.getPillarDefaultSilo(k) })), null, 2)); process.exit(0); })();"
+```
+
+This read feeds Step 3: the pillar is proposed from the notes, and its default intent is the
+first silo candidate.
+
+### 2c. No spark in hand? Propose three from the owner's own material
+
+When the invocation carries no thought (a bare "spark", "I've got nothing", an empty box),
+do not ask the owner to produce one cold and do not invent one. Their takes already exist in
+writing: the active profile's `interview.md` (the raw voice interview, with its seed lists,
+stories, and opinions) and the verbatim samples in the voice card. Resolve the file from the
+repo root, then read it in full:
+
+```bash
+npx tsx -e "import('./src/profile/loader.ts').then(m => console.log(m.interviewPath()))"
+```
+
+Then read what has already been used, so a proposal is never a repeat. Every queued or
+published idea on the active profile, with its seed and angle:
+
+```bash
+npx tsx -e "(async () => { const {db} = await import('./src/db/client'); const {ideaQueueItems} = await import('./src/db/schema'); const {eq} = await import('drizzle-orm'); const {getActiveProfileId} = await import('./src/profile/loader'); const r = await db.select({ status: ideaQueueItems.status, pillar: ideaQueueItems.pillar, silo: ideaQueueItems.silo, angle: ideaQueueItems.proposedAngle, seed: ideaQueueItems.seed }).from(ideaQueueItems).where(eq(ideaQueueItems.profileId, getActiveProfileId())); console.log(JSON.stringify(r, null, 2)); process.exit(0); })();"
+```
+
+Propose **exactly three** candidates, one line each, in this shape: the take in the owner's
+own words (quote the interview line or stay within a close paraphrase of it), the pillar it
+sits in (from the notes in Step 2b), and the intent that pillar defaults to. Prefer takes no
+existing item has used, spread the three across pillars, and lean to the pillars the
+coverage numbers say are quiet. Then one question: which one, or none. That is the whole
+step: one round of three, no second round unless the owner asks for one, no drafting on
+speculation. If they pick none and ask for more, offer three different ones; if the
+interview holds nothing unused, say so plainly and ask for a thought instead.
+
+The pick becomes the spark. Its raw text is the interview line itself (that is what Step 7
+records verbatim in the `sparks` row), and the flow continues at Step 3 exactly as if the
+owner had typed it. Take-origination holds throughout: every candidate must trace to a line
+the owner actually said. A take that is "probably how they'd see it" is an invention, and
+this step never produces one.
+
 ### 3. Infer-and-confirm the silo
 
-Read the spark and propose **the single most likely silo in one line, with brief
-reasoning** — "this reads like a teach, not a hot take, right?" The owner nods or redirects.
+Read the spark against the pillar notes from Step 2b and propose, **in one line, the pillar
+and the silo together**, with the note's reason: "this sits in FinOps Education, which is
+normally a teach; sound right?" The pillar's `default_silo` is the first candidate. When the
+spark plainly reads as a different intent than the pillar's default (a raw question in a
+teach-default lane), propose that intent instead and say why. The owner nods or redirects.
 No up-front taxonomy quiz, no silent classification. It is a **proposal, not an assertion**:
-the same take-origination principle applied to the silo choice, so `spark` never decides
-*for* the owner what kind of post this is.
+the same take-origination principle applied to the pillar and silo choice, so `spark` never
+decides *for* the owner what lane or kind of post this is.
 
 The silo roster is platform-keyed in `src/core/silos.ts`: LinkedIn ships
-`conversation | teach | win | curate`, Reddit ships `discuss | help | share | ask | curate`, and
+`conversation | teach | win | curate | promote`, Reddit ships `discuss | help | share | ask | curate`, and
 **`web` (long-form) ships the piece kinds** `how-to | explainer | comparison | thought-piece | whitepaper`.
 Propose from whichever platform the spark is headed for — the profile's default platform
 (Step 4 confirms it) unless the spark plainly names the other one. Propose exactly one;
@@ -129,14 +188,34 @@ quotas.
 
 | Silo | Depth | Question budget | What spark mines |
 |------|-------|-----------------|-----------------|
-| `conversation` | Deepest | 1-3 sharp questions | Cross-domain friction — the "seam" where the owner's roles, domains, and eras disagree |
-| `teach` | Light | Usually one question | The single useful takeaway + the concrete example that proves it |
-| `win` | Light | One question | Whose win / what happened and why it mattered; keep the owner accountable, never the aggressive hero |
-| `curate` | Minimal | One question | What the owner adds by passing this along, and who gets credit |
+| `conversation` | Deepest | 1-3 sharp questions | Cross-domain friction — the "seam" where the owner's roles, domains, and eras disagree — and the one question the owner cannot answer |
+| `teach` | Light | Usually one question | The mechanism: what is the step, and where does it live (what to do and where; or a number, a command, a before-and-after). A place with no action is not a step |
+| `win` | Light | One question | Who the hero is (never the owner), what they did, and one specific about the outcome |
+| `curate` | Minimal | One question | Who gets credit, by name, and the one reason this earned a share |
+| `promote` | Minimal | One or two questions | The one real specific to show (a finding, a number, a screenshot), and the ask; then stop |
 | `discuss` (Reddit) | Deepest | 1-3 sharp questions | Cross-domain friction — the Reddit analog of `conversation` |
-| `help` (Reddit) | Light | Usually one question | The concrete problem and the concrete answer — the teach-analog |
-| `share` (Reddit) | Light | One question | What happened and why it mattered, told plainly — the win-analog, no hero framing |
-| `ask` (Reddit-only) | Minimal | One question | What exactly the owner wants the community's read on |
+| `help` (Reddit) | Light | Usually one question | The concrete problem and the concrete answer — the teach-analog, same mechanism floor |
+| `share` (Reddit) | Light | One question | What happened, plainly, with one specific — the win-analog, no hero framing |
+| `ask` (Reddit-only) | Minimal | One question | The exact question the owner wants answered, as they would put it to a colleague |
+
+**The floor per intent.** Every intent has one concrete thing it must carry, or it is not that
+kind of post yet (doctrine Principle 3). The interview's job is to get it, and to write it into
+`points` as a beat, so the drafter carries it by name and the reviewer can see it landed:
+
+| Intent | The floor (the one concrete thing it must carry) | When it is missing |
+|---|---|---|
+| `teach` / `help` | One mechanism the reader can act on: a step (what to do, and where: "activate the key on the Billing console's Cost allocation tags page"), a number, a command, a before-and-after, or a named failure mode ("spend lands under no tag key"). Naming a place without the action is not a step | It is a claim, not a lesson yet: get the mechanism, or file it as `conversation` |
+| `conversation` / `discuss` | One question the owner genuinely cannot answer, plus the experience that raised it | If the owner knows the answer it is a `teach`; if there is no experience behind it there is no post |
+| `win` / `share` | A named person or team other than the owner (or, for a self-story, the owner's own mistake), what they did, and one specific about the outcome | No hero and no outcome is not a win; it is a `share` on Reddit or a `conversation` |
+| `curate` | The source credited by name and one reason it earned the share (what it gets right, or what it changes) | No reason is a bare pointer: do not post it |
+| `promote` | What the product does in one plain sentence, for whom, one real specific, and the single ask | No specific means no post; ask for the finding, the number, or the screenshot |
+| `ask` (Reddit) | The exact question as the owner would put it to a colleague, and one or two sentences of honest context | If the owner does not actually want the answer, it is engagement bait |
+
+When the floor is missing after the question, say so in one plain line ("that is a claim, not
+a lesson yet: what is the step, and where does it live?") and offer the exit from the table.
+Never write a post below its floor; a well-formed shell that passes every check is the failure
+this step exists to prevent. Take-origination still holds: the floor comes from the owner, or
+the post changes kind.
 
 **The conversation branch (deepest).** Keep the seam-mining. The richest questions press on
 the owner's cross-domain friction — the places where the different selves in the voice card
@@ -145,7 +224,7 @@ the other side push back?" A conversation post lives in that seam; the interview
 seam this spark sits on. Three questions is a ceiling. Reddit's `discuss` gets the identical
 deepest treatment — it is the same seam-mining, just headed for a subreddit instead of the feed.
 
-**The lighter branches.** `teach`/`win`/`curate` and their Reddit counterparts `help`/`share`,
+**The lighter branches.** `teach`/`win`/`curate`/`promote` and their Reddit counterparts `help`/`share`,
 plus the Reddit-only `ask`, do **not** get seam-mining — that would over-shape a post the
 drafter keeps short and purpose-fit. Each is essentially one well-aimed question surfacing the
 one thing its downstream shape needs.
@@ -154,8 +233,31 @@ one thing its downstream shape needs.
 one of the five piece kinds and the interview additionally captures the two SEO inputs the article
 needs, one plain question each: the **target keyword** (the single phrase the piece targets) and the
 **search intent** (who is searching and why, in the owner's own words, e.g. "compare tools before
-buying"). These are the owner's, never invented; if the owner does not know the keyword yet, leave it
-as a `[FILL: ...]` marker. Depth still follows the piece kind, not these two questions.
+buying"). These are the owner's, never invented; if the owner does not know the keyword yet, leave the
+field empty and say so in the hand-off; never a placeholder. Depth still follows the piece
+kind, not these two questions.
+
+### 5b. Recommend the length band
+
+How long the post runs is its own axis (bands in `src/core/lengths.ts`: short 300 to 600,
+medium 700 to 1100, long 1300 to 1900 body characters). Recommend one, **in one line with the
+reason, and ask**. Start from the silo's default (`teach`/`help` lean medium; every other
+post intent leans short), then read the shape of what the interview produced, not the count:
+
+- **Short** when the floor is one specific that needs no "because" to be believed: a number
+  with its unit, a credited pointer and its reason, a single question with its experience.
+- **Medium** when the floor needs explaining to be usable: a mechanism (where it lives, what
+  it does, what goes wrong), or an experience that has to be told before the question lands.
+- **Long** only when the post carries the mechanism, the mistake people make, and the check
+  or fix, all three.
+
+"You gave me the checkbox, the case-sensitivity trap, and the backfill, so medium; sound
+right?" The owner nods or picks another. **Up-recommend when the pick will not hold the
+floor:** if the owner says short and the points carry a mechanism, say the band cannot fit it
+and recommend medium, with the reason; if they still want short, write the one specific and
+drop the rest rather than compressing all of it. The band is a target the drafter writes to,
+never a reason to leave the floor out. Skip this step for `web` (the article carries its own
+length target).
 
 ### 6. Angle-finder, calibrated by silo and colored by tone
 
@@ -173,6 +275,8 @@ reshaping of the owner's own spark, never an invented take.
   whose-moment-this-was, or what-I-learned-watching-it. Never the aggressive-hero frame.
 - **curate** (shared by both platforms) — **1 angle**, the generous pointer, phrased so the
   credited source is the subject. Minimal by design.
+- **promote** (LinkedIn-only) — **1 angle**, the plain statement of what it does and for whom,
+  phrased in the resolved tone. No contrarian frame, no story.
 - **ask** (Reddit-only, no LinkedIn counterpart) — **1-2 angles** around framing the question:
   bare and direct, or with a sentence of context first.
 
@@ -189,24 +293,27 @@ plus the resolved platform and tone. From the repo root:
 ```bash
 npx tsx src/ingest/capture.ts "RAW SPARK TEXT" [pillar] \
   --seed "REFINED CONVERGED THOUGHT" \
-  --silo <conversation|teach|win|curate|discuss|help|share|ask|how-to|explainer|comparison|thought-piece|whitepaper> \
+  --silo <conversation|teach|win|curate|promote|discuss|help|share|ask|how-to|explainer|comparison|thought-piece|whitepaper> \
   --platform <platform-key> \
-  --tone <tone-key>
+  --tone <tone-key> \
+  --length <short|medium|long>
 ```
 
 - The first positional is the owner's original raw spark (recorded verbatim in the `sparks`
-  row).
-- `pillar` is optional: pass a profile pillar `key` only if the thought clearly sits in one,
-  otherwise omit it and let capture default to the profile's first pillar.
+  row). For a spark chosen in Step 2c it is the interview line the owner picked.
+- `pillar` is the pillar key the owner confirmed in Step 3. Always pass it; capture's
+  first-pillar default is for bare captures, not for a spark that was walked.
 - `--seed` carries the refined thought the owner converged on.
 - `--silo` sets the detected silo, validated against `src/core/silos.ts`'s roster for the
-  resolved `--platform` (LinkedIn's four, Reddit's five, or `web`'s five piece kinds), instead of
+  resolved `--platform` (LinkedIn's five, Reddit's five, or `web`'s five piece kinds), instead of
   capture's `conversation` default.
 - `--platform` and `--tone` persist the register the spark was shaped for, so `queue`
   and `content-reviewer` can read it downstream.
+- `--length` persists the band the owner confirmed in Step 5b, so the drafter writes to it
+  and the card shows it. Omit it only for `web`.
 
-The item lands with `status = seeded`, `tag = needs-your-take`, `silo = <detected>`, and the
-platform/tone pinned. Report the new spark id and idea id and confirm what it landed as
+The item lands with `status = seeded`, `tag = needs-your-take`, `silo = <detected>`, the
+platform/tone pinned, and the length band set. Report the new spark id and idea id and confirm what it landed as
 (silo, platform, tone).
 
 ### 8. Web only — side-write the article row
@@ -220,7 +327,7 @@ and side-write the long-form `articles` row that carries the SEO inputs, via the
 ```bash
 npx tsx src/articles/create-article.ts "<ideaId>" '{
   "title": "<a working title from the chosen angle>",
-  "targetKeyword": "<the target keyword, or a [FILL: ...] marker>",
+  "targetKeyword": "<the target keyword, or empty if the owner has none yet>",
   "searchIntent": "<the search intent in the owner's words>"
 }'
 ```
@@ -270,8 +377,16 @@ annotated screenshot, or an Unsplash pick. If the owner wants one, follow
 - The owner's spark is the spine. The interview sharpens and the angle-finder reframes, but
   the converged seed must still be recognizably the owner's thought.
 - Any specific real detail the owner has not provided (a number, which tool, what actually
-  happened, a customer) is a `[FILL: ...]` marker in the seed, surfaced — never a guess.
+  happened, a customer) is asked for in the interview; if the owner does not have it, the
+  seed drops the claim. Never a guess, never a placeholder in saved text.
 - One converged thought per invocation. A second post means a second spark.
+- Never write a post below its intent's floor (Step 5). A teach with no mechanism, a
+  conversation with no real question, a win with no hero, a curate with no reason, a promote
+  with no specific: get the missing thing or change the kind. Never pad a short band to hide
+  a missing floor, and never choose short when the floor will not fit.
+- With nothing in hand, propose only from the owner's own written material (`interview.md`,
+  the voice card's samples): three candidates, one round, every one traceable to a line they
+  said. Never manufacture a take to fill the gap, and never draft one nobody picked.
 - `spark` never reviews or publishes. It writes only via the shared procedures, and only
   after the seed is saved — the write can always be abandoned and rerun without losing the
   shaped thought. Review and Publish belong to the owner, on the Queue card.

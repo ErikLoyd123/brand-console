@@ -15,6 +15,12 @@ It is the substance step of the ladder: **Discovery inbox → saved → (develop
 insight → Draft.** A spark arrives with a take but usually no beats; a promoted article arrives
 with your one-line take and the source. Either way, the develop procedure turns it into something with meat.
 
+It obeys the shared interaction rules (`.claude/skills/interaction-rules.md`): the proposed take
+and beats are shown as the exact text that will be saved before asking; in decide-for-me mode
+("just go") they are saved without the confirm round and shown in the report. The one stop that
+always holds is an item with no take at all: the beats are drawn from the owner's take, so with
+no take there is nothing to draw from, and the procedure asks for it.
+
 It **never invents the opinion or the beats.** They come from the owner, grounded in the item,
 its source, and the voice card. The owner decides; the skill files.
 
@@ -73,7 +79,15 @@ Interview at the depth the idea needs. The substance is the owner's:
 - **The points (2-4 beats).** Ask what they'd actually say, in order — the tension only they
   see, the concrete example, the turn, what it means for the reader. Propose candidate beats
   **drawn from their take and the source**, then have them confirm or rewrite each. Do not invent
-  a position; if they can't supply the substance, stop rather than fill it in.
+  a position; if they can't supply the substance, stop rather than fill it in. When a beat is
+  a category ("the right packages", "a few regions"), ask for the name. The seed and points are
+  where the specifics have to live: the drafter carries them by name and the reviewer fails a
+  draft that loses one (doctrine Principle 5). One of the beats is always the intent's
+  **floor** (Principle 3): the mechanism for a `teach` (what is the step, where does it live),
+  the question the owner cannot answer for a `conversation`, the named hero and the outcome
+  for a `win`, the credited source and the reason for a `curate`, the one specific for a
+  `promote`. Ask for it directly when the take does not contain it; if the owner does not
+  have it, say the item is not that kind of post yet and name the kind it is.
 - Keep it to 2-4 beats. More than that is a draft, not a developed idea. Fewer than two is still
   a bare angle — push gently for at least two unless the piece is genuinely a single move.
 

@@ -28,7 +28,16 @@ import { sweepTerminalImages } from './terminal-images';
 import { attachSkillSurface } from './skill-engine';
 
 const app = express();
+// Express 5 defaults to the "simple" query parser; keep 4's "extended" so nested and array
+// query params parse the way the routes were written against.
+app.set('query parser', 'extended');
 app.use(express.json({ limit: '12mb' }));
+// Express 5 leaves req.body undefined when a request carries no body; the routes
+// destructure it (`const { x } = req.body`), which would throw. Default it to {} as 4 did.
+app.use((req, _res, next) => {
+  if (req.body === undefined) req.body = {};
+  next();
+});
 
 app.use('/api/sources', sourcesRouter);
 app.use('/api/queue', queueRouter);

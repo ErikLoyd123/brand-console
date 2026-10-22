@@ -86,7 +86,7 @@ export interface Start {
   skillName: string;
   initialInput?: string;
   // Optional Claude model override for this session (alias or full model id,
-  // e.g. "claude-opus-4-8"). Omitted = the engine's default.
+  // e.g. "claude-opus-5-5"). Omitted = the engine's default (SKILL_MODEL, else claude-opus-5-5).
   model?: string;
 }
 

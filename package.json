@@ -10,7 +10,7 @@
     "postinstall": "chmod +x node_modules/node-pty/prebuilds/*/spawn-helper 2>/dev/null || true"
   },
   "dependencies": {
-    "@anthropic-ai/claude-agent-sdk": "^0.1.5",
+    "@anthropic-ai/claude-agent-sdk": "^0.3.284",
     "better-sqlite3": "^11.8.1",
     "drizzle-orm": "^0.45.2",
     "express": "^4.21.2",
@@ -21,7 +21,7 @@
     "sharp": "^0.35.4",
     "ws": "^8.18.0",
     "yaml": "^2.6.1",
-    "zod": "^3.25.0"
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.12",
@@ -31,5 +31,8 @@
     "drizzle-kit": "^0.30.2",
     "tsx": "^4.19.2",
     "typescript": "^5.7.3"
+  },
+  "overrides": {
+    "@modelcontextprotocol/sdk": "^1.32.1"
   }
 }
